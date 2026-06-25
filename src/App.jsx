@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 
 function App() {
   const [activeTab, setActiveTab] = useState('storyboard')
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('storyboard_api_key') || '')
+  const [apiKey, setApiKey] = useState(() => import.meta.env.VITE_API_KEY || localStorage.getItem('storyboard_api_key') || '')
   
   // --- STORYBOARD STATES ---
   const [productImage, setProductImage] = useState(null)
@@ -214,9 +214,6 @@ Voice Over Prompt [Number]
         </button>
         <button className={`nav-item ${activeTab === 'gen_thread' ? 'active' : ''}`} onClick={() => setActiveTab('gen_thread')}>
           <span className="icon">📰</span> Utas Bebas
-        </button>
-        <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-          <span className="icon">🔑</span> API Settings
         </button>
       </nav>
 
