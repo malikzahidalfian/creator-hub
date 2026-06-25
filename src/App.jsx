@@ -231,7 +231,7 @@ Voice Over Prompt [Number]
   const renderStoryboardForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
-        <h2>Google Veo Prompt Generator</h2>
+        <h2 className="desktop-title">Google Veo Prompt Generator</h2>
         <p className="subtitle">Ubah produk Anda menjadi rentetan prompt video 10-detik berkelanjutan untuk Google Veo.</p>
 
         <div className="layout-grid">
@@ -445,7 +445,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
   const renderThreadForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
-        <h2>Utas Affiliate</h2>
+        <h2 className="desktop-title">Utas Affiliate</h2>
         <p className="subtitle">Buat thread jualan berbalut storytelling yang memicu FOMO dan konversi tinggi.</p>
         <div className="layout-grid">
           <div className="glass-panel input-section">
@@ -499,7 +499,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
   const renderGenThreadForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
-        <h2>Utas Bebas (Viral Umum)</h2>
+        <h2 className="desktop-title">Utas Bebas (Viral Umum)</h2>
         <p className="subtitle">Buat konten murni untuk engagement tanpa unsur jualan.</p>
         <div className="layout-grid">
           <div className="glass-panel input-section">
@@ -554,7 +554,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
   const renderSettings = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
-        <h2>API Settings</h2>
+        <h2 className="desktop-title">API Settings</h2>
         <p className="subtitle">Atur kunci API Anda di sini.</p>
         <div className="glass-panel">
         <div className="input-group" style={{maxWidth: '500px', margin: '0 auto', textAlign: 'left'}}>
