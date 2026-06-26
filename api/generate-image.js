@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     let payload = {};
 
     if (provider === 'openrouter') {
-      apiUrl = 'https://openrouter.ai/api/v1/images/generations';
+      apiUrl = 'https://openrouter.ai/api/v1/images';
       payload = {
         prompt: prompt,
         model: model || 'openai/gpt-image-2' // fallback model
@@ -43,7 +43,13 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload)
     });
     
-    const data = await fetchRes.json();
+    let data;
+    const textRes = await fetchRes.text();
+    try {
+      data = JSON.parse(textRes);
+    } catch (e) {
+      data = { error: "Non-JSON response from API: " + textRes.substring(0, 100) };
+    }
     return res.status(fetchRes.status).json(data);
   } catch (error) {
     return res.status(500).json({ error: error.message });

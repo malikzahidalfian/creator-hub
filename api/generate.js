@@ -18,9 +18,9 @@ export default async function handler(req, res) {
     
     // Auto fallback to free models if user is on OpenRouter to save cost
     if (hasImage) {
-      modelOverride = 'meta-llama/llama-3.2-11b-vision-instruct:free';
+      modelOverride = 'openrouter/free'; // Uses OpenRouter's smart router to find a free vision model
     } else {
-      modelOverride = 'google/gemma-2-9b-it:free';
+      modelOverride = 'openrouter/free'; // Use openrouter/free for text too, it's safer
     }
   } else if (provider === 'deepseek') {
     apiUrl = 'https://api.deepseek.com/chat/completions';
@@ -55,7 +55,13 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload)
     });
     
-    const data = await fetchRes.json();
+    let data;
+    const textRes = await fetchRes.text();
+    try {
+      data = JSON.parse(textRes);
+    } catch (e) {
+      data = { error: "Non-JSON response from API: " + textRes.substring(0, 100) };
+    }
     return res.status(fetchRes.status).json(data);
   } catch (error) {
     return res.status(500).json({ error: error.message });
