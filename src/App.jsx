@@ -48,6 +48,19 @@ function App() {
   const [isGeneratingImg, setIsGeneratingImg] = useState(false)
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null)
 
+  // --- EDU-MATION STATES ---
+  const [eduTopic, setEduTopic] = useState('')
+  const [eduAudience, setEduAudience] = useState('Anak-anak (Bahasanya ceria & simpel)')
+  const [eduCharacter, setEduCharacter] = useState('')
+  const [eduStyle, setEduStyle] = useState('3D Pixar Animation Style')
+  const [eduDuration, setEduDuration] = useState('Pendek (3 Scene)')
+  const [isGeneratingEdu, setIsGeneratingEdu] = useState(false)
+  const [generatedEdu, setGeneratedEdu] = useState(null)
+  const [eduCharImg, setEduCharImg] = useState(null)
+  
+  const eduAudienceList = ['Balita (Sangat simpel, ceria)', 'Anak-anak (Bahasanya ceria & seru)', 'Remaja (Gaul & asik)', 'Umum (Profesional tapi santai)'];
+  const eduStyleList = ['3D Pixar Animation Style', '2D Vector Cartoon Flat', 'Claymation (Plastisin Stop Motion)', 'Anime Style Vibrant'];
+
   const stylesList = [
     "Kartun 3D lucu, warna cerah, karakter Indonesia",
     "Cinematic Realism, film look, dramatic lighting",
@@ -309,6 +322,10 @@ Voice Over Prompt [Number]
         <nav className="sidebar-nav">
           <button className={`nav-item ${activeTab === 'storyboard' ? 'active' : ''}`} onClick={() => {setActiveTab('storyboard'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'edu_mation' ? 'active' : ''}`} onClick={() => {setActiveTab('edu_mation'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🎓</span> Edu-Animasi</div>
             <span className="nav-arrow">&gt;</span>
           </button>
           <button className={`nav-item ${activeTab === 'image_gen' ? 'active' : ''}`} onClick={() => {setActiveTab('image_gen'); setIsMobileMenuOpen(false);}}>
@@ -600,6 +617,168 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     }
   };
 
+  const handleGenerateEdu = async () => {
+    if (!eduTopic || !eduCharacter || !apiKey) {
+      alert("Pastikan Topik, Ide Karakter, dan API Key sudah diisi.");
+      return;
+    }
+    
+    setIsGeneratingEdu(true)
+    setGeneratedEdu(null)
+    setEduCharImg(null)
+    
+    try {
+      const numScenes = eduDuration.includes('Pendek') ? 3 : 6;
+      const systemPrompt = `Anda adalah Sutradara Animasi Edukasi dan Prompt Engineer tingkat ahli.
+Tugas Anda adalah merancang paket penyutradaraan (Director's Pack) untuk video animasi edukasi.
+Anda akan diberikan: Topik, Target Penonton, Ide Karakter Utama, Gaya Visual, dan Jumlah Scene.
+
+HASILKAN OUTPUT DALAM BENTUK JSON DENGAN STRUKTUR BERIKUT:
+{
+  "char_prompt": "Prompt bahasa Inggris yang sangat detail untuk image generator (menjelaskan karakter utama, gaya visual, latar belakang putih bersih, seluruh tubuh terlihat, rasio 1:1).",
+  "voice_over": "Naskah narator/voice over dalam bahasa Indonesia yang memikat, mendidik, dan disesuaikan dengan bahasa Target Penonton.",
+  "video_prompts": [
+    {
+      "scene_no": 1,
+      "time": "0-5 detik",
+      "prompt": "Prompt bahasa Inggris sangat deskriptif untuk Video AI (Veo 3 / Kling), menggunakan gaya visual yang diminta, menjelaskan aksi karakter di scene ini, cinematic lighting, dll."
+    }
+  ]
+}
+
+PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array video_prompts berisi persis sejumlah scene yang diminta.`;
+
+      const userPrompt = `Topik Pembelajaran: ${eduTopic}\nTarget Penonton: ${eduAudience}\nIde Karakter Utama: ${eduCharacter}\nGaya Visual: ${eduStyle}\nJumlah Scene: ${numScenes} scene`;
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": "1inference"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      const data = await response.json();
+      let generatedText = data.choices[0].message.content.trim();
+      if (generatedText.startsWith('```json')) {
+         generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
+      }
+      
+      const parsedData = JSON.parse(generatedText);
+      setGeneratedEdu(parsedData);
+
+      if (parsedData.char_prompt) {
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(parsedData.char_prompt)}?model=flux&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
+        const img = new Image();
+        img.src = url;
+        img.onload = () => {
+          setEduCharImg(url);
+        };
+      }
+
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsGeneratingEdu(false)
+    }
+  }
+
+  const renderEduForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">🎓 Edu-Animasi (Director's Pack)</h2>
+        <p className="subtitle">Rancang karakter, naskah, dan prompt video edukasi profesional dalam sekali klik.</p>
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <div className="input-group">
+              <label>Topik Pembelajaran</label>
+              <textarea placeholder="Contoh: Cara menyikat gigi yang benar..." value={eduTopic} onChange={(e) => setEduTopic(e.target.value)} rows="2" />
+            </div>
+            <div className="input-group">
+              <label>Ide Karakter Utama</label>
+              <textarea placeholder="Contoh: Sebuah gigi graham putih yang memiliki mata bulat besar, bibir tersenyum, memegang sikat gigi..." value={eduCharacter} onChange={(e) => setEduCharacter(e.target.value)} rows="3" />
+            </div>
+            <div className="input-group">
+              <label>Target Penonton</label>
+              <select value={eduAudience} onChange={(e) => setEduAudience(e.target.value)} className="select-input">
+                {eduAudienceList.map((aud, idx) => <option key={idx} value={aud}>{aud}</option>)}
+              </select>
+            </div>
+            <div className="input-group">
+              <label>Gaya Visual</label>
+              <select value={eduStyle} onChange={(e) => setEduStyle(e.target.value)} className="select-input">
+                {eduStyleList.map((st, idx) => <option key={idx} value={st}>{st}</option>)}
+              </select>
+            </div>
+            <div className="input-group">
+              <label>Durasi Video</label>
+              <select value={eduDuration} onChange={(e) => setEduDuration(e.target.value)} className="select-input">
+                <option value="Pendek (3 Scene)">Pendek (3 Scene - Cocok untuk Shorts)</option>
+                <option value="Panjang (6 Scene)">Panjang (6 Scene - Cocok untuk YouTube)</option>
+              </select>
+            </div>
+            <button className="btn-primary generate-btn" onClick={handleGenerateEdu} disabled={!eduTopic || !eduCharacter || isGeneratingEdu || !apiKey}>
+              {isGeneratingEdu ? 'Meracik Ide...' : '✨ Buat Konsep Edukasi'}
+            </button>
+            {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
+          </div>
+          
+          <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
+          {generatedEdu ? (
+            <div className="prompts-container">
+              <div className="prompt-card fade-in">
+                <div className="prompt-header">
+                  <h3>🎨 Karakter & Naskah Narator</h3>
+                </div>
+                <div style={{padding: '1rem'}}>
+                  <div style={{display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap'}}>
+                    <div style={{flex: '1 1 150px', minWidth: '150px', background: '#f8fafc', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '1/1'}}>
+                      {eduCharImg ? <img src={eduCharImg} alt="Karakter" style={{width: '100%', height: '100%', objectFit: 'cover'}} /> : <span className="loading-spinner"></span>}
+                    </div>
+                    <div style={{flex: '2 1 300px'}}>
+                      <h4 style={{marginBottom: '0.5rem', color: 'var(--primary-color)'}}>Prompt Desain Karakter</h4>
+                      <pre className="prompt-content" style={{padding: '0.5rem', fontSize: '0.8rem', background: '#f1f5f9'}}>{generatedEdu.char_prompt}</pre>
+                    </div>
+                  </div>
+                  <h4 style={{marginTop: '1.5rem', marginBottom: '0.5rem', color: 'var(--primary-color)'}}>Naskah Suara (Voice Over)</h4>
+                  <pre className="prompt-content" style={{padding: '1rem'}}>{generatedEdu.voice_over}</pre>
+                </div>
+              </div>
+
+              <div className="prompt-card fade-in" style={{marginTop: '1rem'}}>
+                <div className="prompt-header">
+                  <h3>🎬 Prompt Video AI (Veo 3 / Flow)</h3>
+                </div>
+                <div style={{padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                  {generatedEdu.video_prompts.map((vp, index) => (
+                    <div key={index} style={{background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid var(--glass-border)'}}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: 'bold'}}>
+                        <span style={{color: 'var(--text-primary)'}}>Scene {vp.scene_no}</span>
+                        <span style={{color: 'var(--primary-color)', fontSize: '0.85rem'}}>{vp.time}</span>
+                      </div>
+                      <pre className="prompt-content" style={{padding: '0.5rem', background: '#ffffff'}}>{vp.prompt}</pre>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : <EmptyStateRight />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderImageGenForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
@@ -881,6 +1060,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
           <h2>Creator Hub AI</h2>
         </div>
         {activeTab === 'storyboard' && renderStoryboardForm()}
+        {activeTab === 'edu_mation' && renderEduForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
