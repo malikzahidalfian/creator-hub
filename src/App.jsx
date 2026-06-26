@@ -625,6 +625,38 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     </div>
   );
 
+  const renderHistory = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">Riwayat Generate</h2>
+        <p className="subtitle">Daftar semua prompt yang pernah Anda buat tersimpan aman di Database.</p>
+        
+        {isHistoryLoading ? (
+          <div style={{textAlign: 'center', padding: '2rem'}}><span className="loading-spinner"></span> Memuat database...</div>
+        ) : history.length === 0 ? (
+          <div className="glass-panel" style={{textAlign: 'center', opacity: 0.7}}>Belum ada data yang tersimpan.</div>
+        ) : (
+          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+            {history.map(item => (
+              <div key={item.id} className="glass-panel" style={{padding: '1.5rem'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center'}}>
+                  <span style={{background: 'var(--primary-color)', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold'}}>{item.type}</span>
+                  <span style={{fontSize: '0.7rem', color: 'var(--text-secondary)'}}>{new Date(item.created_at).toLocaleString('id-ID')}</span>
+                </div>
+                <div style={{fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '1rem'}}>
+                  <strong>Topik/Produk:</strong> {item.product_desc || '-'}
+                </div>
+                <div style={{background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '12px', fontSize: '0.8rem', whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.05)'}}>
+                  {item.result}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderSettings = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">

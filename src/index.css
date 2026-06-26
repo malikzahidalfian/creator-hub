@@ -523,16 +523,23 @@ textarea:focus, .api-key-input:focus, .select-input:focus, input:focus {
     width: calc(100vw - 30px);
     height: 70px;
     flex-direction: row;
-    padding: 0;
-    z-index: 100;
-    background: rgba(15, 23, 42, 0.98); /* Less transparent to prevent text overlapping visually */
+    padding: 0 15px;
+    border-radius: 25px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 24px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.1);
-    justify-content: space-around;
-    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    justify-content: flex-start;
+    gap: 15px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .sidebar::-webkit-scrollbar {
+    display: none;
   }
   
   .sidebar-logo, .sidebar-bottom {
@@ -541,22 +548,13 @@ textarea:focus, .api-key-input:focus, .select-input:focus, input:focus {
 
   .sidebar-nav {
     flex-direction: row;
-    width: 100%;
-    height: 100%;
-    justify-content: space-around;
+    width: max-content;
+    gap: 5px;
+    margin-top: 0;
     align-items: center;
-    gap: 0;
   }
 
   .nav-item {
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 0.5rem 0;
-    font-size: 0.6rem;
-    font-weight: 500;
-    background: transparent !important;
-    flex: 1;
     border-radius: 20px;
     margin: 0 2px;
     transition: all 0.3s ease;
