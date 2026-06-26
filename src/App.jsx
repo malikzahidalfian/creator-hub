@@ -798,7 +798,21 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array
     setGeneratedSelling(null)
     
     try {
-      const systemPrompt = `Anda adalah seorang manajer produk berpengalaman, khususnya terampil dalam mengidentifikasi poin penjualan produk dan memecahkan masalah nyata yang dihadapi pelanggan agar sesuai dengan kebutuhan mereka. Sekarang, pengguna akan memberi Anda tautan atau deskripsi produk. Kemudian, Anda meninjau dan menganalisis tautan tersebut untuk mengungkap poin penjualan produk dan mengidentifikasi masalah yang dipecahkan produk tersebut untuk pelanggan.`;
+      const systemPrompt = `Anda adalah seorang manajer produk berpengalaman. Tugas Anda adalah mengidentifikasi poin penjualan produk dan memecahkan masalah nyata yang dihadapi pelanggan.
+Pengguna akan memberi Anda tautan atau deskripsi produk.
+OUTPUT WAJIB DALAM BENTUK JSON DENGAN STRUKTUR BERIKUT:
+{
+  "target_market": ["List siapa yang cocok menggunakan produk ini"],
+  "pain_points": ["List masalah yang sering dialami pengguna"],
+  "solutions": [{"masalah": "...", "solusi": "..."}],
+  "usp": ["List Unique Selling Point utama"],
+  "emotional_hook": ["List alasan emosional kenapa orang beli"],
+  "marketing_angles": [{"angle": "Nama angle (misal: Protection Angle)", "copy": "Contoh kalimat iklan pendek"}],
+  "ad_hooks": ["List contoh kalimat hook iklan yang high convert"],
+  "positioning": {"title": "Posisi produk (misal: Mid-range stylish)", "details": ["List detail positioning"]},
+  "viral_potential": ["List alasan kenapa produk ini bisa viral/laku keras"]
+}
+PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -819,7 +833,10 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array
 
       if (!response.ok) throw new Error(`API Error: ${response.status}`);
       const data = await response.json();
-      let generatedText = data.choices[0].message.content.trim().replace(/\*\*/g, "");
+      let generatedText = data.choices[0].message.content.trim();
+      if (generatedText.startsWith('```json')) {
+         generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
+      }
       
       setGeneratedSelling(generatedText);
     } catch (error) {
@@ -829,7 +846,17 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array
     }
   }
 
-  const renderSellingForm = () => (
+  const renderSellingForm = () => {
+    let parsedSelling = null;
+    if (generatedSelling) {
+      try {
+        parsedSelling = JSON.parse(generatedSelling);
+      } catch(e) {
+        // If not json, parsedSelling remains null
+      }
+    }
+
+    return (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
         <h2 className="desktop-title">🎯 Analisis Selling Point</h2>
@@ -857,7 +884,142 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array
                     {copiedIndex === 'selling' ? '✅ Copied!' : '📋 Copy'}
                   </button>
                 </div>
-                <pre className="prompt-content" style={{padding: '1rem', whiteSpace: 'pre-wrap'}}>{generatedSelling}</pre>
+                
+                {parsedSelling && parsedSelling.target_market ? (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1.5rem', background: '#ffffff', borderRadius: '0 0 12px 12px', color: '#1e293b'}}>
+                    
+                    {/* 1. TARGET MARKET */}
+                    <div>
+                      <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🔍</span> 1. TARGET MARKET (Siapa yang paling cocok)</h4>
+                      <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155'}}>
+                        {parsedSelling.target_market.map((item, i) => <li key={i}>{item}</li>)}
+                      </ul>
+                    </div>
+                    
+                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
+                    
+                    {/* 2. PAIN POINTS */}
+                    <div>
+                      <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>💥</span> 2. MASALAH UTAMA CUSTOMER (Pain Points)</h4>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 'bold', color: '#b91c1c'}}><span>❌</span> Masalah yang sering dialami pengguna:</div>
+                      <ol style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155', fontWeight: 'bold'}}>
+                        {parsedSelling.pain_points.map((item, i) => <li key={i}>{item}</li>)}
+                      </ol>
+                    </div>
+
+                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
+
+                    {/* 3. SOLUTIONS */}
+                    {parsedSelling.solutions && (
+                      <div>
+                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>✅</span> 3. SOLUSI YANG DITAWARKAN PRODUK</h4>
+                        <div style={{overflowX: 'auto'}}>
+                          <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem', fontSize: '0.95rem'}}>
+                            <thead>
+                              <tr style={{background: '#f1f5f9', borderBottom: '2px solid #cbd5e1'}}>
+                                <th style={{padding: '0.75rem', textAlign: 'left', width: '50%'}}>Masalah Customer</th>
+                                <th style={{padding: '0.75rem', textAlign: 'left', width: '50%'}}>Solusi dari Produk</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {parsedSelling.solutions.map((item, i) => (
+                                <tr key={i} style={{borderBottom: '1px solid #e2e8f0'}}>
+                                  <td style={{padding: '0.75rem', color: '#475569'}}>{item.masalah}</td>
+                                  <td style={{padding: '0.75rem', color: '#047857', fontWeight: '500'}}>{item.solusi}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
+
+                    {/* 4. USP */}
+                    {parsedSelling.usp && (
+                      <div>
+                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>⭐</span> 4. UNIQUE SELLING POINT (USP)</h4>
+                        <div style={{marginBottom: '0.5rem', fontWeight: 'bold', color: '#ea580c'}}>🔥 Ini yang bikin produk “KEJUALAN”:</div>
+                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155', fontWeight: 'bold'}}>
+                          {parsedSelling.usp.map((item, i) => <li key={i}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
+
+                    {/* 5. EMOTIONAL HOOK */}
+                    {parsedSelling.emotional_hook && (
+                      <div>
+                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🧠</span> 5. EMOTIONAL HOOK (Kenapa orang beli)</h4>
+                        <div style={{marginBottom: '0.5rem', fontStyle: 'italic', color: '#475569'}}>Produk ini bukan cuma barang, tapi:</div>
+                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155'}}>
+                          {parsedSelling.emotional_hook.map((item, i) => <li key={i}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
+
+                    {/* 6. MARKETING ANGLES */}
+                    {parsedSelling.marketing_angles && (
+                      <div>
+                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🎯</span> 6. ANGLE MARKETING PALING KUAT</h4>
+                        <div style={{marginBottom: '0.8rem', color: '#475569'}}>Beberapa angle yang bisa dipakai untuk jualan:</div>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                          {parsedSelling.marketing_angles.map((item, i) => (
+                            <div key={i}>
+                              <div style={{fontWeight: 'bold', color: '#334155'}}>{i+1}. {item.angle}</div>
+                              <div style={{color: '#0284c7', fontStyle: 'italic', marginTop: '0.2rem'}}>“{item.copy}”</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
+
+                    {/* 7. AD HOOKS */}
+                    {parsedSelling.ad_hooks && (
+                      <div>
+                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🎬</span> 7. CONTOH HOOK IKLAN (HIGH CONVERT)</h4>
+                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#16a34a', fontWeight: '500', fontStyle: 'italic'}}>
+                          {parsedSelling.ad_hooks.map((item, i) => <li key={i}>“{item}”</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
+
+                    {/* 8. POSITIONING */}
+                    {parsedSelling.positioning && (
+                      <div>
+                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>📦</span> 8. POSITIONING PRODUK</h4>
+                        <div style={{fontWeight: 'bold', color: '#4f46e5', marginBottom: '0.5rem'}}>👉 {parsedSelling.positioning.title}</div>
+                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155'}}>
+                          {parsedSelling.positioning.details.map((item, i) => <li key={i}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
+
+                    {/* 9. VIRAL POTENTIAL */}
+                    {parsedSelling.viral_potential && (
+                      <div>
+                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🚀</span> 9. POTENSI VIRAL (Kenapa bisa laku keras)</h4>
+                        <div style={{marginBottom: '0.5rem', color: '#475569'}}>Produk ini punya:</div>
+                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155', fontWeight: '500'}}>
+                          {parsedSelling.viral_potential.map((item, i) => <li key={i}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                  </div>
+                ) : (
+                  <pre className="prompt-content" style={{padding: '1rem', whiteSpace: 'pre-wrap'}}>{generatedSelling}</pre>
+                )}
               </div>
               <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
                 <button className="btn-secondary" onClick={() => saveToSupabase([generatedSelling], 'Selling Point', sellingProductInfo.substring(0,30))} disabled={isSaving} style={{flex: 1}}>
@@ -870,7 +1032,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderImageGenForm = () => (
     <div className="content-wrapper fade-in">
