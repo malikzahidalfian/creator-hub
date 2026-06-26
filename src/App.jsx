@@ -650,33 +650,6 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     </div>
   );
 
-  const renderSettings = () => (
-    <div className="content-wrapper fade-in">
-      <div className="content-panel">
-        <h2 className="desktop-title">API Settings</h2>
-        <p className="subtitle">Masukkan kunci rahasia API Anda di sini.</p>
-        <div className="glass-panel">
-          <div className="input-group">
-            <label>1inference API Key</label>
-            <input 
-              type="password" 
-              className="api-key-input" 
-              placeholder="sk-..." 
-              value={apiKey} 
-              onChange={(e) => {
-                setApiKey(e.target.value);
-                localStorage.setItem('storyboard_api_key', e.target.value);
-              }} 
-            />
-            <small style={{color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'block'}}>
-              Kunci ini disimpan dengan aman di dalam memori browser Anda.
-            </small>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="app-layout">
       {renderSidebar()}
