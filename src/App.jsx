@@ -9,6 +9,11 @@ function App() {
   const [isSaving, setIsSaving] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
+  // --- AUTHENTICATION STATES ---
+  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('storyboard_auth') === 'true')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState(false)
+
   // --- STORYBOARD STATES ---
   const [productImage, setProductImage] = useState(null)
   const [productFile, setProductFile] = useState(null)
@@ -822,6 +827,50 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
       </div>
     </div>
   );
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (loginPassword === 'malik2026') {
+      setIsAuthenticated(true);
+      localStorage.setItem('storyboard_auth', 'true');
+      setLoginError(false);
+    } else {
+      setLoginError(true);
+    }
+  };
+
+  const renderLogin = () => (
+    <div className="app-layout" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e293b, #0f172a)'}}>
+      <div className="glass-panel fade-in" style={{maxWidth: '400px', width: '90%', padding: '2.5rem', textAlign: 'center'}}>
+        <div style={{marginBottom: '2rem'}}>
+          <LogoSVG />
+          <h2 style={{color: 'white', marginTop: '1rem', fontSize: '1.5rem'}}>Creator Hub AI</h2>
+          <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem'}}>Silakan masukkan password untuk masuk</p>
+        </div>
+        
+        <form onSubmit={handleLogin} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          <div className="input-group" style={{textAlign: 'left'}}>
+            <input
+              type="password"
+              value={loginPassword}
+              onChange={(e) => { setLoginPassword(e.target.value); setLoginError(false); }}
+              placeholder="Password..."
+              className="api-key-input"
+              style={{borderColor: loginError ? '#ef4444' : 'rgba(255,255,255,0.1)'}}
+              autoFocus
+            />
+            {loginError && <small style={{color: '#ef4444', marginTop: '0.5rem', display: 'block'}}>Password salah!</small>}
+          </div>
+          
+          <button type="submit" className="btn-primary" style={{width: '100%', padding: '0.8rem'}}>
+            Login
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
+  if (!isAuthenticated) return renderLogin();
 
   return (
     <div className="app-layout">
