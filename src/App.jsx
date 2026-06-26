@@ -58,6 +58,11 @@ function App() {
   const [generatedEdu, setGeneratedEdu] = useState(null)
   const [eduCharImg, setEduCharImg] = useState(null)
   
+  // --- SELLING POINT STATES ---
+  const [sellingProductInfo, setSellingProductInfo] = useState('')
+  const [isGeneratingSelling, setIsGeneratingSelling] = useState(false)
+  const [generatedSelling, setGeneratedSelling] = useState(null)
+
   const eduAudienceList = ['Balita (Sangat simpel, ceria)', 'Anak-anak (Bahasanya ceria & seru)', 'Remaja (Gaul & asik)', 'Umum (Profesional tapi santai)'];
   const eduStyleList = ['3D Pixar Animation Style', '2D Vector Cartoon Flat', 'Claymation (Plastisin Stop Motion)', 'Anime Style Vibrant'];
 
@@ -338,6 +343,10 @@ Voice Over Prompt [Number]
           </button>
           <button className={`nav-item ${activeTab === 'gen_thread' ? 'active' : ''}`} onClick={() => {setActiveTab('gen_thread'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">📰</span> Threads Umum</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'selling_point' ? 'active' : ''}`} onClick={() => {setActiveTab('selling_point'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🎯</span> Selling Point</div>
             <span className="nav-arrow">&gt;</span>
           </button>
           <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => {setActiveTab('history'); setIsMobileMenuOpen(false);}}>
@@ -779,6 +788,90 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array
     </div>
   );
 
+  const handleGenerateSelling = async () => {
+    if (!sellingProductInfo || !apiKey) {
+      alert("Pastikan Deskripsi/Tautan Produk dan API Key sudah diisi.");
+      return;
+    }
+    
+    setIsGeneratingSelling(true)
+    setGeneratedSelling(null)
+    
+    try {
+      const systemPrompt = `Anda adalah seorang manajer produk berpengalaman, khususnya terampil dalam mengidentifikasi poin penjualan produk dan memecahkan masalah nyata yang dihadapi pelanggan agar sesuai dengan kebutuhan mereka. Sekarang, pengguna akan memberi Anda tautan atau deskripsi produk. Kemudian, Anda meninjau dan menganalisis tautan tersebut untuk mengungkap poin penjualan produk dan mengidentifikasi masalah yang dipecahkan produk tersebut untuk pelanggan.`;
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": "1inference"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Deskripsi/Tautan Produk:\n${sellingProductInfo}` }
+          ],
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      const data = await response.json();
+      let generatedText = data.choices[0].message.content.trim().replace(/\*\*/g, "");
+      
+      setGeneratedSelling(generatedText);
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsGeneratingSelling(false)
+    }
+  }
+
+  const renderSellingForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">🎯 Analisis Selling Point</h2>
+        <p className="subtitle">Bedah masalah pelanggan dan temukan poin penjualan yang paling tajam dari sebuah produk.</p>
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <div className="input-group">
+              <label>Deskripsi atau Tautan Produk</label>
+              <textarea placeholder="Contoh: Sepatu lari anti air merek X..." value={sellingProductInfo} onChange={(e) => setSellingProductInfo(e.target.value)} rows="5" />
+            </div>
+            
+            <button className="btn-primary generate-btn" onClick={handleGenerateSelling} disabled={!sellingProductInfo || isGeneratingSelling || !apiKey}>
+              {isGeneratingSelling ? 'Menganalisis...' : '✨ Temukan Selling Point'}
+            </button>
+            {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
+          </div>
+          
+          <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
+          {generatedSelling ? (
+            <div className="prompts-container">
+              <div className="prompt-card fade-in">
+                <div className="prompt-header">
+                  <h3>Hasil Analisis</h3>
+                  <button className="btn-copy" onClick={() => handleCopy(generatedSelling, 'selling')}>
+                    {copiedIndex === 'selling' ? '✅ Copied!' : '📋 Copy'}
+                  </button>
+                </div>
+                <pre className="prompt-content" style={{padding: '1rem', whiteSpace: 'pre-wrap'}}>{generatedSelling}</pre>
+              </div>
+              <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase([generatedSelling], 'Selling Point', sellingProductInfo.substring(0,30))} disabled={isSaving} style={{flex: 1}}>
+                  {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
+                </button>
+              </div>
+            </div>
+          ) : <EmptyStateRight />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderImageGenForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
@@ -1064,6 +1157,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array
         {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
+        {activeTab === 'selling_point' && renderSellingForm()}
         {activeTab === 'history' && renderHistory()}
         {activeTab === 'settings' && renderSettings()}
       </main>
