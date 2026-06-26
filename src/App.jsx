@@ -291,23 +291,43 @@ Voice Over Prompt [Number]
       </div>
       <nav className="sidebar-nav">
         <button className={`nav-item ${activeTab === 'storyboard' ? 'active' : ''}`} onClick={() => setActiveTab('storyboard')}>
-          <span className="icon">🎬</span> Storyboard
+          <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
+          <span className="nav-arrow">&gt;</span>
         </button>
         <button className={`nav-item ${activeTab === 'thread' ? 'active' : ''}`} onClick={() => setActiveTab('thread')}>
-          <span className="icon">🛒</span> Utas Affiliate
+          <div className="nav-item-content"><span className="icon">🛒</span> Ide Animasi</div>
+          <span className="nav-arrow">&gt;</span>
         </button>
         <button className={`nav-item ${activeTab === 'gen_thread' ? 'active' : ''}`} onClick={() => setActiveTab('gen_thread')}>
-          <span className="icon">📰</span> Utas Bebas
+          <div className="nav-item-content"><span className="icon">📰</span> Ulas Gambar</div>
+          <span className="nav-arrow">&gt;</span>
+        </button>
+        <button className={`nav-item ${activeTab === 'ulas_teks' ? 'active' : ''}`} onClick={() => setActiveTab('ulas_teks')}>
+          <div className="nav-item-content"><span className="icon">📝</span> Ulas Teks</div>
+          <span className="nav-arrow">&gt;</span>
         </button>
         <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-          <span className="icon">📂</span> Riwayat
+          <div className="nav-item-content"><span className="icon">🔍</span> Riwayat</div>
+          <span className="nav-arrow">&gt;</span>
         </button>
         <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-          <span className="icon">🔑</span> API Settings
+          <div className="nav-item-content"><span className="icon">🔑</span> API Settings</div>
+          <span className="nav-arrow">&gt;</span>
         </button>
       </nav>
 
       <div className="sidebar-bottom">
+        <div style={{background: 'var(--active-gradient)', padding: '1.2rem', borderRadius: '16px', color: 'white', marginBottom: '1rem', boxShadow: '0 10px 25px rgba(99,102,241,0.3)'}}>
+          <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', marginBottom: '0.5rem'}}>
+            <span style={{color: '#fbbf24'}}>⭐</span> Upgrade ke Pro
+          </div>
+          <p style={{fontSize: '0.75rem', opacity: 0.9, marginBottom: '1rem', lineHeight: 1.4}}>
+            Dapatkan fitur premium dan akses tanpa batas.
+          </p>
+          <button style={{width: '100%', padding: '0.6rem', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600'}}>
+            Upgrade Sekarang
+          </button>
+        </div>
         <div className="copyright">
           © 2025 Creator Hub AI<br/>All rights reserved.
         </div>
@@ -674,7 +694,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
                 <div style={{fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '1rem'}}>
                   <strong>Topik/Produk:</strong> {item.product_desc || '-'}
                 </div>
-                <div style={{background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '12px', fontSize: '0.8rem', whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.05)'}}>
+                <div style={{background: '#f8fafc', padding: '1rem', borderRadius: '12px', fontSize: '0.8rem', whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--glass-border)'}}>
                   {item.result}
                 </div>
               </div>
