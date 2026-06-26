@@ -274,6 +274,9 @@ Voice Over Prompt [Number]
         <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
           <span className="icon">📂</span> Riwayat
         </button>
+        <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+          <span className="icon">🔑</span> API Settings
+        </button>
       </nav>
 
       <div className="sidebar-bottom">
@@ -643,6 +646,33 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
           <small className="help-text">API Key tersimpan aman di browser Anda.</small>
         </div>
       </div>
+      </div>
+    </div>
+  );
+
+  const renderSettings = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">API Settings</h2>
+        <p className="subtitle">Masukkan kunci rahasia API Anda di sini.</p>
+        <div className="glass-panel">
+          <div className="input-group">
+            <label>1inference API Key</label>
+            <input 
+              type="password" 
+              className="api-key-input" 
+              placeholder="sk-..." 
+              value={apiKey} 
+              onChange={(e) => {
+                setApiKey(e.target.value);
+                localStorage.setItem('storyboard_api_key', e.target.value);
+              }} 
+            />
+            <small style={{color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'block'}}>
+              Kunci ini disimpan dengan aman di dalam memori browser Anda.
+            </small>
+          </div>
+        </div>
       </div>
     </div>
   );
