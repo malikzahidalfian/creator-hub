@@ -2,14 +2,7 @@ import { useState, useEffect } from 'react'
 
 function App() {
   const [activeTab, setActiveTab] = useState('storyboard')
-  const [apiProvider, setApiProvider] = useState(() => localStorage.getItem('storyboard_api_provider') || '1inference')
-  const [apiKeys, setApiKeys] = useState(() => {
-    const oldKey = localStorage.getItem('storyboard_api_key') || '';
-    const storedKeys = localStorage.getItem('storyboard_api_keys');
-    if (storedKeys) return JSON.parse(storedKeys);
-    return { '1inference': oldKey };
-  });
-  const apiKey = apiKeys[apiProvider] || '';
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('storyboard_api_key') || '')
   const [copiedIndex, setCopiedIndex] = useState(null)
   const [history, setHistory] = useState([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
@@ -236,7 +229,7 @@ Voice Over Prompt [Number]
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
-          "X-Provider": apiProvider
+          "X-Provider": "1inference"
         },
         body: JSON.stringify({
           model: "gpt-4o",
@@ -496,7 +489,7 @@ Link Afiliasi Saya: ${threadLink || '[ISI_LINK_NANTI]'}`;
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
-          "X-Provider": apiProvider
+          "X-Provider": "1inference"
         },
         body: JSON.stringify({
           model: "gpt-4o",
@@ -551,7 +544,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
-          "X-Provider": apiProvider
+          "X-Provider": "1inference"
         },
         body: JSON.stringify({
           model: "gpt-4o",
@@ -595,51 +588,10 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
           setIsGeneratingImg(false);
           alert("Gagal memuat gambar dari server gratis.");
         }
-        return; // wait for onload
-      } else {
-        if (!apiKey) {
-          setIsGeneratingImg(false);
-          return alert("API Key belum diatur!");
-        }
-        
-        let finalModel = imgModel;
-        if (imgModel === 'openrouter-gpt') finalModel = 'openai/gpt-image-2';
-        if (imgModel === 'openrouter-custom') {
-          if (!customOpenRouterModel) {
-            setIsGeneratingImg(false);
-            return alert("Silakan ketikkan ID Model OpenRouter!");
-          }
-          finalModel = customOpenRouterModel;
-        }
-
-        const response = await fetch("/api/generate-image", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`,
-            "X-Provider": apiProvider
-          },
-          body: JSON.stringify({
-            prompt: imgPrompt,
-            model: finalModel
-          })
-        });
-
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
-        const data = await response.json();
-        
-        if (data.data && data.data[0] && data.data[0].url) {
-          setGeneratedImageUrl(data.data[0].url);
-        } else if (data.error) {
-          throw new Error(JSON.stringify(data.error));
-        } else {
-          throw new Error("Gagal mengambil gambar dari API. Mungkin batas gratis harian sudah habis atau model tidak mendukung.");
-        }
       }
     } catch (e) {
       alert("Error: " + e.message);
-    } finally {
-      if (imgModel !== 'flux-free' && imgModel !== 'turbo-free') setIsGeneratingImg(false);
+      setIsGeneratingImg(false);
     }
   };
 
@@ -655,30 +607,17 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
               <select value={imgModel} onChange={(e) => setImgModel(e.target.value)} className="select-input">
                 <option value="turbo-free">SDXL Turbo (100% Gratis - Cepat & Artistik/Tidak Kaku)</option>
                 <option value="flux-free">Flux.1 AI (100% Gratis - Kualitas HD Realistis)</option>
-                <option value="openrouter-gpt">OpenRouter: OpenAI GPT Image 2 (Berbayar)</option>
-                <option value="openrouter-custom">OpenRouter: Ketik ID Model Sendiri (Bebas/Gratisan)</option>
               </select>
             </div>
-            
-            {imgModel === 'openrouter-custom' && (
-              <div className="input-group">
-                <label>ID Model OpenRouter</label>
-                <input type="text" className="api-key-input" placeholder="Contoh: stabilityai/stable-diffusion-3-medium:free" value={customOpenRouterModel} onChange={(e) => setCustomOpenRouterModel(e.target.value)} />
-                <small className="help-text" style={{marginTop: '0.5rem', display: 'block', color: 'var(--text-secondary)'}}>
-                  Temukan ID model gambar yang ada tag "Free" di web OpenRouter lalu paste di sini.
-                </small>
-              </div>
-            )}
 
             <div className="input-group">
               <label>Deskripsi Gambar (Prompt)</label>
               <textarea placeholder="Contoh: Kucing lucu memakai kacamata hitam di pantai..." value={imgPrompt} onChange={(e) => setImgPrompt(e.target.value)} rows="4" />
             </div>
             
-            <button className="btn-primary generate-btn" onClick={handleGenerateImage} disabled={!imgPrompt || isGeneratingImg || (imgModel !== 'flux-free' && imgModel !== 'turbo-free' && !apiKey)}>
+            <button className="btn-primary generate-btn" onClick={handleGenerateImage} disabled={!imgPrompt || isGeneratingImg}>
               {isGeneratingImg ? 'Melukis Gambar...' : '🎨 Generate Gambar'}
             </button>
-            {imgModel !== 'flux-free' && imgModel !== 'turbo-free' && !apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
           </div>
           
           <div className="glass-panel" style={{padding: '1.5rem', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px'}}>
@@ -855,50 +794,28 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
   );
 
   const handleKeyChange = (e) => {
-    const newKeys = { ...apiKeys, [apiProvider]: e.target.value };
-    setApiKeys(newKeys);
-    localStorage.setItem('storyboard_api_keys', JSON.stringify(newKeys));
-  };
-
-  const handleProviderChange = (e) => {
-    setApiProvider(e.target.value);
-    localStorage.setItem('storyboard_api_provider', e.target.value);
+    setApiKey(e.target.value);
+    localStorage.setItem('storyboard_api_key', e.target.value);
   };
 
   const renderSettings = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
         <h2 className="desktop-title">Pengaturan API</h2>
-        <p className="subtitle">Kelola koneksi API Anda di sini.</p>
+        <p className="subtitle">Masukkan Kunci API 1inference Anda di sini.</p>
         
-        <div className="glass-panel" style={{maxWidth: '500px', margin: '0 auto', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+        <div className="glass-panel" style={{maxWidth: '500px', margin: '0 auto', textAlign: 'left'}}>
           <div className="input-group">
-            <label>Pilih Penyedia AI</label>
-            <select 
-              value={apiProvider}
-              onChange={handleProviderChange}
-              className="select-input"
-            >
-              <option value="1inference">1inference (Default)</option>
-              <option value="openrouter">OpenRouter (Versi Gratis)</option>
-              <option value="deepseek">DeepSeek API</option>
-              <option value="openai">OpenAI Resmi</option>
-            </select>
-          </div>
-
-          <div className="input-group">
-            <label>Kunci API ({apiProvider})</label>
+            <label>1inference API Key</label>
             <input
               type="password"
               value={apiKey}
               onChange={handleKeyChange}
-              placeholder={`Masukkan API Key ${apiProvider}...`}
+              placeholder="Masukkan API Key Anda..."
               className="api-key-input"
             />
             <small className="help-text" style={{marginTop: '0.5rem', display: 'block', color: 'var(--text-secondary)'}}>
-              {apiProvider === 'openrouter' 
-                ? "Info: Sistem otomatis menggunakan model AI gratisan (Gemma/Llama) jika Anda memilih OpenRouter!" 
-                : "Kunci API disimpan dengan aman di penyimpanan lokal peramban Anda."}
+              Kunci API disimpan dengan aman di penyimpanan lokal peramban Anda.
             </small>
           </div>
         </div>
