@@ -3,7 +3,11 @@ import { useState, useEffect } from 'react'
 function App() {
   const [activeTab, setActiveTab] = useState('storyboard')
   const [apiKey, setApiKey] = useState(() => import.meta.env.VITE_API_KEY || localStorage.getItem('storyboard_api_key') || '')
-  
+  const [copiedIndex, setCopiedIndex] = useState(null)
+  const [history, setHistory] = useState([])
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
   // --- STORYBOARD STATES ---
   const [productImage, setProductImage] = useState(null)
   const [productFile, setProductFile] = useState(null)
@@ -14,7 +18,6 @@ function App() {
   const [scenePerPrompt, setScenePerPrompt] = useState('3') 
   const [isGeneratingStory, setIsGeneratingStory] = useState(false)
   const [generatedPrompts, setGeneratedPrompts] = useState([]) 
-  const [copiedIndex, setCopiedIndex] = useState(null)
 
   // --- THREAD AFFILIATE STATES ---
   const [threadTitle, setThreadTitle] = useState('')
@@ -41,14 +44,67 @@ function App() {
     "Custom..."
   ]
 
-  const toneList = [
-    "Misteri / Menegangkan",
-    "Edukasi / Informatif (Santai)",
-    "Lucu / Komedi / Satir",
-    "Inspiratif / Memotivasi",
-    "Gosip Terkini / Pop Culture",
-    "Bahas Sejarah / Konspirasi"
-  ]
+  const toneList = ['Sangat Emosional/Baper', 'Misterius/Penasaran', 'Inspiratif & Motivasi', 'Kontroversial (Bikin Debat)', 'Santai & Lucu'];
+
+  const supabaseUrl = 'https://xkixokhnofujcnehuvgz.supabase.co';
+  const supabaseKey = 'sb_publishable_zryQEkMVI1nD3R3Cgf0zdw_LTD0nwtY';
+
+  const fetchHistory = async () => {
+    setIsHistoryLoading(true);
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?select=*&order=created_at.desc`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setHistory(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchHistory();
+    }
+  }, [activeTab]);
+
+  const saveToSupabase = async (blocks, type, desc) => {
+    setIsSaving(true);
+    const resultText = blocks.join('\n\n---\n\n');
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/prompts`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          type: type,
+          product_desc: desc,
+          result: resultText
+        })
+      });
+      if (response.ok) {
+        alert("Berhasil disimpan permanen ke Database!");
+      } else {
+        const err = await response.json();
+        alert("Gagal: " + (err.message || JSON.stringify(err)));
+      }
+    } catch(e) {
+      alert("Error jaringan: " + e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleImageUpload = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -215,6 +271,9 @@ Voice Over Prompt [Number]
         <button className={`nav-item ${activeTab === 'gen_thread' ? 'active' : ''}`} onClick={() => setActiveTab('gen_thread')}>
           <span className="icon">📰</span> Utas Bebas
         </button>
+        <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
+          <span className="icon">📂</span> Riwayat
+        </button>
       </nav>
 
       <div className="sidebar-bottom">
@@ -314,6 +373,11 @@ Voice Over Prompt [Number]
                   <pre className="prompt-content">{promptText}</pre>
                 </div>
               ))}
+              <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(generatedPrompts, 'Storyboard', productDesc)} disabled={isSaving} style={{flex: 1}}>
+                  {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
+                </button>
+              </div>
             </div>
           ) : <EmptyStateRight />}
           </div>
@@ -485,6 +549,11 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
                   <pre className="prompt-content">{tweet}</pre>
                 </div>
               ))}
+              <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(generatedThread, 'Utas Affiliate', threadTitle)} disabled={isSaving} style={{flex: 1}}>
+                  {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
+                </button>
+              </div>
             </div>
           ) : <EmptyStateRight />}
           </div>
@@ -540,6 +609,11 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
                   <pre className="prompt-content">{tweet}</pre>
                 </div>
               ))}
+              <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(generatedGenThread, 'Utas Bebas', genThreadTopic)} disabled={isSaving} style={{flex: 1}}>
+                  {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
+                </button>
+              </div>
             </div>
           ) : <EmptyStateRight />}
           </div>
@@ -580,6 +654,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
+        {activeTab === 'history' && renderHistory()}
         {activeTab === 'settings' && renderSettings()}
       </main>
     </div>
