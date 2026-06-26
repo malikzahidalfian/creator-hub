@@ -208,14 +208,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  position: sticky;
-  top: 0;
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .input-group label {
@@ -295,6 +295,8 @@ textarea, .api-key-input, .select-input, input[type="text"], input[type="passwor
   font-size: 0.95rem;
   transition: all 0.3s ease;
   resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .select-input {
