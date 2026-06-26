@@ -43,6 +43,12 @@ function App() {
   const [isGeneratingGenThread, setIsGeneratingGenThread] = useState(false)
   const [generatedGenThread, setGeneratedGenThread] = useState(null)
 
+  // --- AI IMAGE GEN STATES ---
+  const [imgPrompt, setImgPrompt] = useState('')
+  const [imgModel, setImgModel] = useState('flux-free') 
+  const [isGeneratingImg, setIsGeneratingImg] = useState(false)
+  const [generatedImageUrl, setGeneratedImageUrl] = useState(null)
+
   const stylesList = [
     "Kartun 3D lucu, warna cerah, karakter Indonesia",
     "Cinematic Realism, film look, dramatic lighting",
@@ -306,6 +312,10 @@ Voice Over Prompt [Number]
             <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
             <span className="nav-arrow">&gt;</span>
           </button>
+          <button className={`nav-item ${activeTab === 'image_gen' ? 'active' : ''}`} onClick={() => {setActiveTab('image_gen'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🎨</span> AI Image</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
           <button className={`nav-item ${activeTab === 'thread' ? 'active' : ''}`} onClick={() => {setActiveTab('thread'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🛒</span> Threads Affiliate</div>
             <span className="nav-arrow">&gt;</span>
@@ -565,6 +575,106 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     }
   }
 
+  const handleGenerateImage = async () => {
+    if (!imgPrompt) return alert("Prompt tidak boleh kosong!");
+    setIsGeneratingImg(true);
+    setGeneratedImageUrl(null);
+
+    try {
+      if (imgModel === 'flux-free') {
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgPrompt)}?model=flux&seed=${Math.floor(Math.random() * 10000)}&nologo=true`;
+        const img = new Image();
+        img.src = url;
+        img.onload = () => {
+          setGeneratedImageUrl(url);
+          setIsGeneratingImg(false);
+        };
+        img.onerror = () => {
+          setIsGeneratingImg(false);
+          alert("Gagal memuat gambar dari server Flux.");
+        }
+        return; // wait for onload
+      } else {
+        if (!apiKey) {
+          setIsGeneratingImg(false);
+          return alert("API Key belum diatur!");
+        }
+        const response = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+            "X-Provider": apiProvider
+          },
+          body: JSON.stringify({
+            prompt: imgPrompt,
+            model: imgModel === 'openrouter-gpt' ? 'openai/gpt-image-2' : imgModel
+          })
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        const data = await response.json();
+        
+        if (data.data && data.data[0] && data.data[0].url) {
+          setGeneratedImageUrl(data.data[0].url);
+        } else {
+          throw new Error("Gagal mengambil gambar dari API. Mungkin batas gratis harian sudah habis atau model tidak mendukung.");
+        }
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+    } finally {
+      if (imgModel !== 'flux-free') setIsGeneratingImg(false);
+    }
+  };
+
+  const renderImageGenForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">AI Image Generator</h2>
+        <p className="subtitle">Ubah teks menjadi gambar menakjubkan dengan AI tingkat tinggi.</p>
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <div className="input-group">
+              <label>Pilih Mesin AI (Model)</label>
+              <select value={imgModel} onChange={(e) => setImgModel(e.target.value)} className="select-input">
+                <option value="flux-free">Flux.1 AI (100% Gratis Tanpa API Key)</option>
+                <option value="openrouter-gpt">OpenRouter: OpenAI GPT Image 2 (Kunci API Diperlukan)</option>
+              </select>
+            </div>
+            <div className="input-group">
+              <label>Deskripsi Gambar (Prompt)</label>
+              <textarea placeholder="Contoh: Kucing lucu memakai kacamata hitam di pantai..." value={imgPrompt} onChange={(e) => setImgPrompt(e.target.value)} rows="4" />
+            </div>
+            
+            <button className="btn-primary generate-btn" onClick={handleGenerateImage} disabled={!imgPrompt || isGeneratingImg || (imgModel !== 'flux-free' && !apiKey)}>
+              {isGeneratingImg ? 'Melukis Gambar...' : '🎨 Generate Gambar'}
+            </button>
+            {imgModel !== 'flux-free' && !apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
+          </div>
+          
+          <div className="glass-panel" style={{padding: '1.5rem', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px'}}>
+            {isGeneratingImg ? (
+              <div style={{textAlign: 'center'}}><span className="loading-spinner" style={{width: '40px', height: '40px', borderTopColor: 'var(--primary-color)'}}></span><p style={{marginTop: '1rem', color: 'var(--text-secondary)'}}>Sedang melukis...</p></div>
+            ) : generatedImageUrl ? (
+              <div className="fade-in" style={{width: '100%', textAlign: 'center'}}>
+                <img src={generatedImageUrl} alt="Hasil AI" style={{width: '100%', borderRadius: '12px', border: '1px solid var(--glass-border)', marginBottom: '1rem'}} />
+                <a href={generatedImageUrl} download="hasil-ai.png" target="_blank" rel="noreferrer" style={{display: 'inline-block', background: 'var(--primary-color)', color: 'white', padding: '0.6rem 1.2rem', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold'}}>
+                  ⬇️ Download Gambar
+                </a>
+              </div>
+            ) : (
+              <div style={{textAlign: 'center', color: 'var(--text-secondary)', opacity: 0.7}}>
+                <div style={{fontSize: '3rem', marginBottom: '1rem'}}>🖼️</div>
+                <h3>Hasil Gambar Akan Muncul di Sini</h3>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderThreadForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
@@ -777,6 +887,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
           <h2>Creator Hub AI</h2>
         </div>
         {activeTab === 'storyboard' && renderStoryboardForm()}
+        {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
         {activeTab === 'history' && renderHistory()}
