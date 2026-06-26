@@ -188,7 +188,7 @@ Voice Over Prompt [Number]
 ---
 `;
 
-      const response = await fetch("https://api.1inference.com/v1/chat/completions", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -420,7 +420,7 @@ ATURAN MUTLAK:
 Deskripsi Produk/Benefit: ${threadDesc || 'Buat benefit yang sangat menggoda berdasarkan judul produk di atas.'}
 Link Afiliasi Saya: ${threadLink || '[ISI_LINK_NANTI]'}`;
 
-      const response = await fetch("https://api.1inference.com/v1/chat/completions", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -474,7 +474,7 @@ ATURAN MUTLAK:
       const userPrompt = `Topik / Ide Cerita: ${genThreadTopic}
 Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri'}`;
 
-      const response = await fetch("https://api.1inference.com/v1/chat/completions", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
