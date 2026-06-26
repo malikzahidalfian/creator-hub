@@ -12,10 +12,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/generate",
-      "destination": "https://api.1inference.com/v1/chat/completions"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

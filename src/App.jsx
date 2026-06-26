@@ -2,7 +2,14 @@ import { useState, useEffect } from 'react'
 
 function App() {
   const [activeTab, setActiveTab] = useState('storyboard')
-  const [apiKey, setApiKey] = useState(() => import.meta.env.VITE_API_KEY || localStorage.getItem('storyboard_api_key') || '')
+  const [apiProvider, setApiProvider] = useState(() => localStorage.getItem('storyboard_api_provider') || '1inference')
+  const [apiKeys, setApiKeys] = useState(() => {
+    const oldKey = localStorage.getItem('storyboard_api_key') || '';
+    const storedKeys = localStorage.getItem('storyboard_api_keys');
+    if (storedKeys) return JSON.parse(storedKeys);
+    return { '1inference': oldKey };
+  });
+  const apiKey = apiKeys[apiProvider] || '';
   const [copiedIndex, setCopiedIndex] = useState(null)
   const [history, setHistory] = useState([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
@@ -221,7 +228,8 @@ Voice Over Prompt [Number]
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": apiProvider
         },
         body: JSON.stringify({
           model: "gpt-4o",
@@ -476,7 +484,8 @@ Link Afiliasi Saya: ${threadLink || '[ISI_LINK_NANTI]'}`;
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": apiProvider
         },
         body: JSON.stringify({
           model: "gpt-4o",
@@ -530,7 +539,8 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": apiProvider
         },
         body: JSON.stringify({
           model: "gpt-4o",
@@ -706,27 +716,54 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     </div>
   );
 
+  const handleKeyChange = (e) => {
+    const newKeys = { ...apiKeys, [apiProvider]: e.target.value };
+    setApiKeys(newKeys);
+    localStorage.setItem('storyboard_api_keys', JSON.stringify(newKeys));
+  };
+
+  const handleProviderChange = (e) => {
+    setApiProvider(e.target.value);
+    localStorage.setItem('storyboard_api_provider', e.target.value);
+  };
+
   const renderSettings = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
-        <h2 className="desktop-title">API Settings</h2>
-        <p className="subtitle">Atur kunci API Anda di sini.</p>
-        <div className="glass-panel">
-        <div className="input-group" style={{maxWidth: '500px', margin: '0 auto', textAlign: 'left'}}>
-          <label>API Key (1inference / OpenAI)</label>
-          <input 
-            type="password"
-            placeholder="Paste your API Key here (sk-xxx...)"
-            value={apiKey}
-            onChange={(e) => {
-              setApiKey(e.target.value);
-              localStorage.setItem('storyboard_api_key', e.target.value);
-            }}
-            className="api-key-input"
-          />
-          <small className="help-text">API Key tersimpan aman di browser Anda.</small>
+        <h2 className="desktop-title">Pengaturan API</h2>
+        <p className="subtitle">Kelola koneksi API Anda di sini.</p>
+        
+        <div className="glass-panel" style={{maxWidth: '500px', margin: '0 auto', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+          <div className="input-group">
+            <label>Pilih Penyedia AI</label>
+            <select 
+              value={apiProvider}
+              onChange={handleProviderChange}
+              className="select-input"
+            >
+              <option value="1inference">1inference (Default)</option>
+              <option value="openrouter">OpenRouter (Versi Gratis)</option>
+              <option value="deepseek">DeepSeek API</option>
+              <option value="openai">OpenAI Resmi</option>
+            </select>
+          </div>
+
+          <div className="input-group">
+            <label>Kunci API ({apiProvider})</label>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={handleKeyChange}
+              placeholder={`Masukkan API Key ${apiProvider}...`}
+              className="api-key-input"
+            />
+            <small className="help-text" style={{marginTop: '0.5rem', display: 'block', color: 'var(--text-secondary)'}}>
+              {apiProvider === 'openrouter' 
+                ? "Info: Sistem otomatis menggunakan model AI gratisan (Gemma/Llama) jika Anda memilih OpenRouter!" 
+                : "Kunci API disimpan dengan aman di penyimpanan lokal peramban Anda."}
+            </small>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );
