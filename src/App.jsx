@@ -7,6 +7,7 @@ function App() {
   const [history, setHistory] = useState([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // --- STORYBOARD STATES ---
   const [productImage, setProductImage] = useState(null)
@@ -284,37 +285,36 @@ Voice Over Prompt [Number]
   );
 
   const renderSidebar = () => (
-    <aside className="sidebar">
-      <div className="sidebar-logo">
-        <LogoSVG />
-        <h2>Creator Hub AI</h2>
-      </div>
-      <nav className="sidebar-nav">
-        <button className={`nav-item ${activeTab === 'storyboard' ? 'active' : ''}`} onClick={() => setActiveTab('storyboard')}>
-          <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
-          <span className="nav-arrow">&gt;</span>
-        </button>
-        <button className={`nav-item ${activeTab === 'thread' ? 'active' : ''}`} onClick={() => setActiveTab('thread')}>
-          <div className="nav-item-content"><span className="icon">🛒</span> Ide Animasi</div>
-          <span className="nav-arrow">&gt;</span>
-        </button>
-        <button className={`nav-item ${activeTab === 'gen_thread' ? 'active' : ''}`} onClick={() => setActiveTab('gen_thread')}>
-          <div className="nav-item-content"><span className="icon">📰</span> Ulas Gambar</div>
-          <span className="nav-arrow">&gt;</span>
-        </button>
-        <button className={`nav-item ${activeTab === 'ulas_teks' ? 'active' : ''}`} onClick={() => setActiveTab('ulas_teks')}>
-          <div className="nav-item-content"><span className="icon">📝</span> Ulas Teks</div>
-          <span className="nav-arrow">&gt;</span>
-        </button>
-        <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-          <div className="nav-item-content"><span className="icon">🔍</span> Riwayat</div>
-          <span className="nav-arrow">&gt;</span>
-        </button>
-        <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-          <div className="nav-item-content"><span className="icon">🔑</span> API Settings</div>
-          <span className="nav-arrow">&gt;</span>
-        </button>
-      </nav>
+    <>
+      {isMobileMenuOpen && <div className="mobile-overlay fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>}
+      <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
+        <div className="sidebar-logo">
+          <LogoSVG />
+          <h2>Creator Hub AI</h2>
+          <button className="hamburger-btn close-btn" onClick={() => setIsMobileMenuOpen(false)}>✕</button>
+        </div>
+        <nav className="sidebar-nav">
+          <button className={`nav-item ${activeTab === 'storyboard' ? 'active' : ''}`} onClick={() => {setActiveTab('storyboard'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'thread' ? 'active' : ''}`} onClick={() => {setActiveTab('thread'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🛒</span> Threads Affiliate</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'gen_thread' ? 'active' : ''}`} onClick={() => {setActiveTab('gen_thread'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">📰</span> Threads Umum</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => {setActiveTab('history'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🔍</span> Riwayat</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => {setActiveTab('settings'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🔑</span> API Key</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+        </nav>
 
       <div className="sidebar-bottom">
         <div style={{background: 'var(--active-gradient)', padding: '1.2rem', borderRadius: '16px', color: 'white', marginBottom: '1rem', boxShadow: '0 10px 25px rgba(99,102,241,0.3)'}}>
@@ -734,6 +734,10 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     <div className="app-layout">
       {renderSidebar()}
       <main className="main-content">
+        <div className="panel-header-mobile">
+          <button className="hamburger-btn" onClick={() => setIsMobileMenuOpen(true)}>☰</button>
+          <h2>Creator Hub AI</h2>
+        </div>
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}

@@ -534,48 +534,52 @@ textarea:focus, .api-key-input:focus, .select-input:focus, input:focus {
     flex-direction: column;
   }
   
-  /* BOTTOM NAVIGATION BAR (PREMIUM) */
   .sidebar {
     position: fixed;
-    bottom: 15px;
-    left: 15px;
-    width: calc(100vw - 30px);
-    height: 70px;
-    flex-direction: row;
-    padding: 0 15px;
-    border-radius: 25px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* Lighter shadow for light theme */
-    background: rgba(255, 255, 255, 0.95); /* White glass background */
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(0, 0, 0, 0.05); /* Light border */
+    top: 0;
+    left: -100%;
+    width: 280px;
+    height: 100vh;
+    flex-direction: column;
+    padding: 2rem 1.5rem;
+    border-radius: 0;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
+    background: #ffffff;
     z-index: 1000;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: normal;
     justify-content: flex-start;
-    gap: 15px;
-    -webkit-overflow-scrolling: touch;
+    gap: 0;
   }
   
-  .sidebar::-webkit-scrollbar {
-    display: none;
+  .sidebar.open {
+    left: 0;
   }
   
-  .sidebar-logo, .sidebar-bottom {
-    display: none; 
+  .sidebar-logo {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 2rem;
+  }
+
+  .sidebar-bottom {
+    display: block;
   }
 
   .sidebar-nav {
-    flex-direction: row;
-    width: max-content;
-    gap: 5px;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.2rem;
     margin-top: 0;
-    align-items: center;
+    align-items: stretch;
   }
 
   .nav-item {
-    border-radius: 20px;
-    margin: 0 2px;
+    margin: 0;
+    border-radius: 12px;
     transition: all 0.3s ease;
     white-space: nowrap;
     overflow: hidden;
@@ -583,10 +587,47 @@ textarea:focus, .api-key-input:focus, .select-input:focus, input:focus {
   }
 
   .nav-item .icon {
+    font-size: 1.2rem;
+    margin-right: 0.8rem;
+    margin-bottom: 0;
+  }
+  
+  .panel-header-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  }
+
+  .panel-header-mobile h2 {
+    font-family: 'Outfit', sans-serif;
+    color: #1e293b;
     font-size: 1.3rem;
-    margin-right: 0;
-    margin-bottom: 2px;
-    transition: all 0.3s ease;
+    margin: 0;
+  }
+
+  .hamburger-btn {
+    display: block;
+    font-size: 1.5rem;
+    color: #1e293b;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .close-btn {
+    font-size: 1.2rem;
+    color: #64748b;
+  }
+
+  .mobile-overlay {
+    display: block;
   }
   
   .nav-item.active {
@@ -603,7 +644,6 @@ textarea:focus, .api-key-input:focus, .select-input:focus, input:focus {
 
   .main-content {
     padding: 1rem 0.5rem;
-    padding-bottom: 110px; /* Leave space for floating bottom bar */
     width: 100%;
     box-sizing: border-box;
     overflow-x: hidden;
