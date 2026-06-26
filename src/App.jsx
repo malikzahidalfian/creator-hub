@@ -333,6 +333,7 @@ Voice Over Prompt [Number]
         </div>
       </div>
     </aside>
+    </>
   );
 
   const renderStoryboardForm = () => (
