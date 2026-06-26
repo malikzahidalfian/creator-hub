@@ -45,7 +45,8 @@ function App() {
 
   // --- AI IMAGE GEN STATES ---
   const [imgPrompt, setImgPrompt] = useState('')
-  const [imgModel, setImgModel] = useState('flux-free') 
+  const [imgModel, setImgModel] = useState('turbo-free') 
+  const [customOpenRouterModel, setCustomOpenRouterModel] = useState('')
   const [isGeneratingImg, setIsGeneratingImg] = useState(false)
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null)
 
@@ -581,8 +582,9 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     setGeneratedImageUrl(null);
 
     try {
-      if (imgModel === 'flux-free') {
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgPrompt)}?model=flux&seed=${Math.floor(Math.random() * 10000)}&nologo=true`;
+      if (imgModel === 'flux-free' || imgModel === 'turbo-free') {
+        const modelParam = imgModel === 'flux-free' ? 'flux' : 'turbo';
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgPrompt)}?model=${modelParam}&seed=${Math.floor(Math.random() * 10000)}&nologo=true`;
         const img = new Image();
         img.src = url;
         img.onload = () => {
@@ -591,7 +593,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
         };
         img.onerror = () => {
           setIsGeneratingImg(false);
-          alert("Gagal memuat gambar dari server Flux.");
+          alert("Gagal memuat gambar dari server gratis.");
         }
         return; // wait for onload
       } else {
@@ -599,6 +601,17 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
           setIsGeneratingImg(false);
           return alert("API Key belum diatur!");
         }
+        
+        let finalModel = imgModel;
+        if (imgModel === 'openrouter-gpt') finalModel = 'openai/gpt-image-2';
+        if (imgModel === 'openrouter-custom') {
+          if (!customOpenRouterModel) {
+            setIsGeneratingImg(false);
+            return alert("Silakan ketikkan ID Model OpenRouter!");
+          }
+          finalModel = customOpenRouterModel;
+        }
+
         const response = await fetch("/api/generate-image", {
           method: "POST",
           headers: {
@@ -608,7 +621,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
           },
           body: JSON.stringify({
             prompt: imgPrompt,
-            model: imgModel === 'openrouter-gpt' ? 'openai/gpt-image-2' : imgModel
+            model: finalModel
           })
         });
 
@@ -617,6 +630,8 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
         
         if (data.data && data.data[0] && data.data[0].url) {
           setGeneratedImageUrl(data.data[0].url);
+        } else if (data.error) {
+          throw new Error(JSON.stringify(data.error));
         } else {
           throw new Error("Gagal mengambil gambar dari API. Mungkin batas gratis harian sudah habis atau model tidak mendukung.");
         }
@@ -624,7 +639,7 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     } catch (e) {
       alert("Error: " + e.message);
     } finally {
-      if (imgModel !== 'flux-free') setIsGeneratingImg(false);
+      if (imgModel !== 'flux-free' && imgModel !== 'turbo-free') setIsGeneratingImg(false);
     }
   };
 
@@ -638,19 +653,32 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
             <div className="input-group">
               <label>Pilih Mesin AI (Model)</label>
               <select value={imgModel} onChange={(e) => setImgModel(e.target.value)} className="select-input">
-                <option value="flux-free">Flux.1 AI (100% Gratis Tanpa API Key)</option>
-                <option value="openrouter-gpt">OpenRouter: OpenAI GPT Image 2 (Kunci API Diperlukan)</option>
+                <option value="turbo-free">SDXL Turbo (100% Gratis - Cepat & Artistik/Tidak Kaku)</option>
+                <option value="flux-free">Flux.1 AI (100% Gratis - Kualitas HD Realistis)</option>
+                <option value="openrouter-gpt">OpenRouter: OpenAI GPT Image 2 (Berbayar)</option>
+                <option value="openrouter-custom">OpenRouter: Ketik ID Model Sendiri (Bebas/Gratisan)</option>
               </select>
             </div>
+            
+            {imgModel === 'openrouter-custom' && (
+              <div className="input-group">
+                <label>ID Model OpenRouter</label>
+                <input type="text" className="api-key-input" placeholder="Contoh: stabilityai/stable-diffusion-3-medium:free" value={customOpenRouterModel} onChange={(e) => setCustomOpenRouterModel(e.target.value)} />
+                <small className="help-text" style={{marginTop: '0.5rem', display: 'block', color: 'var(--text-secondary)'}}>
+                  Temukan ID model gambar yang ada tag "Free" di web OpenRouter lalu paste di sini.
+                </small>
+              </div>
+            )}
+
             <div className="input-group">
               <label>Deskripsi Gambar (Prompt)</label>
               <textarea placeholder="Contoh: Kucing lucu memakai kacamata hitam di pantai..." value={imgPrompt} onChange={(e) => setImgPrompt(e.target.value)} rows="4" />
             </div>
             
-            <button className="btn-primary generate-btn" onClick={handleGenerateImage} disabled={!imgPrompt || isGeneratingImg || (imgModel !== 'flux-free' && !apiKey)}>
+            <button className="btn-primary generate-btn" onClick={handleGenerateImage} disabled={!imgPrompt || isGeneratingImg || (imgModel !== 'flux-free' && imgModel !== 'turbo-free' && !apiKey)}>
               {isGeneratingImg ? 'Melukis Gambar...' : '🎨 Generate Gambar'}
             </button>
-            {imgModel !== 'flux-free' && !apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
+            {imgModel !== 'flux-free' && imgModel !== 'turbo-free' && !apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
           </div>
           
           <div className="glass-panel" style={{padding: '1.5rem', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px'}}>
