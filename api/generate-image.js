@@ -21,6 +21,7 @@ export default async function handler(req, res) {
         ? 'https://api.openai.com/v1/images/generations' 
         : 'https://api.1inference.com/v1/images/generations';
       payload = {
+        model: model,
         prompt: prompt,
         n: 1,
         size: "1024x1024"

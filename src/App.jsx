@@ -602,6 +602,11 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
 
   const handleGenerateImage = async () => {
     if (!imgPrompt) return alert("Prompt tidak boleh kosong!");
+    if (!imgModel.includes('free') && !apiKey) {
+      alert("Pastikan API Key sudah diisi di menu API Settings untuk menggunakan model berbayar.");
+      return;
+    }
+
     setIsGeneratingImg(true);
     setGeneratedImageUrl(null);
 
@@ -619,6 +624,30 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
           setIsGeneratingImg(false);
           alert("Gagal memuat gambar dari server gratis.");
         }
+      } else {
+        // Gunakan 1inference API
+        const response = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+            "X-Provider": "1inference"
+          },
+          body: JSON.stringify({
+            model: imgModel,
+            prompt: imgPrompt
+          })
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        const data = await response.json();
+        
+        if (data && data.data && data.data.length > 0 && data.data[0].url) {
+          setGeneratedImageUrl(data.data[0].url);
+        } else {
+          throw new Error("Gagal mendapatkan URL gambar dari API.");
+        }
+        setIsGeneratingImg(false);
       }
     } catch (e) {
       alert("Error: " + e.message);
@@ -1045,8 +1074,15 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             <div className="input-group">
               <label>Pilih Mesin AI (Model)</label>
               <select value={imgModel} onChange={(e) => setImgModel(e.target.value)} className="select-input">
-                <option value="turbo-free">SDXL Turbo (100% Gratis - Cepat & Artistik/Tidak Kaku)</option>
-                <option value="flux-free">Flux.1 AI (100% Gratis - Kualitas HD Realistis)</option>
+                <optgroup label="Server Gratis (Tanpa API Key)">
+                  <option value="turbo-free">SDXL Turbo (100% Gratis - Cepat & Artistik)</option>
+                  <option value="flux-free">Flux.1 AI (100% Gratis - Kualitas HD Realistis)</option>
+                </optgroup>
+                <optgroup label="1inference (Butuh API Key)">
+                  <option value="dall-e-3">DALL-E 3 (Kualitas Tertinggi OpenAI)</option>
+                  <option value="venice-z-image-turbo">Venice Image Turbo (Cepat & Stabil)</option>
+                  <option value="seedream-4.5">Seedream 4.5</option>
+                </optgroup>
               </select>
             </div>
 
