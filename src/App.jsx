@@ -18,18 +18,12 @@ function App() {
   const [productImage, setProductImage] = useState(null)
   const [productFile, setProductFile] = useState(null)
   const [productDesc, setProductDesc] = useState('')
-  
-  const [numberOfAngles, setNumberOfAngles] = useState('3')
-  const [generatedAngles, setGeneratedAngles] = useState([])
-  const [selectedAngle, setSelectedAngle] = useState(null)
-  const [customAngle, setCustomAngle] = useState('')
-  const [isGeneratingAngles, setIsGeneratingAngles] = useState(false)
-  
   const [styleOption, setStyleOption] = useState('Kartun 3D lucu, warna cerah, karakter Indonesia')
   const [specialInstruction, setSpecialInstruction] = useState('')
-  const [totalScenes, setTotalScenes] = useState('4') 
+  const [promptCount, setPromptCount] = useState('3') 
+  const [scenePerPrompt, setScenePerPrompt] = useState('3') 
   const [isGeneratingStory, setIsGeneratingStory] = useState(false)
-  const [generatedStoryboard, setGeneratedStoryboard] = useState(null)
+  const [generatedPrompts, setGeneratedPrompts] = useState([])
 
   // --- THREAD AFFILIATE STATES ---
   const [threadTitle, setThreadTitle] = useState('')
@@ -209,110 +203,49 @@ function App() {
     setTimeout(() => setCopiedIndex(null), 2000);
   }
 
-  // --- GENERATE STORYBOARD ANGLES LOGIC ---
-  const handleGenerateAngles = async () => {
+  // --- GENERATE STORYBOARD LOGIC ---
+  const handleGenerateStory = async () => {
     if (!productFile || !productDesc || !apiKey) {
       alert("Pastikan Gambar, Deskripsi, dan API Key sudah diisi.");
       return;
     }
     
-    setIsGeneratingAngles(true)
-    setGeneratedAngles([])
-    setSelectedAngle(null)
-    setCustomAngle('')
-    setGeneratedStoryboard(null)
-    
-    try {
-      const base64Image = await fileToBase64(productFile);
-      const systemPrompt = `Anda adalah Creative Director di sebuah agency iklan terkemuka.
-Tugas Anda adalah memberikan ide ${numberOfAngles} angle cerita/konsep iklan video pendek untuk produk ini.
-Fokus pada emosi, hook yang menarik, dan daya tarik visual.
-
-OUTPUT WAJIB DALAM BENTUK JSON:
-{
-  "angles": [
-    {
-      "title": "Nama Angle Singkat",
-      "description": "Deskripsi ide cerita (1-2 kalimat padat)"
-    }
-  ]
-}
-OUTPUT HANYA JSON TANPA MARKDOWN \`\`\`json !`;
-
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-          "X-Provider": "1inference"
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: [
-                { type: "text", text: `Product Description: ${productDesc}` },
-                { type: "image_url", image_url: { url: base64Image } }
-              ]
-            }
-          ],
-          temperature: 0.7
-        })
-      });
-
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
-      const data = await response.json();
-      let generatedText = data.choices[0].message.content.trim();
-      if (generatedText.startsWith('```json')) generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
-      
-      const parsed = JSON.parse(generatedText);
-      if (parsed && parsed.angles) {
-        setGeneratedAngles(parsed.angles);
-      }
-    } catch (error) {
-      alert("Error generating angles: " + error.message);
-    } finally {
-      setIsGeneratingAngles(false)
-    }
-  }
-
-  // --- GENERATE STORYBOARD FINAL LOGIC ---
-  const handleGenerateStoryboard = async () => {
-    const finalAngle = customAngle ? customAngle : (selectedAngle ? selectedAngle.description : null);
-    if (!finalAngle) {
-      alert("Pilih atau tulis angle terlebih dahulu!");
-      return;
-    }
-
     setIsGeneratingStory(true)
-    setGeneratedStoryboard(null)
+    setGeneratedPrompts([])
     
     try {
       const base64Image = await fileToBase64(productFile);
       const finalStyle = styleOption === 'Custom...' ? customStyle : styleOption;
       
-      const systemPrompt = `You are an expert prompt engineer for an AI Video Generator (like Google Veo 3 or Kling). 
-Your task is to create a Director's Pack for a continuous commercial based on a product image, description, and the selected STORY ANGLE.
+      const systemPrompt = `You are an expert prompt engineer for an AI Video Generator (like Google Veo). 
+Your task is to create a SINGLE, CONTINUOUS storytelling animation commercial based on a product image and description.
 
-STORY ANGLE: "${finalAngle}"
-STYLE: "${finalStyle}"
-${specialInstruction ? `SPECIAL INSTRUCTION: "${specialInstruction}"` : ''}
+STRICT INSTRUCTIONS:
+1. You MUST generate exactly ${promptCount} Prompts. 
+2. CRITICAL: These ${promptCount} Prompts MUST form ONE connected, continuous story. Prompt 1 flows directly into Prompt 2, which flows into Prompt 3, and so on. Do not make them separate isolated ideas. They are consecutive 10-second segments of a single cohesive commercial.
+3. Each Prompt represents exactly 10 SECONDS of this continuous video sequence. 
+4. Each Prompt MUST be divided into exactly ${scenePerPrompt} Scenes.
+5. The requested style is: "${finalStyle}". Apply this style strictly throughout the whole sequence.
+${specialInstruction ? `6. SPECIAL INSTRUCTIONS FROM USER: "${specialInstruction}". YOU MUST FOLLOW THIS STRICTLY.` : ''}
+7. Provide the output in plain text. DO NOT USE MARKDOWN.
+8. Separate each main Prompt block with a separator line "---" so the system can parse it.
+9. End each prompt with a "Voice Over Prompt [Number]". The voice over script must also be continuous across the prompts.
 
-You MUST output exactly ${totalScenes} Scenes. Make sure it flows perfectly.
+FOLLOW THIS EXACT FORMAT TEMPLATE FOR EVERY PROMPT:
 
-OUTPUT WAJIB DALAM BENTUK JSON:
-{
-  "character_prompt": "1 highly detailed prompt specifically designed for an AI Image Generator to establish the BASE character/product reference. Describe lighting, camera angle, character's face/outfit, and product clearly.",
-  "video_prompts": [
-    {
-      "scene_no": 1,
-      "time": "0-10 Detik",
-      "prompt": "Detailed action prompt for the video AI describing motion, camera angle, and the scene. MUST reference the character/product from the base image consistently.",
-      "voice_over": "Voice over script for this scene"
-    }
-  ]
-}
-OUTPUT HANYA JSON TANPA MARKDOWN \`\`\`json !`;
+PROMPT [Number] (StartSec-EndSec DETIK)
+Judul: "[Title of the whole story]"
+Style: [The style requested]
+
+Scene 1 (StartSec-EndSec Detik)
+Prompt: [Detailed visual description of the scene]
+
+... (up to scene ${scenePerPrompt})
+
+Voice Over Prompt [Number]
+"[The spoken script that matches the 10 seconds of action]"
+---
+`;
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -336,11 +269,12 @@ OUTPUT HANYA JSON TANPA MARKDOWN \`\`\`json !`;
       });
 
       if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
       const data = await response.json();
-      let generatedText = data.choices[0].message.content.trim();
-      if (generatedText.startsWith('```json')) generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
+      let generatedText = data.choices[0].message.content.trim().replace(/\*\*/g, ""); 
       
-      setGeneratedStoryboard(JSON.parse(generatedText));
+      const blocks = generatedText.split('---').map(b => b.trim()).filter(b => b.length > 0);
+      setGeneratedPrompts(blocks);
     } catch (error) {
       alert("Error: " + error.message);
     } finally {
@@ -449,12 +383,10 @@ OUTPUT HANYA JSON TANPA MARKDOWN \`\`\`json !`;
     <div className="content-wrapper fade-in">
       <div className="content-panel">
         <h2 className="desktop-title">Google Veo Prompt Generator</h2>
-        <p className="subtitle">Ubah produk Anda menjadi rentetan prompt video konsisten untuk Google Veo.</p>
+        <p className="subtitle">Ubah produk Anda menjadi rentetan prompt video 10-detik berkelanjutan untuk Google Veo.</p>
 
         <div className="layout-grid">
           <div className="glass-panel input-section">
-            
-            <div style={{marginBottom: '1rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>LANGKAH 1: IDENTIFIKASI PRODUK</div>
             <div className="input-group">
               <label>Gambar Produk</label>
               <div className="image-upload-wrapper">
@@ -475,153 +407,74 @@ OUTPUT HANYA JSON TANPA MARKDOWN \`\`\`json !`;
             </div>
 
             <div className="input-group">
-              <label>Deskripsi Produk / Tujuan Iklan</label>
+              <label>Deskripsi Produk / Cerita</label>
               <textarea 
                 placeholder="Contoh: Sebuah jam tangan pintar yang dipakai oleh petani..."
                 value={productDesc}
                 onChange={(e) => setProductDesc(e.target.value)}
-                rows="3"
+                rows="4"
               />
             </div>
 
             <div className="input-group">
-              <label>Jumlah Pilihan Angle Cerita</label>
-              <select value={numberOfAngles} onChange={(e) => setNumberOfAngles(e.target.value)} className="select-input">
-                <option value="3">3 Angle Cerita</option>
-                <option value="5">5 Angle Cerita</option>
+              <label>Instruksi Khusus (Opsional)</label>
+              <textarea 
+                placeholder="Contoh: Buat karakter tanpa wajah, fokus pada detail produk..."
+                value={specialInstruction}
+                onChange={(e) => setSpecialInstruction(e.target.value)}
+                rows="2"
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Style Animasi</label>
+              <select value={styleOption} onChange={(e) => setStyleOption(e.target.value)} className="select-input">
+                {stylesList.map((style, idx) => <option key={idx} value={style}>{style}</option>)}
               </select>
             </div>
 
-            <button className="btn-primary generate-btn" onClick={handleGenerateAngles} disabled={!productFile || !productDesc || isGeneratingAngles || !apiKey}>
-              {isGeneratingAngles ? 'Mencari Ide Angle...' : '💡 Temukan Ide Angle Cerita'}
+            <div className="input-row">
+              <div className="input-group">
+                <label>Jumlah Prompt (10s/prompt)</label>
+                <input type="number" min="1" max="10" value={promptCount} onChange={(e) => setPromptCount(e.target.value)} className="select-input" />
+              </div>
+              <div className="input-group">
+                <label>Scene per Prompt</label>
+                <select value={scenePerPrompt} onChange={(e) => setScenePerPrompt(e.target.value)} className="select-input">
+                  <option value="2">2 Scene</option>
+                  <option value="3">3 Scene</option>
+                  <option value="4">4 Scene</option>
+                </select>
+              </div>
+            </div>
+
+            <button className="btn-primary generate-btn" onClick={handleGenerateStory} disabled={!productFile || !productDesc || isGeneratingStory || !apiKey}>
+              {isGeneratingStory ? 'Meracik Prompt...' : '✨ Generate Prompt'}
             </button>
             {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
-
-            
-            {(generatedAngles.length > 0 || customAngle) && (
-              <div style={{marginTop: '2rem'}} className="fade-in">
-                <hr style={{borderTop: '1px solid var(--glass-border)', marginBottom: '1.5rem'}} />
-                <div style={{marginBottom: '1rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>LANGKAH 2: PENGATURAN PRODUKSI</div>
-                
-                <div className="input-group">
-                  <label>Instruksi Khusus (Opsional)</label>
-                  <textarea 
-                    placeholder="Contoh: Pastikan ada adegan hujan di akhir..."
-                    value={specialInstruction}
-                    onChange={(e) => setSpecialInstruction(e.target.value)}
-                    rows="2"
-                  />
-                </div>
-
-                <div className="input-group">
-                  <label>Style Visual</label>
-                  <select value={styleOption} onChange={(e) => setStyleOption(e.target.value)} className="select-input">
-                    {stylesList.map((style, idx) => <option key={idx} value={style}>{style}</option>)}
-                  </select>
-                </div>
-
-                <div className="input-group">
-                  <label>Total Durasi (Jumlah Scene)</label>
-                  <select value={totalScenes} onChange={(e) => setTotalScenes(e.target.value)} className="select-input">
-                    <option value="4">4 Scene (Pendek - TikTok)</option>
-                    <option value="6">6 Scene (Sedang - Reels/Shorts)</option>
-                    <option value="8">8 Scene (Panjang - Iklan TV/Youtube)</option>
-                  </select>
-                </div>
-
-                <button className="btn-primary generate-btn" onClick={handleGenerateStoryboard} disabled={isGeneratingStory || !apiKey || (!selectedAngle && !customAngle)}>
-                  {isGeneratingStory ? 'Menulis Naskah & Prompt...' : '🎬 Buat Prompt Storyboard'}
-                </button>
-              </div>
-            )}
-
           </div>
 
           <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-            {generatedStoryboard ? (
-              <div className="prompts-container fade-in">
-                <h3 style={{marginBottom: '1rem', color: 'var(--text-primary)'}}>📦 Director's Pack</h3>
-                
-                <div className="prompt-card">
+          {generatedPrompts.length > 0 ? (
+            <div className="prompts-container">
+              {generatedPrompts.map((promptText, index) => (
+                <div key={index} className="prompt-card fade-in">
                   <div className="prompt-header">
-                    <h3>🖼️ Prompt Karakter Dasar (Character Consistency)</h3>
-                    <button className="btn-copy" onClick={() => handleCopy(generatedStoryboard.character_prompt, 'char')}>
-                      {copiedIndex === 'char' ? '✅ Copied!' : '📋 Copy'}
+                    <h3>Bagian {index + 1}</h3>
+                    <button className="btn-copy" onClick={() => handleCopy(promptText, index)}>
+                      {copiedIndex === index ? '✅ Copied!' : '📋 Copy'}
                     </button>
                   </div>
-                  <div style={{padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '0.5rem', marginBottom: '0.5rem'}}>
-                    <p style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem'}}>Generate prompt ini di AI Image Generator untuk mendapatkan gambar pertama, lalu gunakan gambar tersebut sebagai Referensi di Veo 3 / Kling.</p>
-                    <pre className="prompt-content" style={{padding: '0.8rem', background: '#ffffff', border: '1px solid #e2e8f0'}}>{generatedStoryboard.character_prompt}</pre>
-                  </div>
+                  <pre className="prompt-content">{promptText}</pre>
                 </div>
-
-                <div className="prompt-card" style={{marginTop: '1.5rem'}}>
-                  <div className="prompt-header">
-                    <h3>🎬 Prompt Video AI (Per Scene)</h3>
-                  </div>
-                  <div style={{padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                    {generatedStoryboard.video_prompts.map((vp, index) => (
-                      <div key={index} style={{background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid var(--glass-border)'}}>
-                        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem', fontWeight: 'bold'}}>
-                          <span style={{color: 'var(--text-primary)', fontSize: '1.1rem'}}>Scene {vp.scene_no}</span>
-                          <span style={{color: 'var(--primary-color)', fontSize: '0.9rem', background: '#e0e7ff', padding: '0.2rem 0.6rem', borderRadius: '12px'}}>{vp.time}</span>
-                        </div>
-                        <div style={{marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#64748b'}}>Action Prompt:</div>
-                        <pre className="prompt-content" style={{padding: '0.8rem', background: '#ffffff', border: '1px solid #e2e8f0', marginBottom: '0.8rem'}}>{vp.prompt}</pre>
-                        
-                        <div style={{marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#64748b'}}>Voice Over (Naskah Suara):</div>
-                        <pre className="prompt-content" style={{padding: '0.8rem', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#334155', fontStyle: 'italic'}}>{vp.voice_over}</pre>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
-                  <button className="btn-secondary" onClick={() => saveToSupabase([JSON.stringify(generatedStoryboard)], 'Storyboard', productDesc.substring(0,30))} disabled={isSaving} style={{flex: 1}}>
-                    {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
-                  </button>
-                </div>
+              ))}
+              <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(generatedPrompts, 'Storyboard', productDesc)} disabled={isSaving} style={{flex: 1}}>
+                  {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
+                </button>
               </div>
-            ) : generatedAngles.length > 0 ? (
-              <div className="prompts-container fade-in">
-                <div className="prompt-card">
-                  <h3 style={{marginBottom: '1rem'}}>💡 Pilih Angle Cerita</h3>
-                  <p style={{fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem'}}>Pilih salah satu ide di bawah ini, atau tulis ide Anda sendiri untuk dilanjutkan ke tahap pembuatan prompt.</p>
-                  
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '0.8rem'}}>
-                    {generatedAngles.map((angle, idx) => (
-                      <div 
-                        key={idx} 
-                        onClick={() => { setSelectedAngle(angle); setCustomAngle(''); }}
-                        style={{
-                          padding: '1rem', 
-                          borderRadius: '8px', 
-                          border: selectedAngle === angle ? '2px solid var(--primary-color)' : '1px solid var(--glass-border)',
-                          background: selectedAngle === angle ? '#f0fdf4' : '#ffffff',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <div style={{fontWeight: 'bold', marginBottom: '0.3rem', color: 'var(--text-primary)'}}>{angle.title}</div>
-                        <div style={{fontSize: '0.9rem', color: '#475569'}}>{angle.description}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{marginTop: '1.5rem'}}>
-                    <label style={{fontSize: '0.9rem', fontWeight: 'bold', color: '#64748b'}}>Atau tulis Angle Custom:</label>
-                    <textarea 
-                      placeholder="Tulis ide cerita Anda di sini..."
-                      value={customAngle}
-                      onChange={(e) => { setCustomAngle(e.target.value); setSelectedAngle(null); }}
-                      rows="3"
-                      style={{marginTop: '0.5rem', border: customAngle ? '2px solid var(--primary-color)' : '1px solid var(--glass-border)'}}
-                    />
-                  </div>
-
-                </div>
-              </div>
-            ) : <EmptyStateRight />}
+            </div>
+          ) : <EmptyStateRight />}
           </div>
         </div>
       </div>
