@@ -639,13 +639,16 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
           })
         });
 
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(`API Error ${response.status}: ${JSON.stringify(errData)}`);
+        }
         const data = await response.json();
         
         if (data && data.data && data.data.length > 0 && data.data[0].url) {
           setGeneratedImageUrl(data.data[0].url);
         } else {
-          throw new Error("Gagal mendapatkan URL gambar dari API.");
+          throw new Error("Gagal mendapatkan URL gambar dari API: " + JSON.stringify(data));
         }
         setIsGeneratingImg(false);
       }

@@ -24,7 +24,8 @@ export default async function handler(req, res) {
         model: model,
         prompt: prompt,
         n: 1,
-        size: "1024x1024"
+        size: "1024x1024",
+        response_format: "url"
       };
     }
 
