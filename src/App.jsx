@@ -24,6 +24,14 @@ function App() {
   const [scenePerPrompt, setScenePerPrompt] = useState('3') 
   const [isGeneratingStory, setIsGeneratingStory] = useState(false)
   const [generatedPrompts, setGeneratedPrompts] = useState([])
+  const [storyImages, setStoryImages] = useState({})
+  const [isGeneratingStoryImg, setIsGeneratingStoryImg] = useState(null)
+  
+  // New 2-step Workflow states
+  const [storySellingPoint, setStorySellingPoint] = useState('')
+  const [isGeneratingStorySelling, setIsGeneratingStorySelling] = useState(false)
+  const [storyVisual, setStoryVisual] = useState('3D Animasi / Pixar Style')
+  const [storyContentStyle, setStoryContentStyle] = useState('Storytelling')
 
   // --- THREAD AFFILIATE STATES ---
   const [threadTitle, setThreadTitle] = useState('')
@@ -74,6 +82,24 @@ function App() {
     "Stop Motion Clay animation, warm lighting, playful",
     "Custom..."
   ]
+
+  const storyVisualList = [
+    '3D Animasi / Pixar Style',
+    'Realistis / Cinematic',
+    'Clay Animation (Plastisin)',
+    'Anime Style',
+    'Minimalist / Flat Vector',
+    'Cyberpunk / Neon'
+  ];
+
+  const storyContentStyleList = [
+    'POV Daily Vlog',
+    'Storytelling',
+    'Unboxing / Review',
+    'Cinematic Commercial',
+    'Behind the Scenes',
+    'Comedy Skit'
+  ];
 
   const toneList = ['Sangat Emosional/Baper', 'Misterius/Penasaran', 'Inspiratif & Motivasi', 'Kontroversial (Bikin Debat)', 'Santai & Lucu'];
 
@@ -203,47 +229,160 @@ function App() {
     setTimeout(() => setCopiedIndex(null), 2000);
   }
 
-  // --- GENERATE STORYBOARD LOGIC ---
-  const handleGenerateStory = async () => {
+  const handleGenerateStoryImage = async (index, promptText) => {
+    setIsGeneratingStoryImg(index);
+    setStoryImages(prev => ({ ...prev, [index]: null }));
+
+    try {
+      const panelCount = scenePerPrompt;
+      const enhancedPrompt = `A single image split into ${panelCount} storyboard panels. Comic book style layout with ${panelCount} frames. ${promptText.substring(0, 800)}`;
+      
+      if (imgModel === 'flux-free' || imgModel === 'turbo-free') {
+        const modelParam = imgModel === 'flux-free' ? 'flux' : 'turbo';
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?model=${modelParam}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
+        const img = new Image();
+        img.src = url;
+        img.onload = () => {
+          setStoryImages(prev => ({ ...prev, [index]: url }));
+          setIsGeneratingStoryImg(null);
+        };
+        img.onerror = () => {
+          setIsGeneratingStoryImg(null);
+          alert("Gagal memuat gambar storyboard.");
+        }
+      } else {
+        if (!apiKey) {
+          alert("API Key belum diisi untuk model berbayar.");
+          setIsGeneratingStoryImg(null);
+          return;
+        }
+        const response = await fetch("/api/generate-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+            "X-Provider": "1inference"
+          },
+          body: JSON.stringify({
+            model: imgModel,
+            prompt: enhancedPrompt
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(`API Error ${response.status}: ${JSON.stringify(err)}`);
+        }
+        const data = await response.json();
+        if (data && data.data && data.data.length > 0 && data.data[0].url) {
+          setStoryImages(prev => ({ ...prev, [index]: data.data[0].url }));
+        } else {
+          throw new Error("Gagal mendapatkan URL gambar dari API.");
+        }
+        setIsGeneratingStoryImg(null);
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+      setIsGeneratingStoryImg(null);
+    }
+  };
+
+  // --- STEP 1: GENERATE SELLING POINTS ---
+  const handleGenerateStorySelling = async () => {
     if (!productFile || !productDesc || !apiKey) {
       alert("Pastikan Gambar, Deskripsi, dan API Key sudah diisi.");
       return;
     }
     
-    setIsGeneratingStory(true)
-    setGeneratedPrompts([])
+    setIsGeneratingStorySelling(true)
     
     try {
       const base64Image = await fileToBase64(productFile);
-      const finalStyle = styleOption === 'Custom...' ? customStyle : styleOption;
+      const systemPrompt = `Anda adalah seorang manajer produk berpengalaman, khususnya terampil dalam mengidentifikasi poin penjualan produk dan memecahkan masalah nyata yang dihadapi pelanggan agar sesuai dengan kebutuhan mereka. Sekarang, pengguna akan memberi Anda deskripsi produk beserta gambarnya. Kemudian, Anda meninjau dan menganalisis produk tersebut untuk mengungkap poin penjualan produk (Selling Points) dan mengidentifikasi masalah yang dipecahkan produk tersebut untuk pelanggan. Berikan hasil analisis poin-poin penjualan secara tajam dan terstruktur.`;
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": "1inference"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: [
+                { type: "text", text: `Product Description: ${productDesc}` },
+                { type: "image_url", image_url: { url: base64Image } }
+              ]
+            }
+          ],
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+      const data = await response.json();
+      let generatedText = data.choices[0].message.content.trim(); 
+      setStorySellingPoint(generatedText);
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsGeneratingStorySelling(false)
+    }
+  }
+
+  // --- STEP 2: GENERATE STORYBOARD ---
+  const handleGenerateStory = async () => {
+    if (!storySellingPoint || !apiKey) {
+      alert("Pastikan Poin Selling sudah ada dan API Key sudah diisi.");
+      return;
+    }
+    
+    setIsGeneratingStory(true)
+    setGeneratedPrompts([])
+    setStoryImages({})
+    
+    try {
+      const base64Image = await fileToBase64(productFile);
       
-      const systemPrompt = `You are an expert prompt engineer for an AI Video Generator (like Google Veo). 
-Your task is to create a SINGLE, CONTINUOUS storytelling animation commercial based on a product image and description.
+      const systemPrompt = `You are an expert prompt engineer for an AI Video Generator (like Google Veo 3). 
+Your task is to create a SINGLE, CONTINUOUS storytelling animation commercial based on a product image, description, and its key selling points.
 
 STRICT INSTRUCTIONS:
 1. You MUST generate exactly ${promptCount} Prompts. 
-2. CRITICAL: These ${promptCount} Prompts MUST form ONE connected, continuous story. Prompt 1 flows directly into Prompt 2, which flows into Prompt 3, and so on. Do not make them separate isolated ideas. They are consecutive 10-second segments of a single cohesive commercial.
+2. CRITICAL: These ${promptCount} Prompts MUST form ONE connected, continuous story. Prompt 1 flows directly into Prompt 2, which flows into Prompt 3.
 3. Each Prompt represents exactly 10 SECONDS of this continuous video sequence. 
 4. Each Prompt MUST be divided into exactly ${scenePerPrompt} Scenes.
-5. The requested style is: "${finalStyle}". Apply this style strictly throughout the whole sequence.
-${specialInstruction ? `6. SPECIAL INSTRUCTIONS FROM USER: "${specialInstruction}". YOU MUST FOLLOW THIS STRICTLY.` : ''}
-7. Provide the output in plain text. DO NOT USE MARKDOWN.
-8. Separate each main Prompt block with a separator line "---" so the system can parse it.
-9. End each prompt with a "Voice Over Prompt [Number]". The voice over script must also be continuous across the prompts.
+5. Visual Style requested: "${storyVisual}".
+6. Content Style/Tone requested: "${storyContentStyle}".
+${specialInstruction ? `7. SPECIAL INSTRUCTIONS FROM USER: "${specialInstruction}". YOU MUST FOLLOW THIS STRICTLY.` : ''}
+8. Provide the output in plain text. DO NOT USE MARKDOWN ASTERISKS (**).
+9. Separate each main Prompt block with a separator line "---" so the system can parse it.
+10. Ensure each scene strictly describes the visuals for image generation.
+11. End each prompt block by providing a "Prompt Siap Tempel ke Veo 3" (in English), "Narasi (Voice Over)", and "Efek Suara".
 
 FOLLOW THIS EXACT FORMAT TEMPLATE FOR EVERY PROMPT:
 
 PROMPT [Number] (StartSec-EndSec DETIK)
 Judul: "[Title of the whole story]"
-Style: [The style requested]
+Gaya Visual: ${storyVisual}
+Gaya Konten: ${storyContentStyle}
 
-Scene 1 (StartSec-EndSec Detik)
-Prompt: [Detailed visual description of the scene]
+Scene 1
+Prompt Visual: [Detailed visual description of the scene]
 
 ... (up to scene ${scenePerPrompt})
 
-Voice Over Prompt [Number]
+Prompt Siap Tempel ke Veo 3:
+[English prompt detailing the cohesive 10-second cinematic motion for Veo 3]
+
+Narasi (Voice Over):
 "[The spoken script that matches the 10 seconds of action]"
+
+Efek Suara (Sound Effects):
+[Sound effects description]
 ---
 `;
 
@@ -259,7 +398,7 @@ Voice Over Prompt [Number]
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: [
-                { type: "text", text: `Product Description: ${productDesc}` },
+                { type: "text", text: `Product Description: ${productDesc}\n\nKey Selling Points (Context):\n${storySellingPoint}` },
                 { type: "image_url", image_url: { url: base64Image } }
               ]
             }
@@ -387,71 +526,111 @@ Voice Over Prompt [Number]
 
         <div className="layout-grid">
           <div className="glass-panel input-section">
-            <div className="input-group">
-              <label>Gambar Produk</label>
-              <div className="image-upload-wrapper">
-              {productImage ? (
-                <div className="image-preview">
-                  <img src={productImage} alt="Preview" />
-                  <button className="btn-secondary" onClick={() => { setProductImage(null); setProductFile(null); }}>Ganti Gambar</button>
+            {/* --- STEP 1: ANALISIS PRODUK --- */}
+            <div style={{marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)'}}>
+              <h3 style={{marginBottom: '1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                <span style={{background: 'var(--primary-color)', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'}}>1</span>
+                Analisis Produk (Selling Points)
+              </h3>
+              
+              <div className="input-group">
+                <label>Gambar Produk</label>
+                <div className="image-upload-wrapper">
+                {productImage ? (
+                  <div className="image-preview">
+                    <img src={productImage} alt="Preview" />
+                    <button className="btn-secondary" onClick={() => { setProductImage(null); setProductFile(null); }}>Ganti Gambar</button>
+                  </div>
+                ) : (
+                  <label className="upload-placeholder">
+                    <input type="file" accept="image/*" onChange={handleImageUpload} hidden />
+                    <span className="upload-icon">⬆️</span>
+                    <span>Klik untuk upload atau paste<br/>(CTRL+V)</span>
+                    <small>PNG, JPG, WEBP hingga 10MB</small>
+                  </label>
+                )}
                 </div>
-              ) : (
-                <label className="upload-placeholder">
-                  <input type="file" accept="image/*" onChange={handleImageUpload} hidden />
-                  <span className="upload-icon">⬆️</span>
-                  <span>Klik untuk upload atau paste<br/>(CTRL+V)</span>
-                  <small>PNG, JPG, WEBP hingga 10MB</small>
-                </label>
+              </div>
+
+              <div className="input-group">
+                <label>Deskripsi Produk Singkat</label>
+                <textarea 
+                  placeholder="Contoh: Jam tangan pintar tahan banting untuk pekerja lapangan..."
+                  value={productDesc}
+                  onChange={(e) => setProductDesc(e.target.value)}
+                  rows="3"
+                />
+              </div>
+
+              <button className="btn-primary generate-btn" onClick={handleGenerateStorySelling} disabled={!productFile || !productDesc || isGeneratingStorySelling || !apiKey} style={{marginBottom: '1rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
+                {isGeneratingStorySelling ? 'Menganalisis...' : '🔍 Temukan Poin Selling'}
+              </button>
+              
+              {storySellingPoint && (
+                <div className="input-group fade-in">
+                  <label>Hasil Analisis (Bisa Diedit)</label>
+                  <textarea 
+                    value={storySellingPoint}
+                    onChange={(e) => setStorySellingPoint(e.target.value)}
+                    rows="6"
+                    style={{border: '1px solid #10b981', background: 'rgba(16, 185, 129, 0.05)'}}
+                  />
+                </div>
               )}
+            </div>
+
+            {/* --- STEP 2: STORYBOARD OPTIONS --- */}
+            <div style={{opacity: storySellingPoint ? 1 : 0.5, pointerEvents: storySellingPoint ? 'auto' : 'none', transition: 'opacity 0.3s'}}>
+              <h3 style={{marginBottom: '1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                <span style={{background: 'var(--primary-color)', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'}}>2</span>
+                Pengaturan Video & Generate
+              </h3>
+
+              <div className="input-row">
+                <div className="input-group">
+                  <label>Gaya Visual</label>
+                  <select value={storyVisual} onChange={(e) => setStoryVisual(e.target.value)} className="select-input">
+                    {storyVisualList.map((style, idx) => <option key={idx} value={style}>{style}</option>)}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Gaya Konten</label>
+                  <select value={storyContentStyle} onChange={(e) => setStoryContentStyle(e.target.value)} className="select-input">
+                    {storyContentStyleList.map((style, idx) => <option key={idx} value={style}>{style}</option>)}
+                  </select>
+                </div>
               </div>
-            </div>
 
-            <div className="input-group">
-              <label>Deskripsi Produk / Cerita</label>
-              <textarea 
-                placeholder="Contoh: Sebuah jam tangan pintar yang dipakai oleh petani..."
-                value={productDesc}
-                onChange={(e) => setProductDesc(e.target.value)}
-                rows="4"
-              />
-            </div>
-
-            <div className="input-group">
-              <label>Instruksi Khusus (Opsional)</label>
-              <textarea 
-                placeholder="Contoh: Buat karakter tanpa wajah, fokus pada detail produk..."
-                value={specialInstruction}
-                onChange={(e) => setSpecialInstruction(e.target.value)}
-                rows="2"
-              />
-            </div>
-
-            <div className="input-group">
-              <label>Style Animasi</label>
-              <select value={styleOption} onChange={(e) => setStyleOption(e.target.value)} className="select-input">
-                {stylesList.map((style, idx) => <option key={idx} value={style}>{style}</option>)}
-              </select>
-            </div>
-
-            <div className="input-row">
               <div className="input-group">
-                <label>Jumlah Prompt (10s/prompt)</label>
-                <input type="number" min="1" max="10" value={promptCount} onChange={(e) => setPromptCount(e.target.value)} className="select-input" />
+                <label>Instruksi Khusus (Opsional)</label>
+                <textarea 
+                  placeholder="Contoh: Fokus pada keawetan bahan, buat nada bicaranya santai..."
+                  value={specialInstruction}
+                  onChange={(e) => setSpecialInstruction(e.target.value)}
+                  rows="2"
+                />
               </div>
-              <div className="input-group">
-                <label>Scene per Prompt</label>
-                <select value={scenePerPrompt} onChange={(e) => setScenePerPrompt(e.target.value)} className="select-input">
-                  <option value="2">2 Scene</option>
-                  <option value="3">3 Scene</option>
-                  <option value="4">4 Scene</option>
-                </select>
-              </div>
-            </div>
 
-            <button className="btn-primary generate-btn" onClick={handleGenerateStory} disabled={!productFile || !productDesc || isGeneratingStory || !apiKey}>
-              {isGeneratingStory ? 'Meracik Prompt...' : '✨ Generate Prompt'}
-            </button>
-            {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
+              <div className="input-row">
+                <div className="input-group">
+                  <label>Jumlah Prompt (10s/prompt)</label>
+                  <input type="number" min="1" max="10" value={promptCount} onChange={(e) => setPromptCount(e.target.value)} className="select-input" />
+                </div>
+                <div className="input-group">
+                  <label>Scene per Prompt</label>
+                  <select value={scenePerPrompt} onChange={(e) => setScenePerPrompt(e.target.value)} className="select-input">
+                    <option value="2">2 Scene</option>
+                    <option value="3">3 Scene</option>
+                    <option value="4">4 Scene</option>
+                  </select>
+                </div>
+              </div>
+
+              <button className="btn-primary generate-btn" onClick={handleGenerateStory} disabled={!storySellingPoint || isGeneratingStory || !apiKey}>
+                {isGeneratingStory ? 'Meracik Naskah Storyboard...' : '🎬 Generate Storyboard'}
+              </button>
+              {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
+            </div>
           </div>
 
           <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
@@ -465,6 +644,22 @@ Voice Over Prompt [Number]
                       {copiedIndex === index ? '✅ Copied!' : '📋 Copy'}
                     </button>
                   </div>
+                  
+                  {storyImages[index] ? (
+                    <div style={{marginBottom: '1rem', textAlign: 'center'}}>
+                      <img src={storyImages[index]} alt={`Storyboard ${index + 1}`} style={{width: '100%', borderRadius: '8px', border: '1px solid var(--glass-border)'}} />
+                      <button className="btn-secondary" onClick={() => handleGenerateStoryImage(index, promptText)} disabled={isGeneratingStoryImg === index} style={{marginTop: '0.5rem', fontSize: '0.8rem'}}>
+                        {isGeneratingStoryImg === index ? 'Melukis Ulang...' : '🔄 Generate Ulang Gambar (Model: ' + imgModel + ')'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{marginBottom: '1rem'}}>
+                      <button className="btn-secondary" onClick={() => handleGenerateStoryImage(index, promptText)} disabled={isGeneratingStoryImg === index} style={{width: '100%', fontWeight: 'bold'}}>
+                        {isGeneratingStoryImg === index ? '🎨 Sedang Melukis Storyboard...' : '🎨 Generate Gambar Visual (Model: ' + imgModel + ')'}
+                      </button>
+                    </div>
+                  )}
+
                   <pre className="prompt-content">{promptText}</pre>
                 </div>
               ))}
