@@ -32,6 +32,7 @@ function App() {
   const [isGeneratingStorySelling, setIsGeneratingStorySelling] = useState(false)
   const [storyVisual, setStoryVisual] = useState('3D Animasi / Pixar Style')
   const [storyContentStyle, setStoryContentStyle] = useState('Storytelling')
+  const [storyImgModel, setStoryImgModel] = useState('venice-z-image-turbo')
 
   // --- THREAD AFFILIATE STATES ---
   const [threadTitle, setThreadTitle] = useState('')
@@ -237,8 +238,8 @@ function App() {
       const panelCount = scenePerPrompt;
       const enhancedPrompt = `A single image split into ${panelCount} storyboard panels. Comic book style layout with ${panelCount} frames. ${promptText.substring(0, 800)}`;
       
-      if (imgModel === 'flux-free' || imgModel === 'turbo-free') {
-        const modelParam = imgModel === 'flux-free' ? 'flux' : 'turbo';
+      if (storyImgModel === 'flux-free' || storyImgModel === 'turbo-free') {
+        const modelParam = storyImgModel === 'flux-free' ? 'flux' : 'turbo';
         const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?model=${modelParam}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
         const img = new Image();
         img.src = url;
@@ -264,7 +265,7 @@ function App() {
             "X-Provider": "1inference"
           },
           body: JSON.stringify({
-            model: imgModel,
+            model: storyImgModel,
             prompt: enhancedPrompt
           })
         });
@@ -626,6 +627,15 @@ Efek Suara (Sound Effects):
                 </div>
               </div>
 
+              <div className="input-group">
+                <label>Mesin AI Gambar (Storyboard)</label>
+                <select value={storyImgModel} onChange={(e) => setStoryImgModel(e.target.value)} className="select-input" style={{borderColor: 'var(--primary-color)'}}>
+                  <option value="venice-z-image-turbo">Venice Image Turbo (Cepat & Stabil)</option>
+                  <option value="dall-e-3">DALL-E 3 (Kualitas Tertinggi OpenAI)</option>
+                  <option value="seedream-4.5">Seedream 4.5</option>
+                </select>
+              </div>
+
               <button className="btn-primary generate-btn" onClick={handleGenerateStory} disabled={!storySellingPoint || isGeneratingStory || !apiKey}>
                 {isGeneratingStory ? 'Meracik Naskah Storyboard...' : '🎬 Generate Storyboard'}
               </button>
@@ -649,13 +659,13 @@ Efek Suara (Sound Effects):
                     <div style={{marginBottom: '1rem', textAlign: 'center'}}>
                       <img src={storyImages[index]} alt={`Storyboard ${index + 1}`} style={{width: '100%', borderRadius: '8px', border: '1px solid var(--glass-border)'}} />
                       <button className="btn-secondary" onClick={() => handleGenerateStoryImage(index, promptText)} disabled={isGeneratingStoryImg === index} style={{marginTop: '0.5rem', fontSize: '0.8rem'}}>
-                        {isGeneratingStoryImg === index ? 'Melukis Ulang...' : '🔄 Generate Ulang Gambar (Model: ' + imgModel + ')'}
+                        {isGeneratingStoryImg === index ? 'Melukis Ulang...' : '🔄 Generate Ulang Gambar (Model: ' + storyImgModel + ')'}
                       </button>
                     </div>
                   ) : (
                     <div style={{marginBottom: '1rem'}}>
                       <button className="btn-secondary" onClick={() => handleGenerateStoryImage(index, promptText)} disabled={isGeneratingStoryImg === index} style={{width: '100%', fontWeight: 'bold'}}>
-                        {isGeneratingStoryImg === index ? '🎨 Sedang Melukis Storyboard...' : '🎨 Generate Gambar Visual (Model: ' + imgModel + ')'}
+                        {isGeneratingStoryImg === index ? '🎨 Sedang Melukis Storyboard...' : '🎨 Generate Gambar Visual (Model: ' + storyImgModel + ')'}
                       </button>
                     </div>
                   )}
