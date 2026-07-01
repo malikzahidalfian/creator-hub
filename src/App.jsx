@@ -992,8 +992,13 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     return fileData;
   };
 
-  const executeGeminiGeneration = async (keyInfo, fileData, retries = 0) => {
-    setUploadProgress('Menulis skrip variasi...');
+  const executeGeminiGeneration = async (keyInfo, fileData, retries = 0, modelIndex = 0) => {
+    const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-8b', 'gemini-pro'];
+    if (modelIndex >= modelsToTry.length) {
+      throw new Error(`Semua model AI gagal diakses. Pastikan API Key Anda memiliki akses.`);
+    }
+    const currentModel = modelsToTry[modelIndex];
+    setUploadProgress(`Menulis skrip menggunakan ${currentModel}...`);
     
     const prompt = `Kamu adalah seorang pakar Digital Marketing dan Konten Kreator Video pendek (TikTok/Reels/Shopee Video). Tugasmu adalah membantu saya membuat 5 variasi skrip video pendek berdasarkan file (gambar/video) dan nama produk yang saya berikan.
 Nama Produk: ${videoProductName}
@@ -1022,7 +1027,7 @@ Aturan Penulisan Skrip:
       generationConfig: { temperature: 0.8 }
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${keyInfo.key}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${keyInfo.key}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody)
@@ -1034,8 +1039,13 @@ Aturan Penulisan Skrip:
       if (nextKey) {
         setActiveGeminiKeyIndex(nextKey.index);
         setUploadProgress(`Key ${keyInfo.index + 1} limit! Otomatis mencoba Key ${nextKey.index + 1}...`);
-        return await executeGeminiGeneration(nextKey, fileData, retries + 1);
+        return await executeGeminiGeneration(nextKey, fileData, retries + 1, modelIndex);
       }
+    }
+
+    if (response.status === 404) {
+      // Model not found, fallback to next model
+      return await executeGeminiGeneration(keyInfo, fileData, retries, modelIndex + 1);
     }
 
     if (!response.ok) {
