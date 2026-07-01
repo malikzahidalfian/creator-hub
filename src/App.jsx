@@ -847,44 +847,6 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     }
   };
 
-  const handleGenerateEdu = async () => {
-    if (!eduTopic || !eduCharacter || !apiKey) {
-      alert("Pastikan Topik, Ide Karakter, dan API Key sudah diisi.");
-      return;
-    }
-    
-    setIsGeneratingEdu(true)
-    setGeneratedEdu(null)
-    setEduCharImg(null)
-    
-    try {
-      const numScenes = eduDuration.includes('Pendek') ? 3 : 6;
-      const systemPrompt = `Anda adalah Sutradara Animasi Edukasi dan Prompt Engineer tingkat ahli.
-Tugas Anda adalah merancang paket penyutradaraan (Director's Pack) untuk video animasi edukasi.
-Anda akan diberikan: Topik, Target Penonton, Ide Karakter Utama, Gaya Visual, dan Jumlah Scene.
-
-HASILKAN OUTPUT DALAM BENTUK JSON DENGAN STRUKTUR BERIKUT:
-{
-  "char_prompt": "Prompt bahasa Inggris yang sangat detail untuk image generator (menjelaskan karakter utama, gaya visual, latar belakang putih bersih, seluruh tubuh terlihat, rasio 1:1).",
-  "voice_over": "Naskah narator/voice over dalam bahasa Indonesia yang memikat, mendidik, dan disesuaikan dengan bahasa Target Penonton.",
-  "video_prompts": [
-    {
-      "scene_no": 1,
-      "time": "0-5 detik",
-      "prompt": "Prompt bahasa Inggris sangat deskriptif untuk Video AI (Veo 3 / Kling), menggunakan gaya visual yang diminta, menjelaskan aksi karakter di scene ini, cinematic lighting, dll."
-    }
-  ]
-}
-
-PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array video_prompts berisi persis sejumlah scene yang diminta.`;
-
-      const userPrompt = `Topik Pembelajaran: ${eduTopic}\nTarget Penonton: ${eduAudience}\nIde Karakter Utama: ${eduCharacter}\nGaya Visual: ${eduStyle}\nJumlah Scene: ${numScenes} scene`;
-
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
   const handleGenerateSelling = async () => {
     if (!sellingProductInfo || !apiKey) {
       alert("Pastikan Deskripsi/Tautan Produk dan API Key sudah diisi.");
