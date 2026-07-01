@@ -82,6 +82,14 @@ function App() {
   const [generatedVideoScripts, setGeneratedVideoScripts] = useState(null)
   const [uploadProgress, setUploadProgress] = useState('')
 
+  // --- DATA PRODUK STATES ---
+  const [productsData, setProductsData] = useState([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
+  const [prodTitle, setProdTitle] = useState('');
+  const [prodDesc, setProdDesc] = useState('');
+  const [prodLink, setProdLink] = useState('');
+  const [prodImgUrl, setProdImgUrl] = useState('');
+
   // --- SELLING POINT STATES ---
   const [sellingProductInfo, setSellingProductInfo] = useState('')
   const [isGeneratingSelling, setIsGeneratingSelling] = useState(false)
@@ -140,15 +148,39 @@ function App() {
     }
   };
 
+  const fetchProducts = async () => {
+    setIsProductsLoading(true);
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?type=eq.Data%20Produk&select=id,product_desc,result,created_at&order=created_at.desc`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // data contains id, product_desc (title), result (JSON string of {desc, link, imgUrl})
+        setProductsData(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsProductsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'history') {
       fetchHistory();
+    }
+    if (activeTab === 'product_data' || activeTab === 'thread') {
+      fetchProducts();
     }
   }, [activeTab]);
 
   const saveToSupabase = async (blocks, type, desc) => {
     setIsSaving(true);
-    const resultText = blocks.join('\n\n---\n\n');
+    const resultText = Array.isArray(blocks) ? blocks.join('\n\n---\n\n') : blocks;
     try {
       const response = await fetch(`${supabaseUrl}/rest/v1/prompts`, {
         method: 'POST',
@@ -165,7 +197,8 @@ function App() {
         })
       });
       if (response.ok) {
-        alert("Berhasil disimpan permanen ke Database!");
+        if (type !== 'Data Produk') alert("Berhasil disimpan permanen ke Database!");
+        if (type === 'Data Produk') fetchProducts(); // Refresh data
       } else {
         const err = await response.json();
         alert("Gagal: " + (err.message || JSON.stringify(err)));
@@ -174,6 +207,35 @@ function App() {
       alert("Error jaringan: " + e.message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveProduct = () => {
+    if (!prodTitle || !prodDesc || !prodLink) return alert("Judul, Deskripsi, dan Link wajib diisi!");
+    const productPayload = JSON.stringify({
+      desc: prodDesc,
+      link: prodLink,
+      imgUrl: prodImgUrl
+    });
+    saveToSupabase(productPayload, 'Data Produk', prodTitle);
+    setProdTitle(''); setProdDesc(''); setProdLink(''); setProdImgUrl('');
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if(!window.confirm("Hapus data produk ini?")) return;
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      if (response.ok) {
+        fetchProducts();
+      }
+    } catch(e) {
+      alert("Gagal hapus: " + e.message);
     }
   };
 
@@ -439,6 +501,10 @@ Efek Suara (Sound Effects):
           </button>
           <button className={`nav-item ${activeTab === 'video_script' ? 'active' : ''}`} onClick={() => {setActiveTab('video_script'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🎥</span> Script Video AI</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'product_data' ? 'active' : ''}`} onClick={() => {setActiveTab('product_data'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">📦</span> Data Produk</div>
             <span className="nav-arrow">&gt;</span>
           </button>
           <button className={`nav-item ${activeTab === 'thread' ? 'active' : ''}`} onClick={() => {setActiveTab('thread'); setIsMobileMenuOpen(false);}}>
@@ -904,7 +970,8 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
     });
     
     if (!uploadResponse.ok) {
-      throw new Error(`Gagal mengunggah: ${uploadResponse.status}`);
+      const errText = await uploadResponse.text();
+      throw new Error(`Gagal mengunggah: ${uploadResponse.status} - ${errText}`);
     }
     
     const uploadResult = await uploadResponse.json();
@@ -955,7 +1022,7 @@ Aturan Penulisan Skrip:
       generationConfig: { temperature: 0.8 }
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${keyInfo.key}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${keyInfo.key}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody)
@@ -972,7 +1039,9 @@ Aturan Penulisan Skrip:
     }
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
+      let errText = "";
+      try { errText = await response.text(); } catch(e){}
+      throw new Error(`API Error: ${response.status} - ${errText}`);
     }
 
     const data = await response.json();
@@ -1386,6 +1455,30 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         <div className="layout-grid">
           <div className="glass-panel input-section">
             <div className="input-group">
+              <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>📦 Pilih Produk Tersimpan (Auto-fill)</label>
+              <select onChange={(e) => {
+                const selectedId = e.target.value;
+                if (!selectedId) {
+                  setThreadTitle(''); setThreadDesc(''); setThreadLink('');
+                  return;
+                }
+                const prod = productsData.find(p => p.id == selectedId);
+                if (prod) {
+                  let parsed = {};
+                  try { parsed = JSON.parse(prod.result); } catch(err){}
+                  setThreadTitle(prod.product_desc);
+                  setThreadDesc(parsed.desc || '');
+                  setThreadLink(parsed.link || '');
+                }
+              }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
+                <option value="">-- Ketik manual atau Pilih produk di sini --</option>
+                {productsData.map(p => (
+                  <option key={p.id} value={p.id}>{p.product_desc}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="input-group">
               <label>Judul Produk</label>
               <input type="text" className="api-key-input" placeholder="Contoh: Sepatu Lari Lokal Kualitas Dunia" value={threadTitle} onChange={(e) => setThreadTitle(e.target.value)} />
             </div>
@@ -1562,6 +1655,74 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
       </div>
     </div>
   );
+  const renderProductDataForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">📦 Bank Data Produk</h2>
+        <p className="subtitle">Simpan data produk Anda di sini agar bisa digunakan otomatis saat membuat utas.</p>
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>Tambah Produk Baru</h3>
+            <div className="input-group">
+              <label>Judul Produk</label>
+              <input type="text" className="api-key-input" placeholder="Contoh: Sepatu Sneakers Pria..." value={prodTitle} onChange={(e) => setProdTitle(e.target.value)} />
+            </div>
+            <div className="input-group">
+              <label>Deskripsi / Benefit Produk</label>
+              <textarea placeholder="Tuliskan spesifikasi atau keunggulan produk..." value={prodDesc} onChange={(e) => setProdDesc(e.target.value)} rows="3" />
+            </div>
+            <div className="input-group">
+              <label>Link Affiliate (Shopee/TikTok)</label>
+              <input type="text" className="api-key-input" placeholder="https://shope.ee/..." value={prodLink} onChange={(e) => setProdLink(e.target.value)} />
+            </div>
+            <div className="input-group">
+              <label>Link Gambar Produk (URL)</label>
+              <input type="text" className="api-key-input" placeholder="Contoh: https://cf.shopee.co.id/file/..." value={prodImgUrl} onChange={(e) => setProdImgUrl(e.target.value)} />
+              <small style={{display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)'}}>
+                Klik kanan gambar di Shopee \u2192 Copy image address / Salin tautan gambar, lalu paste di sini.
+              </small>
+            </div>
+            <button className="btn-primary generate-btn" onClick={handleSaveProduct} disabled={!prodTitle || !prodDesc || !prodLink || isSaving}>
+              {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
+            </button>
+          </div>
+          
+          <div className="glass-panel" style={{padding: '1rem', background: 'transparent', border: 'none', boxShadow: 'none'}}>
+            <h3 style={{marginBottom: '1rem'}}>Galeri Produk ({productsData.length})</h3>
+            {isProductsLoading ? (
+              <div style={{textAlign: 'center', padding: '2rem'}}><span className="loading-spinner"></span> Memuat...</div>
+            ) : productsData.length === 0 ? (
+              <EmptyStateRight />
+            ) : (
+              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                {productsData.map(item => {
+                  let parsed = {};
+                  try { parsed = JSON.parse(item.result); } catch(e) {}
+                  return (
+                    <div key={item.id} className="prompt-card fade-in" style={{display: 'flex', gap: '1rem', padding: '1rem'}}>
+                      {parsed.imgUrl && (
+                        <div style={{width: '80px', height: '80px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)'}}>
+                          <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                        </div>
+                      )}
+                      <div style={{flex: 1, overflow: 'hidden'}}>
+                        <h4 style={{margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--primary-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{item.product_desc}</h4>
+                        <p style={{fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                        <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none'}}>🔗 Link Produk</a>
+                      </div>
+                      <button onClick={() => handleDeleteProduct(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', alignSelf: 'flex-start'}}>
+                        Hapus
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderHistory = () => (
     <div className="content-wrapper fade-in">
@@ -1710,6 +1871,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'video_script' && renderVideoScriptForm()}
+        {activeTab === 'product_data' && renderProductDataForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
         {activeTab === 'selling_point' && renderSellingForm()}
