@@ -24,15 +24,12 @@ function App() {
   const [scenePerPrompt, setScenePerPrompt] = useState('3') 
   const [isGeneratingStory, setIsGeneratingStory] = useState(false)
   const [generatedPrompts, setGeneratedPrompts] = useState([])
-  const [storyImages, setStoryImages] = useState({})
-  const [isGeneratingStoryImg, setIsGeneratingStoryImg] = useState(null)
   
   // New 2-step Workflow states
   const [storySellingPoint, setStorySellingPoint] = useState('')
   const [isGeneratingStorySelling, setIsGeneratingStorySelling] = useState(false)
   const [storyVisual, setStoryVisual] = useState('3D Animasi / Pixar Style')
   const [storyContentStyle, setStoryContentStyle] = useState('Storytelling')
-  const [storyImgModel, setStoryImgModel] = useState('venice-z-image-turbo')
 
   // --- THREAD AFFILIATE STATES ---
   const [threadTitle, setThreadTitle] = useState('')
@@ -230,64 +227,6 @@ function App() {
     setTimeout(() => setCopiedIndex(null), 2000);
   }
 
-  const handleGenerateStoryImage = async (index, promptText) => {
-    setIsGeneratingStoryImg(index);
-    setStoryImages(prev => ({ ...prev, [index]: null }));
-
-    try {
-      const panelCount = scenePerPrompt;
-      const enhancedPrompt = `A single image split into ${panelCount} storyboard panels. Comic book style layout with ${panelCount} frames. ${promptText.substring(0, 800)}`;
-      
-      if (storyImgModel === 'flux-free' || storyImgModel === 'turbo-free') {
-        const modelParam = storyImgModel === 'flux-free' ? 'flux' : 'turbo';
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?model=${modelParam}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
-        const img = new Image();
-        img.src = url;
-        img.onload = () => {
-          setStoryImages(prev => ({ ...prev, [index]: url }));
-          setIsGeneratingStoryImg(null);
-        };
-        img.onerror = () => {
-          setIsGeneratingStoryImg(null);
-          alert("Gagal memuat gambar storyboard.");
-        }
-      } else {
-        if (!apiKey) {
-          alert("API Key belum diisi untuk model berbayar.");
-          setIsGeneratingStoryImg(null);
-          return;
-        }
-        const response = await fetch("/api/generate-image", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`,
-            "X-Provider": "1inference"
-          },
-          body: JSON.stringify({
-            model: storyImgModel,
-            prompt: enhancedPrompt
-          })
-        });
-
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(`API Error ${response.status}: ${JSON.stringify(err)}`);
-        }
-        const data = await response.json();
-        if (data && data.data && data.data.length > 0 && data.data[0].url) {
-          setStoryImages(prev => ({ ...prev, [index]: data.data[0].url }));
-        } else {
-          throw new Error("Gagal mendapatkan URL gambar dari API.");
-        }
-        setIsGeneratingStoryImg(null);
-      }
-    } catch (e) {
-      alert("Error: " + e.message);
-      setIsGeneratingStoryImg(null);
-    }
-  };
-
   // --- STEP 1: GENERATE SELLING POINTS ---
   const handleGenerateStorySelling = async () => {
     if (!productFile || !productDesc || !apiKey) {
@@ -299,7 +238,17 @@ function App() {
     
     try {
       const base64Image = await fileToBase64(productFile);
-      const systemPrompt = `Anda adalah seorang manajer produk berpengalaman, khususnya terampil dalam mengidentifikasi poin penjualan produk dan memecahkan masalah nyata yang dihadapi pelanggan agar sesuai dengan kebutuhan mereka. Sekarang, pengguna akan memberi Anda deskripsi produk beserta gambarnya. Kemudian, Anda meninjau dan menganalisis produk tersebut untuk mengungkap poin penjualan produk (Selling Points) dan mengidentifikasi masalah yang dipecahkan produk tersebut untuk pelanggan. Berikan hasil analisis poin-poin penjualan secara tajam dan terstruktur.`;
+      const systemPrompt = `Anda adalah seorang manajer produk dan ahli visual berpengalaman. Pengguna akan memberi Anda deskripsi produk beserta gambarnya. 
+Tugas Anda ada dua:
+1. DESKRIPSI FISIK SUPER DETAIL: Analisis gambar produk dengan sangat teliti. Deskripsikan secara mikroskopis bentuk fisik, warna spesifik, bahan/tekstur, rasio, posisi komponen/logo, dan fitur unik produk dari gambar tersebut. Tujuannya agar deskripsi ini bisa dipakai oleh AI Image Generator (DALL-E/Midjourney) untuk menggambar ulang produk dengan akurasi 100%.
+2. SELLING POINTS: Identifikasi masalah yang dipecahkan produk tersebut dan berikan poin-poin penjualan secara tajam dan terstruktur.
+
+Berikan output dengan format:
+[DESKRIPSI FISIK PRODUK]
+(isi deskripsi detail)
+
+[SELLING POINTS]
+(isi poin penjualan)`;
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -343,12 +292,11 @@ function App() {
     
     setIsGeneratingStory(true)
     setGeneratedPrompts([])
-    setStoryImages({})
     
     try {
       const base64Image = await fileToBase64(productFile);
       
-      const systemPrompt = `You are an expert prompt engineer for an AI Video Generator (like Google Veo 3). 
+      const systemPrompt = `You are an expert prompt engineer for AI Video Generators (like Google Veo 3) and AI Image Generators (like Midjourney/DALL-E 3). 
 Your task is to create a SINGLE, CONTINUOUS storytelling animation commercial based on a product image, description, and its key selling points.
 
 STRICT INSTRUCTIONS:
@@ -359,9 +307,9 @@ STRICT INSTRUCTIONS:
 5. Visual Style requested: "${storyVisual}".
 6. Content Style/Tone requested: "${storyContentStyle}".
 ${specialInstruction ? `7. SPECIAL INSTRUCTIONS FROM USER: "${specialInstruction}". YOU MUST FOLLOW THIS STRICTLY.` : ''}
-8. Provide the output in plain text. DO NOT USE MARKDOWN ASTERISKS (**).
-9. Separate each main Prompt block with a separator line "---" so the system can parse it.
-10. Ensure each scene strictly describes the visuals for image generation.
+8. CRITICAL VISUAL CONSISTENCY: Read the highly detailed physical description of the product provided in the context. You MUST inject this exact, detailed physical description of the product into EVERY SINGLE "Prompt Visual" and "Prompt Siap Tempel ke Veo 3" without fail. Do not use generic pronouns like "the product", always describe its exact shape, color, and texture in every scene to lock the visual consistency.
+9. Provide the output in plain text. DO NOT USE MARKDOWN ASTERISKS (**).
+10. Separate each main Prompt block with a separator line "---" so the system can parse it.
 11. End each prompt block by providing a "Prompt Siap Tempel ke Veo 3" (in English), "Narasi (Voice Over)", and "Efek Suara".
 
 FOLLOW THIS EXACT FORMAT TEMPLATE FOR EVERY PROMPT:
@@ -627,15 +575,6 @@ Efek Suara (Sound Effects):
                 </div>
               </div>
 
-              <div className="input-group">
-                <label>Mesin AI Gambar (Storyboard)</label>
-                <select value={storyImgModel} onChange={(e) => setStoryImgModel(e.target.value)} className="select-input" style={{borderColor: 'var(--primary-color)'}}>
-                  <option value="venice-z-image-turbo">Venice Image Turbo (Cepat & Stabil)</option>
-                  <option value="dall-e-3">DALL-E 3 (Kualitas Tertinggi OpenAI)</option>
-                  <option value="seedream-4.5">Seedream 4.5</option>
-                </select>
-              </div>
-
               <button className="btn-primary generate-btn" onClick={handleGenerateStory} disabled={!storySellingPoint || isGeneratingStory || !apiKey}>
                 {isGeneratingStory ? 'Meracik Naskah Storyboard...' : '🎬 Generate Storyboard'}
               </button>
@@ -654,21 +593,6 @@ Efek Suara (Sound Effects):
                       {copiedIndex === index ? '✅ Copied!' : '📋 Copy'}
                     </button>
                   </div>
-                  
-                  {storyImages[index] ? (
-                    <div style={{marginBottom: '1rem', textAlign: 'center'}}>
-                      <img src={storyImages[index]} alt={`Storyboard ${index + 1}`} style={{width: '100%', borderRadius: '8px', border: '1px solid var(--glass-border)'}} />
-                      <button className="btn-secondary" onClick={() => handleGenerateStoryImage(index, promptText)} disabled={isGeneratingStoryImg === index} style={{marginTop: '0.5rem', fontSize: '0.8rem'}}>
-                        {isGeneratingStoryImg === index ? 'Melukis Ulang...' : '🔄 Generate Ulang Gambar (Model: ' + storyImgModel + ')'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{marginBottom: '1rem'}}>
-                      <button className="btn-secondary" onClick={() => handleGenerateStoryImage(index, promptText)} disabled={isGeneratingStoryImg === index} style={{width: '100%', fontWeight: 'bold'}}>
-                        {isGeneratingStoryImg === index ? '🎨 Sedang Melukis Storyboard...' : '🎨 Generate Gambar Visual (Model: ' + storyImgModel + ')'}
-                      </button>
-                    </div>
-                  )}
 
                   <pre className="prompt-content">{promptText}</pre>
                 </div>
