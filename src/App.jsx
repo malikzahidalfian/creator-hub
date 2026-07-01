@@ -3,6 +3,18 @@ import { useState, useEffect } from 'react'
 function App() {
   const [activeTab, setActiveTab] = useState('storyboard')
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('storyboard_api_key') || '')
+  
+  // --- GEMINI API KEYS STATES ---
+  const [geminiKeys, setGeminiKeys] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gemini_api_keys');
+      return saved ? JSON.parse(saved) : Array(10).fill('');
+    } catch {
+      return Array(10).fill('');
+    }
+  });
+  const [activeGeminiKeyIndex, setActiveGeminiKeyIndex] = useState(0);
+
   const [copiedIndex, setCopiedIndex] = useState(null)
   const [history, setHistory] = useState([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
@@ -44,6 +56,10 @@ function App() {
   const [genThreadSource, setGenThreadSource] = useState('')
   const [genThreadTone, setGenThreadTone] = useState('Misteri / Menegangkan')
   const [genThreadLength, setGenThreadLength] = useState('Utas Pendek (5-10 Pancingan Komentar)')
+  const [genThreadLengthCount, setGenThreadLengthCount] = useState(5)
+  const [genThreadLanguageStyle, setGenThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
+  const [threadLanguageStyle, setThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
+  const [threadAngle, setThreadAngle] = useState('Storytelling (Bercerita pengalaman pribadi)')
   const [isGeneratingGenThread, setIsGeneratingGenThread] = useState(false)
   const [generatedGenThread, setGeneratedGenThread] = useState(null)
   const [genThreadCategory, setGenThreadCategory] = useState('Otomotif')
@@ -57,6 +73,14 @@ function App() {
   const [customOpenRouterModel, setCustomOpenRouterModel] = useState('')
   const [isGeneratingImg, setIsGeneratingImg] = useState(false)
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null)
+
+  // --- SCRIPT VIDEO AI STATES ---
+  const [videoScriptFile, setVideoScriptFile] = useState(null)
+  const [videoScriptPreview, setVideoScriptPreview] = useState(null)
+  const [videoProductName, setVideoProductName] = useState('')
+  const [isGeneratingVideoScript, setIsGeneratingVideoScript] = useState(false)
+  const [generatedVideoScripts, setGeneratedVideoScripts] = useState(null)
+  const [uploadProgress, setUploadProgress] = useState('')
 
   // --- SELLING POINT STATES ---
   const [sellingProductInfo, setSellingProductInfo] = useState('')
@@ -413,6 +437,10 @@ Efek Suara (Sound Effects):
             <div className="nav-item-content"><span className="icon">🎨</span> AI Image</div>
             <span className="nav-arrow">&gt;</span>
           </button>
+          <button className={`nav-item ${activeTab === 'video_script' ? 'active' : ''}`} onClick={() => {setActiveTab('video_script'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🎥</span> Script Video AI</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
           <button className={`nav-item ${activeTab === 'thread' ? 'active' : ''}`} onClick={() => {setActiveTab('thread'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🛒</span> Threads Affiliate</div>
             <span className="nav-arrow">&gt;</span>
@@ -612,21 +640,23 @@ Efek Suara (Sound Effects):
       if (threadLength.includes('Sangat Pendek')) {
         lengthInstruction = "Buat utas SANGAT PENDEK. Hanya 1 atau maksimal 2 tweet. Gunakan HANYA BEBERAPA KATA yang menohok/memancing rasa penasaran, lalu langsung berikan link afiliasi.";
       } else if (threadLength.includes('Pendek')) {
-        lengthInstruction = "Buat utas pendek (3-5 tweet/bagian). Langsung ke intinya namun tetap persuasif.";
+        lengthInstruction = "Buat utas pendek (3-5 tweet/bagian). Setiap tweet HARUS PENDEK (maksimal 2-3 kalimat) agar mudah dibaca/snackable.";
       } else {
-        lengthInstruction = "Buat utas panjang bergaya storytelling (6-10 tweet/bagian). Bangun emosi, masalah, dan perlahan berikan solusi.";
+        lengthInstruction = "Buat utas panjang bergaya storytelling (6-10 tweet/bagian). Bangun emosi, masalah, dan perlahan berikan solusi. PENTING: Setiap tweet HARUS PENDEK (maksimal 3-4 kalimat per tweet). Dilarang menulis paragraf yang terlalu panjang agar orang tidak malas membaca.";
       }
 
       const systemPrompt = `Kamu adalah seorang Copywriter Viral dan Affiliate Marketer kelas atas di platform X/Twitter dan Threads.
 Keahlianmu adalah membuat konten berseri (Utas/Thread) yang sangat mengundang interaksi, memicu emosi (FOMO, rasa penasaran, atau empati), dan berujung pada klik link afiliasi.
 
-ATURAN MUTLAK:
-1. Pisahkan setiap tweet/bagian utas dengan "---" agar sistem bisa memotongnya.
-2. Tweet pertama HARUS berupa HOOK yang sangat kuat. JANGAN terlihat seperti sedang berjualan di tweet pertama.
-3. Gunakan bahasa Indonesia kasual, gaul, namun tetap profesional (seperti selebtwit).
-4. ${lengthInstruction}
-5. Selipkan "Link produk: [LINK AFILIASI]" di bagian akhir utas atau di bagian call-to-action.
-6. Jangan gunakan hashtag yang berlebihan, maksimal 2 hashtag natural.`;
+ATURAN MUTLAK (DILARANG KERAS MENGGUNAKAN BAHASA AI/ROBOT):
+1. Gaya Bahasa / Diksi: ${threadLanguageStyle}. TULISLAH LAYAKNYA MANUSIA ASLI DI TWITTER/X. Dilarang terlihat seperti robot!
+2. Angle Jualan: ${threadAngle}. Terapkan strategi ini di dalam isi utas.
+3. DILARANG KERAS menggunakan kata-kata kaku khas AI seperti: "Di era digital ini", "Kesimpulannya", "Mari kita bahas", "Tak dapat dipungkiri". Gunakan singkatan wajar orang Indonesia.
+4. Pisahkan setiap tweet/bagian utas dengan "---" agar sistem bisa memotongnya.
+5. Tweet pertama HARUS berupa HOOK yang sangat kuat. JANGAN terlihat seperti sedang berjualan di tweet pertama.
+6. ${lengthInstruction}
+7. Selipkan kalimat ajakan/Call to Action dan "Link produk: [LINK AFILIASI]" di bagian akhir utas.
+8. Jangan gunakan hashtag yang berlebihan, maksimal 2 hashtag natural.`;
 
       const userPrompt = `Judul Produk: ${threadTitle}
 Deskripsi Produk/Benefit: ${threadDesc || 'Buat benefit yang sangat menggoda berdasarkan judul produk di atas.'}
@@ -739,8 +769,8 @@ PASTIKAN OUTPUT MURNI JSON ARRAY TANPA FORMATTING MARKDOWN \`\`\`json !`;
 - Setiap utas harus dirancang khusus untuk mengundang komentar keras, perdebatan, atau rasa penasaran dari netizen.
 - Pisahkan antar utas dengan "---".`
         : `Kamu harus membuat 1 utas (thread) BERANTAI PANJANG.
-- Utas harus dibagi menjadi beberapa bagian/tweet.
-- SETIAP bagian/tweet HARUS memiliki MINIMAL 3 PARAGRAF panjang yang menceritakan detail secara mendalam (storytelling).
+- Utas harus dibagi menjadi tepat ${genThreadLengthCount} bagian/tweet berurutan.
+- PENTING: SETIAP bagian/tweet HARUS PENDEK (maksimal 3-4 kalimat per tweet/bagian). JANGAN MENULIS PARAGRAF PANJANG! Buatlah konten yang snackable.
 - SETIAP tweet (kecuali tweet terakhir) WAJIB ditutup dengan HOOK atau kalimat gantung/cliffhanger yang membuat pembaca tidak sabar membaca tweet selanjutnya.
 - Pisahkan setiap tweet/bagian utas dengan "---".`;
 
@@ -748,12 +778,14 @@ PASTIKAN OUTPUT MURNI JSON ARRAY TANPA FORMATTING MARKDOWN \`\`\`json !`;
 Tugasmu adalah membuat konten organik murni berdasarkan topik yang diberikan untuk mendapatkan ribuan likes, retweets, dan interaksi.
 TIDAK ADA UNSUR JUALAN SAMA SEKALI.
 
-ATURAN MUTLAK:
-1. Pisahkan setiap tweet/bagian dengan "---" agar sistem bisa memotongnya.
-2. Gaya Bahasa / Tone yang diminta: ${genThreadTone}. Sesuaikan pilihan kata (diksi) dengan tone ini!
-3. Jika ada sumber referensi yang diberikan, gabungkan secara natural ke dalam cerita.
-4. Jangan gunakan kalimat penutup yang kaku atau hashtag berlebihan.
-5. PENTING (FORMAT PANJANG/PENDEK): 
+ATURAN MUTLAK (DILARANG KERAS MENGGUNAKAN BAHASA AI/ROBOT):
+1. Gaya Bahasa / Diksi: ${genThreadLanguageStyle}. TULISLAH LAYAKNYA MANUSIA ASLI DI TWITTER/X.
+2. DILARANG KERAS menggunakan kata-kata kaku khas AI seperti: "Di era digital ini", "Kesimpulannya", "Mari kita bahas", "Tak dapat dipungkiri".
+3. Gunakan singkatan wajar orang Indonesia jika gaya bahasanya santai (misal: yg, dgn, bgt, pdhl, udh, kek, lo, gue, dll). Jangan terlalu kaku. Jangan terlihat seperti robot.
+4. Tema/Tone Emosi: ${genThreadTone}. Sesuaikan emosi tulisan dengan tone ini!
+5. Jika ada sumber referensi yang diberikan, gabungkan secara natural ke dalam cerita tanpa menyebut "Berdasarkan referensi".
+6. Pisahkan setiap tweet/bagian dengan "---" agar sistem bisa memotongnya.
+7. PENTING (FORMAT PANJANG/PENDEK): 
 ${lengthInstructions}`;
 
       const userPrompt = `Topik / Ide Cerita: ${genThreadTopic}
@@ -846,6 +878,142 @@ Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri
       setIsGeneratingImg(false);
     }
   };
+  const getWorkingGeminiKey = (startIndex) => {
+    let i = startIndex;
+    let attempts = 0;
+    while (attempts < 10) {
+      if (geminiKeys[i] && geminiKeys[i].trim() !== '') {
+        return { key: geminiKeys[i].trim(), index: i };
+      }
+      i = (i + 1) % 10;
+      attempts++;
+    }
+    return null;
+  };
+
+  const uploadFileToGemini = async (file, key) => {
+    setUploadProgress('Mengunggah file ke Google...');
+    const uploadResponse = await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files?key=${key}`, {
+      method: 'POST',
+      headers: {
+        'X-Goog-Upload-Protocol': 'raw',
+        'X-Goog-Upload-File-Name': file.name,
+        'Content-Type': file.type
+      },
+      body: file
+    });
+    
+    if (!uploadResponse.ok) {
+      throw new Error(`Gagal mengunggah: ${uploadResponse.status}`);
+    }
+    
+    const uploadResult = await uploadResponse.json();
+    const fileData = uploadResult.file;
+    
+    if (file.type.startsWith('video/')) {
+      setUploadProgress('Menunggu Google memproses video (bisa memakan waktu)...');
+      let state = 'PROCESSING';
+      while (state === 'PROCESSING') {
+        await new Promise(r => setTimeout(r, 3000));
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileData.name}?key=${key}`);
+        const data = await res.json();
+        state = data.state;
+        if (state === 'FAILED') throw new Error("Google gagal memproses video.");
+      }
+    }
+    
+    return fileData;
+  };
+
+  const executeGeminiGeneration = async (keyInfo, fileData, retries = 0) => {
+    setUploadProgress('Menulis skrip variasi...');
+    
+    const prompt = `Kamu adalah seorang pakar Digital Marketing dan Konten Kreator Video pendek (TikTok/Reels/Shopee Video). Tugasmu adalah membantu saya membuat 5 variasi skrip video pendek berdasarkan file (gambar/video) dan nama produk yang saya berikan.
+Nama Produk: ${videoProductName}
+
+Aturan Penulisan Skrip: 
+1. Durasi: Sesuaikan dengan durasi video dengan hook yang kuat.
+2. Struktur Variasi: 
+   - Opsi 1 (Problem Solving): Fokus pada masalah yang dialami pengguna dan solusi dari produk. 
+   - Opsi 2 (Hard Selling): Fokus pada harga, diskon, kualitas material, atau status 'viral'. 
+   - Opsi 3 (Feature Highlight): Fokus pada fungsi unik atau teknologi spesifik produk. 
+   - Opsi 4 (Aesthetic/Social): Fokus pada visual produk yang cantik, kerapian, atau keseruan saat dipakai. 
+   - Opsi 5 (Lifestyle/Context): Fokus pada penggunaan sehari-hari (contoh: untuk kantor, sekolah, atau kado).
+3. CTA Wajib: Di akhir setiap skrip, wajib sertakan kalimat: 'Yang mau cek keranjang belanja sekarang juga.'
+4. Gaya Bahasa: Santai, persuasif, informatif, dan adaptif sesuai target pasar produk tersebut.
+5. Sitasi: Berikan tanda sitasi \`\` pada bagian fitur yang merujuk pada gambar/video yang saya lampirkan.
+6. OUTPUT HARUS MEMISAHKAN SETIAP OPSI DENGAN "---" AGAR BISA DIPOTONG SISTEM.`;
+
+    const requestBody = {
+      contents: [{
+        role: "user",
+        parts: [
+          fileData ? { fileData: { mimeType: fileData.mimeType, fileUri: fileData.uri } } : { text: "Tidak ada file referensi, buat berdasarkan nama produk." },
+          { text: prompt }
+        ]
+      }],
+      generationConfig: { temperature: 0.8 }
+    };
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${keyInfo.key}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (response.status === 429 && retries < 9) {
+      // Rotate key
+      const nextKey = getWorkingGeminiKey((keyInfo.index + 1) % 10);
+      if (nextKey) {
+        setActiveGeminiKeyIndex(nextKey.index);
+        setUploadProgress(`Key ${keyInfo.index + 1} limit! Otomatis mencoba Key ${nextKey.index + 1}...`);
+        return await executeGeminiGeneration(nextKey, fileData, retries + 1);
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.candidates || data.candidates.length === 0) throw new Error("Gemini menolak memproses prompt.");
+    
+    let text = data.candidates[0].content.parts[0].text;
+    const blocks = text.split('---').map(b => b.trim()).filter(b => b.length > 10);
+    return blocks;
+  };
+
+  const handleGenerateVideoScript = async () => {
+    if (!videoProductName) {
+      return alert("Nama produk wajib diisi!");
+    }
+    
+    const activeKey = getWorkingGeminiKey(activeGeminiKeyIndex);
+    if (!activeKey) {
+      return alert("Harap masukkan setidaknya 1 Gemini API Key di menu Pengaturan API.");
+    }
+    setActiveGeminiKeyIndex(activeKey.index);
+
+    setIsGeneratingVideoScript(true);
+    setGeneratedVideoScripts(null);
+    setUploadProgress('Memulai...');
+
+    try {
+      let fileData = null;
+      if (videoScriptFile) {
+        fileData = await uploadFileToGemini(videoScriptFile, activeKey.key);
+      }
+      
+      const blocks = await executeGeminiGeneration(activeKey, fileData);
+      setGeneratedVideoScripts(blocks);
+      setUploadProgress('');
+    } catch (e) {
+      alert("Error: " + e.message);
+      setUploadProgress('');
+    } finally {
+      setIsGeneratingVideoScript(false);
+    }
+  };
 
   const handleGenerateSelling = async () => {
     if (!sellingProductInfo || !apiKey) {
@@ -904,6 +1072,68 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
       setIsGeneratingSelling(false)
     }
   }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setVideoScriptFile(file);
+      if (file.type.startsWith('image/')) {
+        setVideoScriptPreview(URL.createObjectURL(file));
+      } else {
+        setVideoScriptPreview(null);
+      }
+    }
+  };
+
+  const renderVideoScriptForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">🎥 Script Video AI (Gemini)</h2>
+        <p className="subtitle">Upload video/gambar mentah, dan biarkan AI meracik 5 variasi skrip FYP untuk Anda.</p>
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <div className="input-group">
+              <label>Nama Produk</label>
+              <input type="text" className="api-key-input" placeholder="Contoh: Sepatu Sneakers Ortuseight" value={videoProductName} onChange={(e) => setVideoProductName(e.target.value)} />
+            </div>
+            <div className="input-group">
+              <label>Upload File Referensi (Video MP4 / Gambar)</label>
+              <input type="file" accept="video/mp4,video/quicktime,image/jpeg,image/png,image/webp" onChange={handleFileChange} className="api-key-input" style={{padding: '0.5rem'}} />
+              {videoScriptFile && <small style={{color: '#10b981', display: 'block', marginTop: '0.5rem'}}>Terpilih: {videoScriptFile.name}</small>}
+              {videoScriptPreview && <img src={videoScriptPreview} alt="Preview" style={{width: '100%', borderRadius: '8px', marginTop: '1rem', border: '1px solid var(--glass-border)'}} />}
+            </div>
+            <button className="btn-primary generate-btn" onClick={handleGenerateVideoScript} disabled={!videoProductName || isGeneratingVideoScript}>
+              {isGeneratingVideoScript ? 'Menganalisis...' : '✨ Generate 5 Skrip Video'}
+            </button>
+            {uploadProgress && <div style={{marginTop: '1rem', color: '#10b981', fontSize: '0.85rem', textAlign: 'center', background: 'rgba(16,185,129,0.1)', padding: '0.5rem', borderRadius: '6px'}}>{uploadProgress}</div>}
+          </div>
+          
+          <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
+          {generatedVideoScripts ? (
+            <div className="prompts-container">
+              {generatedVideoScripts.map((script, index) => (
+                <div key={index} className="prompt-card fade-in">
+                  <div className="prompt-header">
+                    <h3>Opsi {index + 1}</h3>
+                    <button className="btn-copy" onClick={() => handleCopy(script, `vid_${index}`)}>
+                      {copiedIndex === `vid_${index}` ? '✅ Copied!' : '📋 Copy'}
+                    </button>
+                  </div>
+                  <pre className="prompt-content" style={{whiteSpace: 'pre-wrap', fontFamily: 'inherit'}}>{script}</pre>
+                </div>
+              ))}
+              <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(generatedVideoScripts, 'Video Script AI', videoProductName)} disabled={isSaving} style={{flex: 1}}>
+                  {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
+                </button>
+              </div>
+            </div>
+          ) : <EmptyStateRight />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderSellingForm = () => {
     let parsedSelling = null;
@@ -1168,11 +1398,30 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               <input type="text" className="api-key-input" placeholder="https://shope.ee/..." value={threadLink} onChange={(e) => setThreadLink(e.target.value)} />
             </div>
             <div className="input-group">
+              <label>Gaya Bahasa (Diksi)</label>
+              <select value={threadLanguageStyle} onChange={(e) => setThreadLanguageStyle(e.target.value)} className="select-input">
+                <option value="Santai (Gue-Elu, Gaul)">Santai (Gue-Elu, Singkatan Twitter, Gaul)</option>
+                <option value="Santai (Aku-Kamu, Ramah)">Santai (Aku-Kamu, Ramah, Sopan)</option>
+                <option value="Reviewer Jujur (Ceplas-ceplos)">Reviewer Jujur (Ceplas-ceplos, Obyektif)</option>
+                <option value="Hard Selling (To the point)">Hard Selling (Agresif, To the point, Promo)</option>
+              </select>
+            </div>
+            <div className="input-group">
+              <label>Angle Jualan (Strategi)</label>
+              <select value={threadAngle} onChange={(e) => setThreadAngle(e.target.value)} className="select-input">
+                <option value="Storytelling (Bercerita pengalaman pribadi/masalah)">Storytelling (Bercerita masalah \u2192 Menemukan solusi)</option>
+                <option value="Soft Selling (Edukasi dulu, jualan kemudian)">Soft Selling (Edukasi/Fakta dulu, lalu rekomendasi produk)</option>
+                <option value="Hard Selling (Fokus pada diskon/promo/kualitas)">Hard Selling (Fokus langsung pada Diskon, Kualitas, FOMO)</option>
+                <option value="Unboxing / Review Jujur (Kesan pertama)">Unboxing / Review Jujur (Membahas pros \u0026 cons)</option>
+                <option value="Meme/Candaan (Humor yang nyambung ke produk)">Meme / Candaan (Humor/Shitposting yang nyambung ke jualan)</option>
+              </select>
+            </div>
+            <div className="input-group">
               <label>Panjang Utas</label>
               <select value={threadLength} onChange={(e) => setThreadLength(e.target.value)} className="select-input">
                 <option value="Sangat Pendek (1-2 Kalimat)">Sangat Pendek (Soft Selling - 1-2 Kalimat)</option>
                 <option value="Pendek (Singkat & Padat)">Pendek (Singkat & Padat - 3-5 Bagian)</option>
-                <option value="Panjang (Storytelling Mendalam)">Panjang (Storytelling Mendalam - 6-10 Bagian)</option>
+                <option value="Panjang (Storytelling Mendalam)">Panjang (Berantai dengan Hook - 6-10 Bagian)</option>
               </select>
             </div>
             <button className="btn-primary generate-btn" onClick={handleGenerateThread} disabled={!threadTitle || isGeneratingThread || !apiKey}>
@@ -1253,7 +1502,17 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               <input type="text" className="api-key-input" placeholder="Link berita atau buku acuan..." value={genThreadSource} onChange={(e) => setGenThreadSource(e.target.value)} />
             </div>
             <div className="input-group">
-              <label>Gaya Bahasa (Tone)</label>
+              <label>Gaya Bahasa (Diksi)</label>
+              <select value={genThreadLanguageStyle} onChange={(e) => setGenThreadLanguageStyle(e.target.value)} className="select-input">
+                <option value="Santai (Gue-Elu, Gaul)">Santai (Gue-Elu, Singkatan Twitter, Gaul)</option>
+                <option value="Formal (Baku, Profesional)">Formal (Baku, Informatif, Edukatif)</option>
+                <option value="Humoris (Banyak Candaan)">Humoris (Banyak Candaan, Memeable)</option>
+                <option value="Nyinyir (Julid, Pedas)">Nyinyir (Julid, Mengundang Emosi/Kritik)</option>
+                <option value="Storytelling Emosional">Storytelling Emosional (Menyentuh Hati, Personal)</option>
+              </select>
+            </div>
+            <div className="input-group">
+              <label>Tema Emosi (Tone)</label>
               <select value={genThreadTone} onChange={(e) => setGenThreadTone(e.target.value)} className="select-input">
                 {toneList.map((tone, idx) => <option key={idx} value={tone}>{tone}</option>)}
               </select>
@@ -1265,6 +1524,13 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 <option value="Utas Panjang (Berantai dengan Hook)">Utas Panjang (Berantai dengan Hook)</option>
               </select>
             </div>
+            {!genThreadLength.includes("Pendek") && (
+              <div className="input-group fade-in">
+                <label>Jumlah Tweet dalam Utas</label>
+                <input type="number" min="2" max="20" className="api-key-input" value={genThreadLengthCount} onChange={(e) => setGenThreadLengthCount(e.target.value)} />
+              </div>
+            )}
+            
             <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadTopic || isGeneratingGenThread || !apiKey}>
               {isGeneratingGenThread ? 'Menyusun Utas...' : '✨ Generate Utas Viral'}
             </button>
@@ -1334,25 +1600,55 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     localStorage.setItem('storyboard_api_key', e.target.value);
   };
 
+  const handleGeminiKeyChange = (index, value) => {
+    const newKeys = [...geminiKeys];
+    newKeys[index] = value;
+    setGeminiKeys(newKeys);
+    localStorage.setItem('gemini_api_keys', JSON.stringify(newKeys));
+  };
+
   const renderSettings = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
         <h2 className="desktop-title">Pengaturan API</h2>
-        <p className="subtitle">Masukkan Kunci API 1inference Anda di sini.</p>
+        <p className="subtitle">Kelola semua kunci API (API Key) Anda di sini.</p>
         
-        <div className="glass-panel" style={{maxWidth: '500px', margin: '0 auto', textAlign: 'left'}}>
-          <div className="input-group">
-            <label>1inference API Key</label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={handleKeyChange}
-              placeholder="Masukkan API Key Anda..."
-              className="api-key-input"
-            />
-            <small className="help-text" style={{marginTop: '0.5rem', display: 'block', color: 'var(--text-secondary)'}}>
-              Kunci API disimpan dengan aman di penyimpanan lokal peramban Anda.
-            </small>
+        <div className="layout-grid">
+          <div className="glass-panel" style={{textAlign: 'left'}}>
+            <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>1inference API (Utama)</h3>
+            <div className="input-group">
+              <label>1inference API Key</label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={handleKeyChange}
+                placeholder="Masukkan API Key 1inference Anda..."
+                className="api-key-input"
+              />
+              <small className="help-text" style={{marginTop: '0.5rem', display: 'block', color: 'var(--text-secondary)'}}>
+                Digunakan untuk fitur Storyboard, Gambar, dan Thread Umum.
+              </small>
+            </div>
+          </div>
+
+          <div className="glass-panel" style={{textAlign: 'left'}}>
+            <h3 style={{marginBottom: '1rem', color: '#10b981'}}>Google Gemini API (Script Video)</h3>
+            <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem'}}>
+              Masukkan hingga 10 API Key Gemini. Sistem akan otomatis memutar (rotasi) ke kunci berikutnya jika kunci yang dipakai mencapai batas kuota (Limit).
+            </p>
+            {geminiKeys.map((key, index) => (
+              <div className="input-group" key={index} style={{marginBottom: '0.5rem'}}>
+                <label style={{fontSize: '0.75rem'}}>Gemini Key {index + 1} {index === activeGeminiKeyIndex && <span style={{color: '#10b981', fontWeight: 'bold'}}>(Aktif)</span>}</label>
+                <input
+                  type="password"
+                  value={key}
+                  onChange={(e) => handleGeminiKeyChange(index, e.target.value)}
+                  placeholder={`AIzaSy...`}
+                  className="api-key-input"
+                  style={{padding: '0.5rem', fontSize: '0.8rem'}}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1413,6 +1709,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         </div>
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
+        {activeTab === 'video_script' && renderVideoScriptForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
         {activeTab === 'selling_point' && renderSellingForm()}
