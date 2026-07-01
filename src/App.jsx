@@ -43,9 +43,13 @@ function App() {
   const [genThreadTopic, setGenThreadTopic] = useState('')
   const [genThreadSource, setGenThreadSource] = useState('')
   const [genThreadTone, setGenThreadTone] = useState('Misteri / Menegangkan')
-  const [genThreadLength, setGenThreadLength] = useState('Panjang (Cerita Mendalam - 6-10 Bagian)')
+  const [genThreadLength, setGenThreadLength] = useState('Utas Pendek (5-10 Pancingan Komentar)')
   const [isGeneratingGenThread, setIsGeneratingGenThread] = useState(false)
   const [generatedGenThread, setGeneratedGenThread] = useState(null)
+  const [genThreadCategory, setGenThreadCategory] = useState('Otomotif')
+  const [genThreadCustomCategory, setGenThreadCustomCategory] = useState('')
+  const [viralIdeas, setViralIdeas] = useState([])
+  const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false)
 
   // --- AI IMAGE GEN STATES ---
   const [imgPrompt, setImgPrompt] = useState('')
@@ -54,23 +58,10 @@ function App() {
   const [isGeneratingImg, setIsGeneratingImg] = useState(false)
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null)
 
-  // --- EDU-MATION STATES ---
-  const [eduTopic, setEduTopic] = useState('')
-  const [eduAudience, setEduAudience] = useState('Anak-anak (Bahasanya ceria & simpel)')
-  const [eduCharacter, setEduCharacter] = useState('')
-  const [eduStyle, setEduStyle] = useState('3D Pixar Animation Style')
-  const [eduDuration, setEduDuration] = useState('Pendek (3 Scene)')
-  const [isGeneratingEdu, setIsGeneratingEdu] = useState(false)
-  const [generatedEdu, setGeneratedEdu] = useState(null)
-  const [eduCharImg, setEduCharImg] = useState(null)
-  
   // --- SELLING POINT STATES ---
   const [sellingProductInfo, setSellingProductInfo] = useState('')
   const [isGeneratingSelling, setIsGeneratingSelling] = useState(false)
   const [generatedSelling, setGeneratedSelling] = useState(null)
-
-  const eduAudienceList = ['Balita (Sangat simpel, ceria)', 'Anak-anak (Bahasanya ceria & seru)', 'Remaja (Gaul & asik)', 'Umum (Profesional tapi santai)'];
-  const eduStyleList = ['3D Pixar Animation Style', '2D Vector Cartoon Flat', 'Claymation (Plastisin Stop Motion)', 'Anime Style Vibrant'];
 
   const stylesList = [
     "Kartun 3D lucu, warna cerah, karakter Indonesia",
@@ -100,6 +91,7 @@ function App() {
   ];
 
   const toneList = ['Sangat Emosional/Baper', 'Misterius/Penasaran', 'Inspiratif & Motivasi', 'Kontroversial (Bikin Debat)', 'Santai & Lucu'];
+  const categoriesList = ['Otomotif', 'Fashion', 'Politik', 'Agama Islam', 'Fakta-fakta', 'Kesehatan', 'Teknologi', 'Hiburan', 'Bisnis', 'Olahraga', 'Custom...'];
 
   const supabaseUrl = 'https://xkixokhnofujcnehuvgz.supabase.co';
   const supabaseKey = 'sb_publishable_zryQEkMVI1nD3R3Cgf0zdw_LTD0nwtY';
@@ -417,10 +409,6 @@ Efek Suara (Sound Effects):
             <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
             <span className="nav-arrow">&gt;</span>
           </button>
-          <button className={`nav-item ${activeTab === 'edu_mation' ? 'active' : ''}`} onClick={() => {setActiveTab('edu_mation'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🎓</span> Edu-Animasi</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
           <button className={`nav-item ${activeTab === 'image_gen' ? 'active' : ''}`} onClick={() => {setActiveTab('image_gen'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🎨</span> AI Image</div>
             <span className="nav-arrow">&gt;</span>
@@ -674,6 +662,65 @@ Link Afiliasi Saya: ${threadLink || '[ISI_LINK_NANTI]'}`;
     }
   }
 
+  const handleGenerateViralIdeas = async () => {
+    if (!apiKey) {
+      alert("Pastikan API Key sudah diisi.");
+      return;
+    }
+    
+    const categoryToSearch = genThreadCategory === 'Custom...' ? genThreadCustomCategory : genThreadCategory;
+    if (!categoryToSearch) {
+      alert("Kategori tidak boleh kosong.");
+      return;
+    }
+
+    setIsGeneratingIdeas(true)
+    setViralIdeas([])
+
+    try {
+      const systemPrompt = `Anda adalah seorang ahli riset konten viral media sosial. 
+Tugas Anda adalah memberikan 5 hingga 10 ide topik atau judul artikel yang paling hangat (trending) dan sangat berpotensi viral saat ini untuk kategori: ${categoryToSearch}.
+OUTPUT WAJIB DALAM BENTUK JSON ARRAY (Hanya array of strings).
+Contoh: ["Misteri hilangnya kapal X di segitiga bermuda", "Fakta gelap di balik industri fast fashion", "Konspirasi terbaru tentang AI"]
+PASTIKAN OUTPUT MURNI JSON ARRAY TANPA FORMATTING MARKDOWN \`\`\`json !`;
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": "1inference"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Berikan 5-10 ide viral untuk kategori: ${categoryToSearch}` }
+          ],
+          temperature: 0.8
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      const data = await response.json();
+      let generatedText = data.choices[0].message.content.trim();
+      if (generatedText.startsWith('```json')) {
+         generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
+      }
+      
+      const parsedData = JSON.parse(generatedText);
+      if (Array.isArray(parsedData)) {
+        setViralIdeas(parsedData);
+      } else {
+        throw new Error("Format JSON tidak sesuai.");
+      }
+    } catch (error) {
+      alert("Gagal mendapatkan ide: " + error.message);
+    } finally {
+      setIsGeneratingIdeas(false)
+    }
+  }
+
   const handleGenerateGenThread = async () => {
     if (!genThreadTopic || !apiKey) {
       alert("Pastikan Topik/Ide Cerita dan API Key sudah diisi.");
@@ -684,17 +731,30 @@ Link Afiliasi Saya: ${threadLink || '[ISI_LINK_NANTI]'}`;
     setGeneratedGenThread(null)
     
     try {
-      const systemPrompt = `Kamu adalah Kreator Konten Viral di X (Twitter) dan Threads.
-Tugasmu adalah membuat utas (thread) organik murni untuk mendapatkan ribuan likes, retweets, dan followers baru.
+      const isPendek = genThreadLength.includes("Pendek");
+      
+      let lengthInstructions = isPendek 
+        ? `Kamu harus membuat 5 hingga 10 utas (thread) PENDEK yang BERBEDA/TERPISAH.
+- Masing-masing utas HANYA berisi 1 paragraf pancingan (sekitar 2-3 kalimat).
+- Setiap utas harus dirancang khusus untuk mengundang komentar keras, perdebatan, atau rasa penasaran dari netizen.
+- Pisahkan antar utas dengan "---".`
+        : `Kamu harus membuat 1 utas (thread) BERANTAI PANJANG.
+- Utas harus dibagi menjadi beberapa bagian/tweet.
+- SETIAP bagian/tweet HARUS memiliki MINIMAL 3 PARAGRAF panjang yang menceritakan detail secara mendalam (storytelling).
+- SETIAP tweet (kecuali tweet terakhir) WAJIB ditutup dengan HOOK atau kalimat gantung/cliffhanger yang membuat pembaca tidak sabar membaca tweet selanjutnya.
+- Pisahkan setiap tweet/bagian utas dengan "---".`;
+
+      const systemPrompt = `Kamu adalah Kreator Konten Viral tingkat dewa di X (Twitter) dan Threads.
+Tugasmu adalah membuat konten organik murni berdasarkan topik yang diberikan untuk mendapatkan ribuan likes, retweets, dan interaksi.
 TIDAK ADA UNSUR JUALAN SAMA SEKALI.
 
 ATURAN MUTLAK:
-1. Pisahkan setiap tweet/bagian utas dengan "---" agar sistem bisa memotongnya.
-2. Tweet pertama HARUS berupa HOOK kontroversial, mencengangkan, atau membuat orang sangat penasaran sampai harus membaca kelanjutannya.
-3. Gaya Bahasa / Tone yang diminta: ${genThreadTone}. Sesuaikan pilihan kata (diksi) dengan tone ini!
-4. Panjang utas: ${genThreadLength}. (Pendek: 3-5 tweet, Panjang: 6-10 tweet).
-5. Jika ada sumber referensi yang diberikan, gabungkan secara natural ke dalam cerita.
-6. Jangan gunakan kalimat penutup yang kaku, gunakan pertanyaan yang memancing balasan/reply dari netizen di akhir utas.`;
+1. Pisahkan setiap tweet/bagian dengan "---" agar sistem bisa memotongnya.
+2. Gaya Bahasa / Tone yang diminta: ${genThreadTone}. Sesuaikan pilihan kata (diksi) dengan tone ini!
+3. Jika ada sumber referensi yang diberikan, gabungkan secara natural ke dalam cerita.
+4. Jangan gunakan kalimat penutup yang kaku atau hashtag berlebihan.
+5. PENTING (FORMAT PANJANG/PENDEK): 
+${lengthInstructions}`;
 
       const userPrompt = `Topik / Ide Cerita: ${genThreadTopic}
 Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri'}`;
@@ -825,130 +885,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json ! Pastikan array
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
-          "X-Provider": "1inference"
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-          temperature: 0.7
-        })
-      });
-
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
-      const data = await response.json();
-      let generatedText = data.choices[0].message.content.trim();
-      if (generatedText.startsWith('```json')) {
-         generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
-      }
-      
-      const parsedData = JSON.parse(generatedText);
-      setGeneratedEdu(parsedData);
-
-      if (parsedData.char_prompt) {
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(parsedData.char_prompt)}?model=flux&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
-        const img = new Image();
-        img.src = url;
-        img.onload = () => {
-          setEduCharImg(url);
-        };
-      }
-
-    } catch (error) {
-      alert("Error: " + error.message);
-    } finally {
-      setIsGeneratingEdu(false)
-    }
-  }
-
-  const renderEduForm = () => (
-    <div className="content-wrapper fade-in">
-      <div className="content-panel">
-        <h2 className="desktop-title">🎓 Edu-Animasi (Director's Pack)</h2>
-        <p className="subtitle">Rancang karakter, naskah, dan prompt video edukasi profesional dalam sekali klik.</p>
-        <div className="layout-grid">
-          <div className="glass-panel input-section">
-            <div className="input-group">
-              <label>Topik Pembelajaran</label>
-              <textarea placeholder="Contoh: Cara menyikat gigi yang benar..." value={eduTopic} onChange={(e) => setEduTopic(e.target.value)} rows="2" />
-            </div>
-            <div className="input-group">
-              <label>Ide Karakter Utama</label>
-              <textarea placeholder="Contoh: Sebuah gigi graham putih yang memiliki mata bulat besar, bibir tersenyum, memegang sikat gigi..." value={eduCharacter} onChange={(e) => setEduCharacter(e.target.value)} rows="3" />
-            </div>
-            <div className="input-group">
-              <label>Target Penonton</label>
-              <select value={eduAudience} onChange={(e) => setEduAudience(e.target.value)} className="select-input">
-                {eduAudienceList.map((aud, idx) => <option key={idx} value={aud}>{aud}</option>)}
-              </select>
-            </div>
-            <div className="input-group">
-              <label>Gaya Visual</label>
-              <select value={eduStyle} onChange={(e) => setEduStyle(e.target.value)} className="select-input">
-                {eduStyleList.map((st, idx) => <option key={idx} value={st}>{st}</option>)}
-              </select>
-            </div>
-            <div className="input-group">
-              <label>Durasi Video</label>
-              <select value={eduDuration} onChange={(e) => setEduDuration(e.target.value)} className="select-input">
-                <option value="Pendek (3 Scene)">Pendek (3 Scene - Cocok untuk Shorts)</option>
-                <option value="Panjang (6 Scene)">Panjang (6 Scene - Cocok untuk YouTube)</option>
-              </select>
-            </div>
-            <button className="btn-primary generate-btn" onClick={handleGenerateEdu} disabled={!eduTopic || !eduCharacter || isGeneratingEdu || !apiKey}>
-              {isGeneratingEdu ? 'Meracik Ide...' : '✨ Buat Konsep Edukasi'}
-            </button>
-            {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
-          </div>
-          
-          <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-          {generatedEdu ? (
-            <div className="prompts-container">
-              <div className="prompt-card fade-in">
-                <div className="prompt-header">
-                  <h3>🎨 Karakter & Naskah Narator</h3>
-                </div>
-                <div style={{padding: '1rem'}}>
-                  <div style={{display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap'}}>
-                    <div style={{flex: '1 1 150px', minWidth: '150px', background: '#f8fafc', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '1/1'}}>
-                      {eduCharImg ? <img src={eduCharImg} alt="Karakter" style={{width: '100%', height: '100%', objectFit: 'cover'}} /> : <span className="loading-spinner"></span>}
-                    </div>
-                    <div style={{flex: '2 1 300px'}}>
-                      <h4 style={{marginBottom: '0.5rem', color: 'var(--primary-color)'}}>Prompt Desain Karakter</h4>
-                      <pre className="prompt-content" style={{padding: '0.5rem', fontSize: '0.8rem', background: '#f1f5f9'}}>{generatedEdu.char_prompt}</pre>
-                    </div>
-                  </div>
-                  <h4 style={{marginTop: '1.5rem', marginBottom: '0.5rem', color: 'var(--primary-color)'}}>Naskah Suara (Voice Over)</h4>
-                  <pre className="prompt-content" style={{padding: '1rem'}}>{generatedEdu.voice_over}</pre>
-                </div>
-              </div>
-
-              <div className="prompt-card fade-in" style={{marginTop: '1rem'}}>
-                <div className="prompt-header">
-                  <h3>🎬 Prompt Video AI (Veo 3 / Flow)</h3>
-                </div>
-                <div style={{padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                  {generatedEdu.video_prompts.map((vp, index) => (
-                    <div key={index} style={{background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid var(--glass-border)'}}>
-                      <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: 'bold'}}>
-                        <span style={{color: 'var(--text-primary)'}}>Scene {vp.scene_no}</span>
-                        <span style={{color: 'var(--primary-color)', fontSize: '0.85rem'}}>{vp.time}</span>
-                      </div>
-                      <pre className="prompt-content" style={{padding: '0.5rem', background: '#ffffff'}}>{vp.prompt}</pre>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : <EmptyStateRight />}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   const handleGenerateSelling = async () => {
     if (!sellingProductInfo || !apiKey) {
       alert("Pastikan Deskripsi/Tautan Produk dan API Key sudah diisi.");
@@ -1317,8 +1253,38 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         <div className="layout-grid">
           <div className="glass-panel input-section">
             <div className="input-group">
+              <label>Kategori</label>
+              <select value={genThreadCategory} onChange={(e) => setGenThreadCategory(e.target.value)} className="select-input">
+                {categoriesList.map((cat, idx) => <option key={idx} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            
+            {genThreadCategory === 'Custom...' && (
+              <div className="input-group fade-in">
+                <input type="text" className="api-key-input" placeholder="Ketik kategori bebas (misal: Anime, Tanaman Hias)..." value={genThreadCustomCategory} onChange={(e) => setGenThreadCustomCategory(e.target.value)} />
+              </div>
+            )}
+            
+            <button className="btn-secondary" onClick={handleGenerateViralIdeas} disabled={isGeneratingIdeas || !apiKey} style={{marginBottom: '1rem', width: '100%', fontSize: '0.85rem'}}>
+              {isGeneratingIdeas ? 'Menganalisis Tren Viral...' : '🔍 Pencari Ide Viral (Dapatkan 5-10 Ide Panas)'}
+            </button>
+            
+            {viralIdeas.length > 0 && (
+              <div className="fade-in" style={{marginBottom: '1.5rem', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--primary-color)'}}>
+                <label style={{color: 'var(--primary-color)', fontSize: '0.85rem', marginBottom: '0.5rem', display: 'block', fontWeight: 'bold'}}>✨ Ide Topik Viral (Klik untuk memilih):</label>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+                  {viralIdeas.map((idea, idx) => (
+                    <button key={idx} onClick={() => setGenThreadTopic(idea)} style={{background: 'rgba(255,255,255,0.1)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)', padding: '0.6rem', borderRadius: '6px', textAlign: 'left', cursor: 'pointer', fontSize: '0.85rem'}} className="idea-btn">
+                      {idea}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="input-group">
               <label>Topik / Ide Cerita</label>
-              <textarea placeholder="Contoh: Misteri hilangnya kapal di segitiga bermuda..." value={genThreadTopic} onChange={(e) => setGenThreadTopic(e.target.value)} rows="3" />
+              <textarea placeholder="Pilih dari ide di atas atau ketik sendiri..." value={genThreadTopic} onChange={(e) => setGenThreadTopic(e.target.value)} rows="3" />
             </div>
             <div className="input-group">
               <label>Sumber Referensi (Opsional)</label>
@@ -1333,8 +1299,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             <div className="input-group">
               <label>Panjang Utas</label>
               <select value={genThreadLength} onChange={(e) => setGenThreadLength(e.target.value)} className="select-input">
-                <option value="Pendek (Singkat & Padat - 3-5 Bagian)">Pendek (Singkat & Padat - 3-5 Bagian)</option>
-                <option value="Panjang (Cerita Mendalam - 6-10 Bagian)">Panjang (Cerita Mendalam - 6-10 Bagian)</option>
+                <option value="Utas Pendek (5-10 Pancingan Komentar)">Utas Pendek (5-10 Pancingan Komentar)</option>
+                <option value="Utas Panjang (Berantai dengan Hook)">Utas Panjang (Berantai dengan Hook)</option>
               </select>
             </div>
             <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadTopic || isGeneratingGenThread || !apiKey}>
@@ -1484,7 +1450,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           <h2>Creator Hub AI</h2>
         </div>
         {activeTab === 'storyboard' && renderStoryboardForm()}
-        {activeTab === 'edu_mation' && renderEduForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
