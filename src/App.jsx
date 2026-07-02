@@ -499,10 +499,6 @@ Efek Suara (Sound Effects):
             <div className="nav-item-content"><span className="icon">🎨</span> AI Image</div>
             <span className="nav-arrow">&gt;</span>
           </button>
-          <button className={`nav-item ${activeTab === 'video_script' ? 'active' : ''}`} onClick={() => {setActiveTab('video_script'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🎥</span> Script Video AI</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
           <button className={`nav-item ${activeTab === 'product_data' ? 'active' : ''}`} onClick={() => {setActiveTab('product_data'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">📦</span> Data Produk</div>
             <span className="nav-arrow">&gt;</span>
