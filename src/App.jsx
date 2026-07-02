@@ -47,7 +47,8 @@ function App() {
   const [cookImage, setCookImage] = useState(null)
   const [cookFile, setCookFile] = useState(null)
   const [cookDesc, setCookDesc] = useState('')
-  const [cookType, setCookType] = useState('ASMR')
+  const [cookInstruction, setCookInstruction] = useState('')
+  const [cookType, setCookType] = useState('ASMR (Fokus suara masakan dan detail close-up)')
   const [cookPromptCount, setCookPromptCount] = useState('2')
   const [cookSceneCount, setCookSceneCount] = useState('4')
   const [isGeneratingCook, setIsGeneratingCook] = useState(false)
@@ -462,7 +463,7 @@ Efek Suara (Sound Effects):
   // --- GENERATE KONTEN MASAK ---
   const handleGenerateCooking = async () => {
     if (!cookDesc || !apiKey) {
-      alert("Pastikan Nama Makanan/Deskripsi dan API Key sudah diisi.");
+      alert("Pastikan Deskripsi Produk dan API Key sudah diisi.");
       return;
     }
     
@@ -471,36 +472,31 @@ Efek Suara (Sound Effects):
     
     try {
       let userContent = [];
-      userContent.push({ type: "text", text: `Nama Makanan / Deskripsi: ${cookDesc}\nTipe Konten: ${cookType}\nJumlah Scene Video: ${cookSceneCount}` });
+      userContent.push({ type: "text", text: `Deskripsi Produk Alat Masak: ${cookDesc}\nTipe Konten: ${cookType}\nJumlah Video/Prompt: ${cookPromptCount}\nJumlah Scene per Video: ${cookSceneCount}\nInstruksi Khusus (Mau masak apa): ${cookInstruction || 'Terserah AI'}` });
 
       if (cookFile) {
         const base64Image = await fileToBase64(cookFile);
         userContent.push({ type: "image_url", image_url: { url: base64Image } });
       }
 
-      const systemPrompt = `Kamu adalah Sutradara Konten Memasak dan Ahli Prompt AI (Midjourney/Kling/Veo). 
-Pengguna akan memberikan gambar produk panci/wajan (opsional), nama masakan, tipe konten, dan jumlah scene. 
-Tugasmu membuat ${cookPromptCount} variasi konsep konten memasak yang berbeda.
+      const systemPrompt = `Kamu adalah Sutradara Konten Memasak dan Ahli Prompt Video AI (Luma Dream Machine/Veo/Kling).
+Pengguna akan memberikan deskripsi alat masak (panci/wajan), instruksi khusus masakan apa yang akan dibuat, dan gambar alat masak (jika ada).
+Tugasmu membuat ${cookPromptCount} variasi storyboard video konten memasak yang berbeda.
+Setiap variasi video berdurasi total (jumlah scene x 10 detik).
 
-Untuk SETIAP VARIASI, berikan struktur berikut ini, pisahkan SETIAP VARIASI dengan simbol "---" agar sistem bisa memotongnya.
+ATURAN OUTPUT:
+1. Pisahkan setiap Variasi dengan simbol "---" agar sistem bisa memotongnya.
+2. Setiap variasi HANYA berisi prompt-prompt video berbahasa Inggris yang sangat detail untuk AI Video Generator.
+3. Prompt video harus mencakup pencahayaan, pergerakan kamera (panning, zoom, macro shot), tekstur masakan, dan keterlibatan alat masak tersebut dengan elegan.
+4. Jangan tambahkan prompt untuk gambar diam secara terpisah. Semua harus berupa prompt video (Scene 1, Scene 2, dst).
 
 FORMAT UNTUK SETIAP VARIASI:
 
 VARIASI [Nomor]: [Judul Konsep]
 
-📸 PROMPT GAMBAR (BAHAN & HASIL):
-- Bahan Mentah: (Prompt bahasa Inggris detail untuk Text-to-Image bahan-bahan mentah yang segar di meja dapur yang estetik, photorealistic, 8k).
-- Hasil Masakan: (Prompt bahasa Inggris detail untuk Text-to-Image hidangan matang yang sangat menggugah selera, food photography, macro lens).
-
-🔍 PROMPT DETAIL PRODUK (GAMBAR PANCI/WAJAN):
-Buatkan prompt bahasa Inggris untuk menghasilkan gambar produk panci/wajan dari berbagai sudut (Front view, Back view, Top view, Bottom view, Left profile, Right profile) yang terlihat premium, studio lighting, clean background.
-
-🎥 PROMPT VIDEO (KLING AI / VEO 3):
-(Buatkan ${cookSceneCount} Scene Video berurutan).
-Untuk setiap scene, tuliskan prompt bahasa Inggris yang sangat detail untuk Video AI (fokus pada gerakan kamera, interaksi bahan dengan wajan masakan, efek sinematik, pencahayaan).
-- Scene 1: ...
-- Scene 2: ...
-- ... (hingga ${cookSceneCount} Scene).`;
+Scene 1: (Prompt video detail dalam bahasa Inggris untuk Scene 1. Biasanya pengguna akan mengubah prompt Scene 1 ini menjadi gambar terlebih dahulu lalu di-animate)
+Scene 2: (Prompt video detail dalam bahasa Inggris)
+... (hingga ${cookSceneCount} Scene)`;
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -823,12 +819,12 @@ Untuk setiap scene, tuliskan prompt bahasa Inggris yang sangat detail untuk Vide
             </div>
 
             <div className="input-group">
-              <label>Nama Masakan / Deskripsi Konsep</label>
+              <label>Deskripsi Produk (Wajan/Panci)</label>
               <textarea 
-                placeholder="Contoh: Nasi Goreng Seafood / Tumis Kangkung Terasi"
+                placeholder="Contoh: Wajan anti lengket granit 24cm, handle kayu tahan panas..."
                 value={cookDesc}
                 onChange={(e) => setCookDesc(e.target.value)}
-                rows="3"
+                rows="2"
               />
             </div>
 
@@ -845,17 +841,27 @@ Untuk setiap scene, tuliskan prompt bahasa Inggris yang sangat detail untuk Vide
 
             <div className="input-row">
               <div className="input-group">
-                <label>Jumlah Variasi Konsep</label>
+                <label>Jumlah Prompt (Video)</label>
                 <input type="number" min="1" max="5" value={cookPromptCount} onChange={(e) => setCookPromptCount(e.target.value)} className="select-input" />
               </div>
               <div className="input-group">
-                <label>Scene Video per Variasi</label>
+                <label>Scene per Prompt</label>
                 <input type="number" min="2" max="6" value={cookSceneCount} onChange={(e) => setCookSceneCount(e.target.value)} className="select-input" />
               </div>
             </div>
 
+            <div className="input-group">
+              <label>Instruksi Khusus (Masak apa hari ini?)</label>
+              <textarea 
+                placeholder="Contoh: Bikin menu nasi gila, harus ada adegan telur diorak-arik..."
+                value={cookInstruction}
+                onChange={(e) => setCookInstruction(e.target.value)}
+                rows="3"
+              />
+            </div>
+
             <button className="btn-primary generate-btn" onClick={handleGenerateCooking} disabled={!cookDesc || isGeneratingCook || !apiKey}>
-              {isGeneratingCook ? 'Meracik Resep Konten...' : '🍳 Generate Konten Masak'}
+              {isGeneratingCook ? 'Meracik Resep Konten...' : '🍳 Generate Storyboard Masak'}
             </button>
             {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
           </div>
