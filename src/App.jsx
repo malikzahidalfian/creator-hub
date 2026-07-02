@@ -102,6 +102,15 @@ function App() {
   const [prodLink, setProdLink] = useState('');
   const [prodImgUrl, setProdImgUrl] = useState('');
 
+  // --- BANK STORYBOARD STATES ---
+  const [bankStoryboardData, setBankStoryboardData] = useState([]);
+  const [isBankStoryboardLoading, setIsBankStoryboardLoading] = useState(false);
+  const [bankCategory, setBankCategory] = useState('');
+  const [bankDesc, setBankDesc] = useState('');
+  const [bankImgUrl, setBankImgUrl] = useState('');
+  const [isBankSaving, setIsBankSaving] = useState(false);
+  const [activeBankCategory, setActiveBankCategory] = useState('Semua');
+
   // --- SELLING POINT STATES ---
   const [sellingProductInfo, setSellingProductInfo] = useState('')
   const [isGeneratingSelling, setIsGeneratingSelling] = useState(false)
@@ -181,12 +190,36 @@ function App() {
     }
   };
 
+  const fetchBankStoryboard = async () => {
+    setIsBankStoryboardLoading(true);
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?type=eq.Bank%20Storyboard&select=id,product_desc,result,created_at&order=created_at.desc`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // data contains id, product_desc (category), result (JSON string of {desc, imgUrl})
+        setBankStoryboardData(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsBankStoryboardLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'history') {
       fetchHistory();
     }
     if (activeTab === 'product_data' || activeTab === 'thread') {
       fetchProducts();
+    }
+    if (activeTab === 'bank_storyboard' || activeTab === 'storyboard' || activeTab === 'cooking_content') {
+      fetchBankStoryboard();
     }
   }, [activeTab]);
 
@@ -209,8 +242,9 @@ function App() {
         })
       });
       if (response.ok) {
-        if (type !== 'Data Produk') alert("Berhasil disimpan permanen ke Database!");
+        if (type !== 'Data Produk' && type !== 'Bank Storyboard') alert("Berhasil disimpan permanen ke Database!");
         if (type === 'Data Produk') fetchProducts(); // Refresh data
+        if (type === 'Bank Storyboard') fetchBankStoryboard(); // Refresh bank data
       } else {
         const err = await response.json();
         alert("Gagal: " + (err.message || JSON.stringify(err)));
@@ -245,6 +279,34 @@ function App() {
       });
       if (response.ok) {
         fetchProducts();
+      }
+    } catch(e) {
+      alert("Gagal hapus: " + e.message);
+    }
+  };
+
+  const handleSaveBank = () => {
+    if (!bankCategory || !bankDesc) return alert("Kategori dan Deskripsi wajib diisi!");
+    const bankPayload = JSON.stringify({
+      desc: bankDesc,
+      imgUrl: bankImgUrl
+    });
+    saveToSupabase(bankPayload, 'Bank Storyboard', bankCategory);
+    setBankDesc(''); setBankImgUrl('');
+  };
+
+  const handleDeleteBank = async (id) => {
+    if(!window.confirm("Hapus data dari Bank Storyboard?")) return;
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      if (response.ok) {
+        fetchBankStoryboard();
       }
     } catch(e) {
       alert("Gagal hapus: " + e.message);
@@ -319,7 +381,7 @@ function App() {
 
   // --- STEP 1: GENERATE SELLING POINTS ---
   const handleGenerateStorySelling = async () => {
-    if (!productFile || !productDesc || !apiKey) {
+    if ((!productFile && !productImage) || !productDesc || !apiKey) {
       alert("Pastikan Gambar, Deskripsi, dan API Key sudah diisi.");
       return;
     }
@@ -327,7 +389,13 @@ function App() {
     setIsGeneratingStorySelling(true)
     
     try {
-      const base64Image = await fileToBase64(productFile);
+      let base64Image = null;
+      if (productFile) {
+        base64Image = await fileToBase64(productFile);
+      } else if (productImage && typeof productImage === 'string' && productImage.startsWith('http')) {
+        base64Image = productImage;
+      }
+      
       const systemPrompt = `Anda adalah seorang manajer produk dan ahli visual berpengalaman. Pengguna akan memberi Anda deskripsi produk beserta gambarnya. 
 Tugas Anda ada dua:
 1. DESKRIPSI FISIK SUPER DETAIL: Analisis gambar produk dengan sangat teliti. Deskripsikan secara mikroskopis bentuk fisik, warna spesifik, bahan/tekstur, rasio, posisi komponen/logo, dan fitur unik produk dari gambar tersebut. Tujuannya agar deskripsi ini bisa dipakai oleh AI Image Generator (DALL-E/Midjourney) untuk menggambar ulang produk dengan akurasi 100%.
@@ -472,27 +540,32 @@ Efek Suara (Sound Effects):
     
     try {
       let userContent = [];
-      userContent.push({ type: "text", text: `Deskripsi Produk Alat Masak: ${cookDesc}\nTipe Konten: ${cookType}\nJumlah Video/Prompt: ${cookPromptCount}\nJumlah Scene per Video: ${cookSceneCount}\nInstruksi Khusus (Mau masak apa): ${cookInstruction || 'Terserah AI'}` });
+      userContent.push({ type: "text", text: `Deskripsi Produk Alat Masak: ${cookDesc}\nTipe Konten: ${cookType}\nJumlah Bagian Video: ${cookPromptCount}\nJumlah Scene per Bagian: ${cookSceneCount}\nInstruksi Khusus (Mau masak apa): ${cookInstruction || 'Terserah AI'}` });
 
+      let base64Image = null;
       if (cookFile) {
-        const base64Image = await fileToBase64(cookFile);
+        base64Image = await fileToBase64(cookFile);
+      } else if (cookImage && typeof cookImage === 'string' && cookImage.startsWith('http')) {
+        base64Image = cookImage;
+      }
+      if (base64Image) {
         userContent.push({ type: "image_url", image_url: { url: base64Image } });
       }
 
       const systemPrompt = `Kamu adalah Sutradara Konten Memasak dan Ahli Prompt Video AI (Luma Dream Machine/Veo/Kling).
 Pengguna akan memberikan deskripsi alat masak (panci/wajan), instruksi khusus masakan apa yang akan dibuat, dan gambar alat masak (jika ada).
-Tugasmu membuat ${cookPromptCount} variasi storyboard video konten memasak yang berbeda.
-Setiap variasi video berdurasi total (jumlah scene x 10 detik).
+Tugasmu membuat storyboard video konten memasak yang menyambung dan berurutan secara logis, dibagi menjadi ${cookPromptCount} Bagian.
+Ini BUKAN variasi yang berbeda, melainkan SATU cerita/video yang dibagi menjadi ${cookPromptCount} bagian (misalnya: Bagian 1 persiapan, Bagian 2 memasak, Bagian 3 penyajian).
 
 ATURAN OUTPUT:
-1. Pisahkan setiap Variasi dengan simbol "---" agar sistem bisa memotongnya.
-2. Setiap variasi HANYA berisi prompt-prompt video berbahasa Inggris yang sangat detail untuk AI Video Generator.
+1. Pisahkan setiap Bagian dengan simbol "---" agar sistem bisa memotongnya.
+2. Setiap Bagian HANYA berisi prompt-prompt video berbahasa Inggris yang sangat detail untuk AI Video Generator.
 3. Prompt video harus mencakup pencahayaan, pergerakan kamera (panning, zoom, macro shot), tekstur masakan, dan keterlibatan alat masak tersebut dengan elegan.
 4. Jangan tambahkan prompt untuk gambar diam secara terpisah. Semua harus berupa prompt video (Scene 1, Scene 2, dst).
 
-FORMAT UNTUK SETIAP VARIASI:
+FORMAT UNTUK SETIAP BAGIAN:
 
-VARIASI [Nomor]: [Judul Konsep]
+BAGIAN [Nomor]: [Fokus Adegan di Bagian Ini]
 
 Scene 1: (Prompt video detail dalam bahasa Inggris untuk Scene 1. Biasanya pengguna akan mengubah prompt Scene 1 ini menjadi gambar terlebih dahulu lalu di-animate)
 Scene 2: (Prompt video detail dalam bahasa Inggris)
@@ -588,6 +661,10 @@ Scene 2: (Prompt video detail dalam bahasa Inggris)
               </div>
             )}
           </div>
+          <button className={`nav-item ${activeTab === 'bank_storyboard' ? 'active' : ''}`} onClick={() => {setActiveTab('bank_storyboard'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🗃️</span> Bank Storyboard</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
           <button className={`nav-item ${activeTab === 'image_gen' ? 'active' : ''}`} onClick={() => {setActiveTab('image_gen'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🎨</span> AI Image</div>
             <span className="nav-arrow">&gt;</span>
@@ -652,6 +729,36 @@ Scene 2: (Prompt video detail dalam bahasa Inggris)
                 <span style={{background: 'var(--primary-color)', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'}}>1</span>
                 Analisis Produk (Selling Points)
               </h3>
+
+              <div className="input-group">
+                <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>🗃️ Pilih dari Bank Storyboard (Auto-fill)</label>
+                <select onChange={(e) => {
+                  const selectedId = e.target.value;
+                  if (!selectedId) {
+                    setProductDesc(''); setProductImage(null); setProductFile(null);
+                    return;
+                  }
+                  const item = bankStoryboardData.find(p => p.id == selectedId);
+                  if (item) {
+                    let parsed = {};
+                    try { parsed = JSON.parse(item.result); } catch(err){}
+                    setProductDesc(parsed.desc || '');
+                    if (parsed.imgUrl) {
+                      setProductImage(parsed.imgUrl);
+                      setProductFile(null); 
+                    }
+                  }
+                }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
+                  <option value="">-- Kosongkan (Isi Manual) --</option>
+                  {bankStoryboardData.map(item => {
+                    let parsed = {};
+                    try { parsed = JSON.parse(item.result); } catch(e) {}
+                    return (
+                      <option key={item.id} value={item.id}>{item.product_desc} - {parsed.desc?.substring(0, 30)}...</option>
+                    )
+                  })}
+                </select>
+              </div>
               
               <div className="input-group">
                 <label>Gambar Produk</label>
@@ -790,6 +897,36 @@ Scene 2: (Prompt video detail dalam bahasa Inggris)
         <div className="layout-grid">
           <div className="glass-panel input-section">
             <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>Pengaturan Konten</h3>
+
+            <div className="input-group">
+              <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>🗃️ Pilih dari Bank Storyboard (Auto-fill)</label>
+              <select onChange={(e) => {
+                const selectedId = e.target.value;
+                if (!selectedId) {
+                  setCookDesc(''); setCookImage(null); setCookFile(null);
+                  return;
+                }
+                const item = bankStoryboardData.find(p => p.id == selectedId);
+                if (item) {
+                  let parsed = {};
+                  try { parsed = JSON.parse(item.result); } catch(err){}
+                  setCookDesc(`${item.product_desc} - ${parsed.desc || ''}`);
+                  if (parsed.imgUrl) {
+                    setCookImage(parsed.imgUrl);
+                    setCookFile(null); 
+                  }
+                }
+              }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
+                <option value="">-- Kosongkan (Isi Manual) --</option>
+                {bankStoryboardData.map(item => {
+                  let parsed = {};
+                  try { parsed = JSON.parse(item.result); } catch(e) {}
+                  return (
+                    <option key={item.id} value={item.id}>{item.product_desc} - {parsed.desc?.substring(0, 30)}...</option>
+                  )
+                })}
+              </select>
+            </div>
             
             <div className="input-group">
               <label>Gambar Produk Panci/Wajan (Opsional)</label>
@@ -1866,6 +2003,93 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
       </div>
     </div>
   );
+  const uniqueBankCategories = ['Semua', ...new Set(bankStoryboardData.map(item => item.product_desc))];
+  const filteredBankData = activeBankCategory === 'Semua' ? bankStoryboardData : bankStoryboardData.filter(item => item.product_desc === activeBankCategory);
+
+  const renderBankStoryboardForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">🗃️ Bank Storyboard</h2>
+        <p className="subtitle">Simpan aset visual (Panci, Wajan, Produk) untuk mempermudah pembuatan Storyboard.</p>
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>Tambah Aset Baru</h3>
+            <div className="input-group">
+              <label>Kategori Produk</label>
+              <input type="text" className="api-key-input" placeholder="Contoh: Peralatan Dapur, Sepatu, Skincare..." value={bankCategory} onChange={(e) => setBankCategory(e.target.value)} />
+              <small style={{display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)'}}>Bebas ketik kategori apapun.</small>
+            </div>
+            <div className="input-group">
+              <label>Deskripsi Produk / Nama Aset</label>
+              <textarea placeholder="Contoh: Wajan anti lengket granit 24cm gagang kayu..." value={bankDesc} onChange={(e) => setBankDesc(e.target.value)} rows="3" />
+            </div>
+            <div className="input-group">
+              <label>Link Gambar Produk (URL)</label>
+              <input type="text" className="api-key-input" placeholder="https://..." value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} />
+            </div>
+            <button className="btn-primary generate-btn" onClick={handleSaveBank} disabled={!bankCategory || !bankDesc || isSaving}>
+              {isSaving ? 'Menyimpan...' : '💾 Simpan ke Bank'}
+            </button>
+          </div>
+          
+          <div className="glass-panel" style={{padding: '1rem', background: 'transparent', border: 'none', boxShadow: 'none'}}>
+            <h3 style={{marginBottom: '1rem'}}>Aset Tersimpan ({filteredBankData.length})</h3>
+            
+            <div style={{display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '1rem', marginBottom: '1rem'}}>
+              {uniqueBankCategories.map((cat, idx) => (
+                <button 
+                  key={idx} 
+                  onClick={() => setActiveBankCategory(cat)}
+                  style={{
+                    padding: '0.4rem 0.8rem', 
+                    borderRadius: '20px', 
+                    border: '1px solid var(--glass-border)', 
+                    background: activeBankCategory === cat ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)',
+                    color: activeBankCategory === cat ? 'white' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {isBankStoryboardLoading ? (
+              <div style={{textAlign: 'center', padding: '2rem'}}><span className="loading-spinner"></span> Memuat...</div>
+            ) : filteredBankData.length === 0 ? (
+              <EmptyStateRight />
+            ) : (
+              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                {filteredBankData.map(item => {
+                  let parsed = {};
+                  try { parsed = JSON.parse(item.result); } catch(e) {}
+                  return (
+                    <div key={item.id} className="prompt-card fade-in" style={{display: 'flex', gap: '1rem', padding: '1rem'}}>
+                      {parsed.imgUrl && (
+                        <div style={{width: '80px', height: '80px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)'}}>
+                          <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                        </div>
+                      )}
+                      <div style={{flex: 1, overflow: 'hidden'}}>
+                        <h4 style={{margin: '0 0 0.5rem 0', fontSize: '0.75rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: '1px'}}>{item.product_desc}</h4>
+                        <p style={{fontSize: '0.85rem', color: 'white', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                      </div>
+                      <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', alignSelf: 'flex-start'}}>
+                        Hapus
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderProductDataForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
@@ -2061,6 +2285,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         </div>
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'cooking_content' && renderCookingContentForm()}
+        {activeTab === 'bank_storyboard' && renderBankStoryboardForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'video_script' && renderVideoScriptForm()}
         {activeTab === 'product_data' && renderProductDataForm()}
