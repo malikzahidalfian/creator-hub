@@ -43,6 +43,17 @@ function App() {
   const [storyVisual, setStoryVisual] = useState('3D Animasi / Pixar Style')
   const [storyContentStyle, setStoryContentStyle] = useState('Storytelling')
 
+  // --- KONTEN MASAK STATES ---
+  const [cookImage, setCookImage] = useState(null)
+  const [cookFile, setCookFile] = useState(null)
+  const [cookDesc, setCookDesc] = useState('')
+  const [cookType, setCookType] = useState('ASMR')
+  const [cookPromptCount, setCookPromptCount] = useState('2')
+  const [cookSceneCount, setCookSceneCount] = useState('4')
+  const [isGeneratingCook, setIsGeneratingCook] = useState(false)
+  const [generatedCook, setGeneratedCook] = useState(null)
+  const [isStoryboardAccordionOpen, setIsStoryboardAccordionOpen] = useState(false)
+
   // --- THREAD AFFILIATE STATES ---
   const [threadTitle, setThreadTitle] = useState('')
   const [threadDesc, setThreadDesc] = useState('')
@@ -448,6 +459,80 @@ Efek Suara (Sound Effects):
     }
   }
 
+  // --- GENERATE KONTEN MASAK ---
+  const handleGenerateCooking = async () => {
+    if (!cookDesc || !apiKey) {
+      alert("Pastikan Nama Makanan/Deskripsi dan API Key sudah diisi.");
+      return;
+    }
+    
+    setIsGeneratingCook(true)
+    setGeneratedCook(null)
+    
+    try {
+      let userContent = [];
+      userContent.push({ type: "text", text: `Nama Makanan / Deskripsi: ${cookDesc}\nTipe Konten: ${cookType}\nJumlah Scene Video: ${cookSceneCount}` });
+
+      if (cookFile) {
+        const base64Image = await fileToBase64(cookFile);
+        userContent.push({ type: "image_url", image_url: { url: base64Image } });
+      }
+
+      const systemPrompt = `Kamu adalah Sutradara Konten Memasak dan Ahli Prompt AI (Midjourney/Kling/Veo). 
+Pengguna akan memberikan gambar produk panci/wajan (opsional), nama masakan, tipe konten, dan jumlah scene. 
+Tugasmu membuat ${cookPromptCount} variasi konsep konten memasak yang berbeda.
+
+Untuk SETIAP VARIASI, berikan struktur berikut ini, pisahkan SETIAP VARIASI dengan simbol "---" agar sistem bisa memotongnya.
+
+FORMAT UNTUK SETIAP VARIASI:
+
+VARIASI [Nomor]: [Judul Konsep]
+
+📸 PROMPT GAMBAR (BAHAN & HASIL):
+- Bahan Mentah: (Prompt bahasa Inggris detail untuk Text-to-Image bahan-bahan mentah yang segar di meja dapur yang estetik, photorealistic, 8k).
+- Hasil Masakan: (Prompt bahasa Inggris detail untuk Text-to-Image hidangan matang yang sangat menggugah selera, food photography, macro lens).
+
+🔍 PROMPT DETAIL PRODUK (GAMBAR PANCI/WAJAN):
+Buatkan prompt bahasa Inggris untuk menghasilkan gambar produk panci/wajan dari berbagai sudut (Front view, Back view, Top view, Bottom view, Left profile, Right profile) yang terlihat premium, studio lighting, clean background.
+
+🎥 PROMPT VIDEO (KLING AI / VEO 3):
+(Buatkan ${cookSceneCount} Scene Video berurutan).
+Untuk setiap scene, tuliskan prompt bahasa Inggris yang sangat detail untuk Video AI (fokus pada gerakan kamera, interaksi bahan dengan wajan masakan, efek sinematik, pencahayaan).
+- Scene 1: ...
+- Scene 2: ...
+- ... (hingga ${cookSceneCount} Scene).`;
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": "1inference"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userContent }
+          ],
+          temperature: 0.8
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+      const data = await response.json();
+      let generatedText = data.choices[0].message.content.trim().replace(/\*\*/g, ""); 
+      
+      const blocks = generatedText.split('---').map(b => b.trim()).filter(b => b.length > 0);
+      setGeneratedCook(blocks);
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsGeneratingCook(false)
+    }
+  }
+
   const LogoSVG = () => (
     <svg viewBox="0 0 100 100" className="logo-svg" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -491,10 +576,22 @@ Efek Suara (Sound Effects):
           <button className="hamburger-btn close-btn" onClick={() => setIsMobileMenuOpen(false)}>✕</button>
         </div>
         <nav className="sidebar-nav">
-          <button className={`nav-item ${activeTab === 'storyboard' ? 'active' : ''}`} onClick={() => {setActiveTab('storyboard'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
+          <div className="accordion-menu">
+            <button className={`nav-item ${(activeTab === 'storyboard' || activeTab === 'cooking_content') ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
+              <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
+              <span className="nav-arrow" style={{transform: isStoryboardAccordionOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s'}}>&gt;</span>
+            </button>
+            {isStoryboardAccordionOpen && (
+              <div className="accordion-content fade-in" style={{paddingLeft: '2rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.2rem', marginBottom: '0.5rem'}}>
+                <button className={`nav-item ${activeTab === 'storyboard' ? 'active' : ''}`} onClick={() => {setActiveTab('storyboard'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
+                  <div className="nav-item-content">Umum</div>
+                </button>
+                <button className={`nav-item ${activeTab === 'cooking_content' ? 'active' : ''}`} onClick={() => {setActiveTab('cooking_content'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
+                  <div className="nav-item-content">Konten Masak</div>
+                </button>
+              </div>
+            )}
+          </div>
           <button className={`nav-item ${activeTab === 'image_gen' ? 'active' : ''}`} onClick={() => {setActiveTab('image_gen'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🎨</span> AI Image</div>
             <span className="nav-arrow">&gt;</span>
@@ -677,6 +774,108 @@ Efek Suara (Sound Effects):
               ))}
               <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
                 <button className="btn-secondary" onClick={() => saveToSupabase(generatedPrompts, 'Storyboard', productDesc)} disabled={isSaving} style={{flex: 1}}>
+                  {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
+                </button>
+              </div>
+            </div>
+          ) : <EmptyStateRight />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCookingContentForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">🍳 Storyboard Konten Masak</h2>
+        <p className="subtitle">Ubah produk alat masak Anda menjadi prompt gambar & video super realistis.</p>
+
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>Pengaturan Konten</h3>
+            
+            <div className="input-group">
+              <label>Gambar Produk Panci/Wajan (Opsional)</label>
+              <div className="image-upload-wrapper">
+              {cookImage ? (
+                <div className="image-preview">
+                  <img src={cookImage} alt="Preview" />
+                  <button className="btn-secondary" onClick={() => { setCookImage(null); setCookFile(null); }}>Ganti Gambar</button>
+                </div>
+              ) : (
+                <label className="upload-placeholder">
+                  <input type="file" accept="image/*" onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      setCookFile(file);
+                      const reader = new FileReader();
+                      reader.onload = (e) => setCookImage(e.target.result);
+                      reader.readAsDataURL(file);
+                    }
+                  }} hidden />
+                  <span className="upload-icon">⬆️</span>
+                  <span>Klik untuk upload gambar produk</span>
+                  <small>Biar AI mengenali bentuk panci/wajan Anda</small>
+                </label>
+              )}
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label>Nama Masakan / Deskripsi Konsep</label>
+              <textarea 
+                placeholder="Contoh: Nasi Goreng Seafood / Tumis Kangkung Terasi"
+                value={cookDesc}
+                onChange={(e) => setCookDesc(e.target.value)}
+                rows="3"
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Tipe Konten</label>
+              <select value={cookType} onChange={(e) => setCookType(e.target.value)} className="select-input">
+                <option value="ASMR (Fokus suara masakan dan detail close-up)">ASMR</option>
+                <option value="Mini Vlog (Estetik, gaya hidup)">Mini Vlog</option>
+                <option value="Review Produk (Menonjolkan fitur anti-lengket dsb)">Review Produk</option>
+                <option value="Tutorial Masak (Step-by-step)">Tutorial Masak</option>
+                <option value="Cinematic Commercial (Megah, dramatis)">Cinematic Commercial</option>
+              </select>
+            </div>
+
+            <div className="input-row">
+              <div className="input-group">
+                <label>Jumlah Variasi Konsep</label>
+                <input type="number" min="1" max="5" value={cookPromptCount} onChange={(e) => setCookPromptCount(e.target.value)} className="select-input" />
+              </div>
+              <div className="input-group">
+                <label>Scene Video per Variasi</label>
+                <input type="number" min="2" max="6" value={cookSceneCount} onChange={(e) => setCookSceneCount(e.target.value)} className="select-input" />
+              </div>
+            </div>
+
+            <button className="btn-primary generate-btn" onClick={handleGenerateCooking} disabled={!cookDesc || isGeneratingCook || !apiKey}>
+              {isGeneratingCook ? 'Meracik Resep Konten...' : '🍳 Generate Konten Masak'}
+            </button>
+            {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
+          </div>
+
+          <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
+          {generatedCook ? (
+            <div className="prompts-container">
+              {generatedCook.map((promptText, index) => (
+                <div key={index} className="prompt-card fade-in">
+                  <div className="prompt-header">
+                    <h3>Variasi {index + 1}</h3>
+                    <button className="btn-copy" onClick={() => handleCopy(promptText, index)}>
+                      {copiedIndex === index ? '✅ Copied!' : '📋 Copy'}
+                    </button>
+                  </div>
+                  <pre className="prompt-content" style={{whiteSpace: 'pre-wrap'}}>{promptText}</pre>
+                </div>
+              ))}
+              <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(generatedCook, 'Konten Masak', cookDesc)} disabled={isSaving} style={{flex: 1}}>
                   {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
                 </button>
               </div>
@@ -1781,7 +1980,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         <p className="subtitle">Kelola semua kunci API (API Key) Anda di sini.</p>
         
         <div className="layout-grid">
-          <div className="glass-panel" style={{textAlign: 'left'}}>
+          <div className="glass-panel" style={{textAlign: 'left', gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto'}}>
             <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>1inference API (Utama)</h3>
             <div className="input-group">
               <label>1inference API Key</label>
@@ -1796,26 +1995,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 Digunakan untuk fitur Storyboard, Gambar, dan Thread Umum.
               </small>
             </div>
-          </div>
-
-          <div className="glass-panel" style={{textAlign: 'left'}}>
-            <h3 style={{marginBottom: '1rem', color: '#10b981'}}>Google Gemini API (Script Video)</h3>
-            <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem'}}>
-              Masukkan hingga 10 API Key Gemini. Sistem akan otomatis memutar (rotasi) ke kunci berikutnya jika kunci yang dipakai mencapai batas kuota (Limit).
-            </p>
-            {geminiKeys.map((key, index) => (
-              <div className="input-group" key={index} style={{marginBottom: '0.5rem'}}>
-                <label style={{fontSize: '0.75rem'}}>Gemini Key {index + 1} {index === activeGeminiKeyIndex && <span style={{color: '#10b981', fontWeight: 'bold'}}>(Aktif)</span>}</label>
-                <input
-                  type="password"
-                  value={key}
-                  onChange={(e) => handleGeminiKeyChange(index, e.target.value)}
-                  placeholder={`AIzaSy...`}
-                  className="api-key-input"
-                  style={{padding: '0.5rem', fontSize: '0.8rem'}}
-                />
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -1875,6 +2054,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           <h2>Creator Hub AI</h2>
         </div>
         {activeTab === 'storyboard' && renderStoryboardForm()}
+        {activeTab === 'cooking_content' && renderCookingContentForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'video_script' && renderVideoScriptForm()}
         {activeTab === 'product_data' && renderProductDataForm()}
