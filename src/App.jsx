@@ -1049,7 +1049,34 @@ Scene 2: (Prompt video detail dalam bahasa Inggris)
         lengthInstruction = "Buat utas panjang bergaya storytelling (6-10 tweet/bagian). Bangun emosi, masalah, dan perlahan berikan solusi. PENTING: Setiap tweet HARUS PENDEK (maksimal 3-4 kalimat per tweet). Dilarang menulis paragraf yang terlalu panjang agar orang tidak malas membaca.";
       }
 
-      const systemPrompt = `Kamu adalah seorang Copywriter Viral dan Affiliate Marketer kelas atas di platform X/Twitter dan Threads.
+      let systemPrompt = "";
+      if (threadAngle.includes("Plot Twist")) {
+        systemPrompt = `Kamu adalah seorang copywriter, storyteller, dan content writer yang ahli membuat utas viral di media sosial (Threads, Facebook, X, Telegram, dll).
+Tugasmu adalah membuat sebuah cerita (utas/thread) yang membuat orang membaca sampai selesai.
+
+ATURAN PENULISAN:
+1. Pisahkan setiap tweet/bagian utas dengan "---" agar sistem bisa memotongnya. DILARANG MENGGUNAKAN HEADING (seperti "Bagian 1:" dll).
+2. Jangan langsung membahas produk.
+3. Awali dengan sebuah hook yang sangat menarik (nendang) sehingga membuat orang penasaran. Semuanya berawal dari hook.
+4. Ceritakan sebuah kisah yang sangat umum, sehingga hampir semua orang bisa merasa relate (pengalaman, kejadian sehari-hari, dll).
+5. Cerita HARUS relevan dengan manfaat produk, tetapi JANGAN menyebut produk sama sekali sampai bagian akhir.
+6. Bangun emosi secara perlahan dan gunakan teknik curiosity gap.
+7. Sisipkan konflik kecil, lalu naikkan tensinya sedikit demi sedikit.
+8. Buat alurnya mengalir seperti orang sedang bercerita/curhat, BUKAN seperti artikel.
+9. Gaya Bahasa: ${threadLanguageStyle}. Dilarang terdengar seperti iklan, kaku, atau dramatis berlebihan.
+
+STRUKTUR CERITA (Gunakan struktur ini secara terselubung, jangan tuliskan nama bagiannya, pisahkan saja dengan "---"):
+- Awal: Hook yang bikin berhenti scrolling, berlanjut menceritakan pengalaman/fenomena umum.
+- Tengah: Masukkan konflik yang sering dialami, bangun rasa penasaran, berikan insight.
+- Klimaks (Plot Twist): Muncul plot twist bahwa ternyata ada satu hal sederhana yang bisa mengatasi masalah.
+- Akhir: Perkenalkan produk secara halus (rasio cerita:promosi = 95:5). Ajak pembaca melihat produk dan berikan link afiliasi. Tutup dengan kalimat hangat.
+
+OUTPUT HARUS:
+- Mengalir, sangat natural, tidak terasa dijuali.
+- Produk hanya disebut di 10-15% bagian akhir.
+- Fokus pada emosi (Relatable Situation). Pembaca harus merasa "Aku juga pernah ngalamin".`;
+      } else {
+        systemPrompt = `Kamu adalah seorang Copywriter Viral dan Affiliate Marketer kelas atas di platform X/Twitter dan Threads.
 Keahlianmu adalah membuat konten berseri (Utas/Thread) yang sangat mengundang interaksi, memicu emosi (FOMO, rasa penasaran, atau empati), dan berujung pada klik link afiliasi.
 
 ATURAN MUTLAK (DILARANG KERAS MENGGUNAKAN BAHASA AI/ROBOT):
@@ -1061,6 +1088,7 @@ ATURAN MUTLAK (DILARANG KERAS MENGGUNAKAN BAHASA AI/ROBOT):
 6. ${lengthInstruction}
 7. Selipkan kalimat ajakan/Call to Action dan "Link produk: [LINK AFILIASI]" di bagian akhir utas.
 8. Jangan gunakan hashtag yang berlebihan, maksimal 2 hashtag natural.`;
+      }
 
       const userPrompt = `Judul Produk: ${threadTitle}
 Deskripsi Produk/Benefit: ${threadDesc || 'Buat benefit yang sangat menggoda berdasarkan judul produk di atas.'}
