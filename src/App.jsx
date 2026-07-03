@@ -149,6 +149,10 @@ function App() {
   const supabaseUrl = 'https://xkixokhnofujcnehuvgz.supabase.co';
   const supabaseKey = 'sb_publishable_zryQEkMVI1nD3R3Cgf0zdw_LTD0nwtY';
 
+  // --- DATABASE (HISTORY) STATES ---
+  const [activeDatabaseCategory, setActiveDatabaseCategory] = useState('Storyboard');
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
     try {
@@ -686,7 +690,7 @@ Scene 2: (Prompt video detail dalam bahasa Inggris)
             <span className="nav-arrow">&gt;</span>
           </button>
           <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => {setActiveTab('history'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🔍</span> Riwayat</div>
+            <div className="nav-item-content"><span className="icon">🗄️</span> Database</div>
             <span className="nav-arrow">&gt;</span>
           </button>
           <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => {setActiveTab('settings'); setIsMobileMenuOpen(false);}}>
@@ -2188,37 +2192,103 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     </div>
   );
 
-  const renderHistory = () => (
-    <div className="content-wrapper fade-in">
-      <div className="content-panel">
-        <h2 className="desktop-title">Riwayat Generate</h2>
-        <p className="subtitle">Daftar semua prompt yang pernah Anda buat tersimpan aman di Database.</p>
-        
-        {isHistoryLoading ? (
-          <div style={{textAlign: 'center', padding: '2rem'}}><span className="loading-spinner"></span> Memuat database...</div>
-        ) : history.length === 0 ? (
-          <div className="glass-panel" style={{textAlign: 'center', opacity: 0.7}}>Belum ada data yang tersimpan.</div>
-        ) : (
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-            {history.map(item => (
-              <div key={item.id} className="glass-panel" style={{padding: '1.5rem'}}>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center'}}>
-                  <span style={{background: 'var(--primary-color)', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold'}}>{item.type}</span>
-                  <span style={{fontSize: '0.7rem', color: 'var(--text-secondary)'}}>{new Date(item.created_at).toLocaleString('id-ID')}</span>
+  const renderDatabase = () => {
+    let filteredHistory = [];
+    if (activeDatabaseCategory === 'Storyboard') {
+      filteredHistory = history.filter(item => item.type === 'Storyboard' || item.type === 'Konten Masak');
+    } else if (activeDatabaseCategory === 'Threads Affiliate') {
+      filteredHistory = history.filter(item => item.type === 'Utas Affiliate');
+    } else if (activeDatabaseCategory === 'Threads Umum') {
+      filteredHistory = history.filter(item => item.type === 'Utas Bebas');
+    }
+
+    if (selectedHistoryItem) {
+      const parts = selectedHistoryItem.result.split('\n\n---\n\n').filter(p => p.trim());
+      return (
+        <div className="content-wrapper fade-in">
+          <div className="content-panel">
+            <button className="btn-secondary" onClick={() => setSelectedHistoryItem(null)} style={{marginBottom: '1rem'}}>
+              &larr; Kembali ke Daftar
+            </button>
+            <h2 className="desktop-title">{selectedHistoryItem.type}</h2>
+            <p className="subtitle" style={{marginBottom: '1rem'}}><strong>Topik/Produk:</strong> {selectedHistoryItem.product_desc}</p>
+            <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+              {parts.map((part, index) => (
+                <div key={index} className="prompt-card fade-in">
+                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center'}}>
+                    <span style={{background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold'}}>
+                      Bagian {index + 1}
+                    </span>
+                    <button 
+                      className="btn-secondary" 
+                      onClick={() => handleCopy(part, index)}
+                      style={{padding: '0.4rem 0.8rem', fontSize: '0.8rem', margin: 0, background: copiedIndex === index ? '#10b981' : '', color: copiedIndex === index ? 'white' : ''}}
+                    >
+                      {copiedIndex === index ? 'Tersalin! ✓' : '📋 Salin'}
+                    </button>
+                  </div>
+                  <div style={{whiteSpace: 'pre-wrap', lineHeight: '1.6'}}>{part.trim()}</div>
                 </div>
-                <div style={{fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '1rem'}}>
-                  <strong>Topik/Produk:</strong> {item.product_desc || '-'}
-                </div>
-                <div style={{background: '#f8fafc', padding: '1rem', borderRadius: '12px', fontSize: '0.8rem', whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--glass-border)'}}>
-                  {item.result}
-                </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="content-wrapper fade-in">
+        <div className="content-panel">
+          <h2 className="desktop-title">🗄️ Database Konten</h2>
+          <p className="subtitle">Tempat penyimpanan semua draft dan karya Anda. Terstruktur per kategori agar mudah dicari.</p>
+          
+          <div style={{display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '1rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)'}}>
+            {['Storyboard', 'Threads Affiliate', 'Threads Umum'].map(cat => (
+              <button 
+                key={cat} 
+                onClick={() => {setActiveDatabaseCategory(cat); setSelectedHistoryItem(null);}}
+                style={{
+                  padding: '0.6rem 1.2rem', 
+                  borderRadius: '8px', 
+                  border: '1px solid var(--glass-border)', 
+                  background: activeDatabaseCategory === cat ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)',
+                  color: activeDatabaseCategory === cat ? 'white' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  fontWeight: 'bold'
+                }}
+              >
+                {cat}
+              </button>
             ))}
           </div>
-        )}
+
+          {isHistoryLoading ? (
+            <div style={{textAlign: 'center', padding: '2rem'}}><span className="loading-spinner"></span> Memuat database...</div>
+          ) : filteredHistory.length === 0 ? (
+            <div className="glass-panel" style={{textAlign: 'center', opacity: 0.7}}>Belum ada data di kategori ini.</div>
+          ) : (
+            <div style={{display: 'flex', flexDirection: 'column', gap: '0.8rem'}}>
+              {filteredHistory.map(item => (
+                <div key={item.id} className="glass-panel hover-card" style={{padding: '1.2rem', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--glass-border)'}} onClick={() => setSelectedHistoryItem(item)}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center'}}>
+                    <span style={{background: 'var(--primary-color)', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold'}}>{item.type}</span>
+                    <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>{new Date(item.created_at).toLocaleString('id-ID')}</span>
+                  </div>
+                  <h4 style={{fontSize: '1rem', color: 'var(--text-primary)', margin: 0}}>
+                    {item.product_desc || 'Tanpa Judul'}
+                  </h4>
+                  <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                    Klik untuk melihat isi konten dan menyalin teks...
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const handleKeyChange = (e) => {
     setApiKey(e.target.value);
@@ -2321,7 +2391,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
         {activeTab === 'selling_point' && renderSellingForm()}
-        {activeTab === 'history' && renderHistory()}
+        {activeTab === 'history' && renderDatabase()}
         {activeTab === 'settings' && renderSettings()}
       </main>
     </div>
