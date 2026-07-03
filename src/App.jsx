@@ -1057,7 +1057,7 @@ ATURAN MUTLAK (DILARANG KERAS MENGGUNAKAN BAHASA AI/ROBOT):
 2. Angle Jualan: ${threadAngle}. Terapkan strategi ini di dalam isi utas.
 3. DILARANG KERAS menggunakan kata-kata kaku khas AI seperti: "Di era digital ini", "Kesimpulannya", "Mari kita bahas", "Tak dapat dipungkiri". Gunakan singkatan wajar orang Indonesia.
 4. Pisahkan setiap tweet/bagian utas dengan "---" agar sistem bisa memotongnya.
-5. Tweet pertama HARUS berupa HOOK yang sangat kuat. JANGAN terlihat seperti sedang berjualan di tweet pertama.
+5. Tweet pertama HARUS berupa HOOK yang "Nendang" dan sangat kuat! Ingat, semuanya berawal dari hook; jika hook gagal, orang akan skip. Pancing emosi terdalam, berikan opini kontroversial, atau rasa penasaran tingkat dewa. JANGAN terlihat seperti sedang berjualan di tweet pertama.
 6. ${lengthInstruction}
 7. Selipkan kalimat ajakan/Call to Action dan "Link produk: [LINK AFILIASI]" di bagian akhir utas.
 8. Jangan gunakan hashtag yang berlebihan, maksimal 2 hashtag natural.`;
@@ -1850,10 +1850,11 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             <div className="input-group">
               <label>Angle Jualan (Strategi)</label>
               <select value={threadAngle} onChange={(e) => setThreadAngle(e.target.value)} className="select-input">
-                <option value="Storytelling (Bercerita pengalaman pribadi/masalah)">Storytelling (Bercerita masalah \u2192 Menemukan solusi)</option>
+                <option value="Storytelling (Bercerita pengalaman pribadi/masalah)">Storytelling (Bercerita masalah → Menemukan solusi)</option>
                 <option value="Soft Selling (Edukasi dulu, jualan kemudian)">Soft Selling (Edukasi/Fakta dulu, lalu rekomendasi produk)</option>
                 <option value="Hard Selling (Fokus pada diskon/promo/kualitas)">Hard Selling (Fokus langsung pada Diskon, Kualitas, FOMO)</option>
-                <option value="Unboxing / Review Jujur (Kesan pertama)">Unboxing / Review Jujur (Membahas pros \u0026 cons)</option>
+                <option value="Unboxing / Review Jujur (Kesan pertama)">Unboxing / Review Jujur (Membahas pros & cons)</option>
+                <option value="Plot Twist Tak Terduga (Mulai dengan cerita/opini ngidul yang sama sekali tidak berkaitan dengan produk, buat pembaca penasaran, lalu tiba-tiba di akhir thread berbelok tajam merekomendasikan produk)">Plot Twist (Cerita ngidul di awal, tiba-tiba jualan di akhir)</option>
                 <option value="Meme/Candaan (Humor yang nyambung ke produk)">Meme / Candaan (Humor/Shitposting yang nyambung ke jualan)</option>
               </select>
             </div>
