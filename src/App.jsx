@@ -1099,7 +1099,7 @@ Scene 2: (Prompt video detail dalam bahasa Inggris)
     try {
       let lengthInstruction = "";
       if (threadLength.includes('Sangat Pendek')) {
-        lengthInstruction = "Buat utas SANGAT PENDEK. Hanya 1 atau maksimal 2 tweet. Gunakan HANYA BEBERAPA KATA yang menohok/memancing rasa penasaran, lalu langsung berikan link afiliasi.";
+        lengthInstruction = "Buat utas SANGAT PENDEK (maksimal 1-2 tweet). Gunakan POLA PERTANYAAN pancingan yang memicu rasa penasaran (Contoh: 'Kalian tau nggak produk yang wajib dipunya pecita [niche]? Barangnya lucu, murah, gampang didapat!'). Buat sesingkat mungkin dan langsung arahkan untuk cek link produk.";
       } else if (threadLength.includes('Pendek')) {
         lengthInstruction = "Buat utas pendek (3-5 tweet/bagian). Setiap tweet HARUS PENDEK (maksimal 2-3 kalimat) agar mudah dibaca/snackable.";
       } else {
@@ -1121,8 +1121,9 @@ ATURAN PENULISAN:
 7. Sisipkan konflik kecil, lalu naikkan tensinya sedikit demi sedikit.
 8. Buat alurnya mengalir seperti orang sedang bercerita/curhat, BUKAN seperti artikel.
 9. Gaya Bahasa: ${threadLanguageStyle}. Dilarang terdengar seperti iklan, kaku, atau dramatis berlebihan.
+10. ${lengthInstruction}
 
-STRUKTUR CERITA (Gunakan struktur ini secara terselubung, jangan tuliskan nama bagiannya, pisahkan saja dengan "---"):
+STRUKTUR CERITA (Gunakan struktur ini secara terselubung, sesuaikan dengan panjang utas yang diminta, jangan tuliskan nama bagiannya, pisahkan saja dengan "---"):
 - Awal: Hook yang bikin berhenti scrolling, berlanjut menceritakan pengalaman/fenomena umum.
 - Tengah: Masukkan konflik yang sering dialami, bangun rasa penasaran, berikan insight.
 - Klimaks (Plot Twist): Muncul plot twist bahwa ternyata ada satu hal sederhana yang bisa mengatasi masalah.
