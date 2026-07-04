@@ -152,6 +152,7 @@ function App() {
   // --- DATABASE (HISTORY) STATES ---
   const [activeDatabaseCategory, setActiveDatabaseCategory] = useState('Storyboard');
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+  const [imageInputs, setImageInputs] = useState({});
 
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
@@ -171,6 +172,58 @@ function App() {
     } finally {
       setIsHistoryLoading(false);
     }
+  };
+
+  const updateHistoryResultInSupabase = async (id, newResult) => {
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ result: newResult })
+      });
+      if (response.ok) {
+        // Update local state
+        const updatedItem = { ...selectedHistoryItem, result: newResult };
+        setSelectedHistoryItem(updatedItem);
+        setHistory(prev => prev.map(item => item.id === id ? updatedItem : item));
+      } else {
+        alert('Gagal menyimpan gambar ke database.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Terjadi kesalahan jaringan saat menyimpan.');
+    }
+  };
+
+  const handleSaveImageToPart = async (partIndex, currentParts) => {
+    const url = imageInputs[partIndex];
+    if (!url) return;
+    
+    const newParts = [...currentParts];
+    newParts[partIndex] = newParts[partIndex].trim() + `\n\n[IMG]${url}[/IMG]`;
+    const newResult = newParts.join('\n\n---\n\n');
+    
+    await updateHistoryResultInSupabase(selectedHistoryItem.id, newResult);
+    
+    // Clear input
+    setImageInputs(prev => {
+      const next = { ...prev };
+      delete next[partIndex];
+      return next;
+    });
+  };
+
+  const handleRemoveImageFromPart = async (partIndex, currentParts) => {
+    const newParts = [...currentParts];
+    // Remove [IMG]...[/IMG] from the text
+    newParts[partIndex] = newParts[partIndex].replace(/\[IMG\].*?\[\/IMG\]/g, '').trim();
+    const newResult = newParts.join('\n\n---\n\n');
+    await updateHistoryResultInSupabase(selectedHistoryItem.id, newResult);
   };
 
   const fetchProducts = async () => {
@@ -2213,23 +2266,62 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             <h2 className="desktop-title">{selectedHistoryItem.type}</h2>
             <p className="subtitle" style={{marginBottom: '1rem'}}><strong>Topik/Produk:</strong> {selectedHistoryItem.product_desc}</p>
             <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-              {parts.map((part, index) => (
-                <div key={index} className="prompt-card fade-in">
-                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center'}}>
-                    <span style={{background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold'}}>
-                      Bagian {index + 1}
-                    </span>
-                    <button 
-                      className="btn-secondary" 
-                      onClick={() => handleCopy(part, index)}
-                      style={{padding: '0.4rem 0.8rem', fontSize: '0.8rem', margin: 0, background: copiedIndex === index ? '#10b981' : '', color: copiedIndex === index ? 'white' : ''}}
-                    >
-                      {copiedIndex === index ? 'Tersalin! ✓' : '📋 Salin'}
-                    </button>
+              {parts.map((part, index) => {
+                const imgMatch = part.match(/\[IMG\](.*?)\[\/IMG\]/);
+                const imageUrl = imgMatch ? imgMatch[1] : null;
+                const textWithoutImage = part.replace(/\[IMG\].*?\[\/IMG\]/g, '').trim();
+                const isStoryboard = activeDatabaseCategory === 'Storyboard';
+
+                return (
+                  <div key={index} className="prompt-card fade-in">
+                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center'}}>
+                      <span style={{background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold'}}>
+                        Bagian {index + 1}
+                      </span>
+                      <button 
+                        className="btn-secondary" 
+                        onClick={() => handleCopy(textWithoutImage, index)}
+                        style={{padding: '0.4rem 0.8rem', fontSize: '0.8rem', margin: 0, background: copiedIndex === index ? '#10b981' : '', color: copiedIndex === index ? 'white' : ''}}
+                      >
+                        {copiedIndex === index ? 'Tersalin! ✓' : '📋 Salin'}
+                      </button>
+                    </div>
+                    <div style={{whiteSpace: 'pre-wrap', lineHeight: '1.6'}}>{textWithoutImage}</div>
+                    
+                    {isStoryboard && (
+                      <div style={{marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)'}}>
+                        {imageUrl ? (
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+                            <img src={imageUrl} alt={`Visualisasi Bagian ${index + 1}`} style={{width: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '12px', background: 'rgba(0,0,0,0.2)'}} />
+                            <div style={{display: 'flex', gap: '0.5rem'}}>
+                              <a href={imageUrl} target="_blank" rel="noreferrer" className="btn-secondary" style={{textDecoration: 'none', display: 'flex', alignItems: 'center', fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>
+                                🔍 Buka Resolusi Penuh
+                              </a>
+                              <button className="btn-secondary" onClick={() => handleRemoveImageFromPart(index, parts)} style={{color: '#ef4444', borderColor: '#ef4444', fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>
+                                🗑️ Hapus Gambar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{display: 'flex', gap: '0.5rem'}}>
+                            <input 
+                              type="text" 
+                              placeholder="URL Gambar Hasil (Midjourney/Flux/dsb)..." 
+                              className="text-input" 
+                              value={imageInputs[index] || ''}
+                              onChange={(e) => setImageInputs({...imageInputs, [index]: e.target.value})}
+                              style={{flex: 1, padding: '0.5rem', fontSize: '0.85rem'}}
+                            />
+                            <button className="btn-primary" onClick={() => handleSaveImageToPart(index, parts)} disabled={!imageInputs[index]} style={{padding: '0.5rem 1rem', fontSize: '0.85rem', margin: 0}}>
+                              Simpan Gambar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div style={{whiteSpace: 'pre-wrap', lineHeight: '1.6'}}>{part.trim()}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
