@@ -1174,8 +1174,6 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
           </div>
         </div>
       </div>
-    </div>
-    </div>
   );
 
   const renderBangJenggotForm = () => (
