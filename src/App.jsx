@@ -55,6 +55,17 @@ function App() {
   const [generatedCook, setGeneratedCook] = useState(null)
   const [isStoryboardAccordionOpen, setIsStoryboardAccordionOpen] = useState(false)
 
+  // --- BANG JENGGOT STATES ---
+  const [bjImage, setBjImage] = useState(null)
+  const [bjFile, setBjFile] = useState(null)
+  const [bjDesc, setBjDesc] = useState('')
+  const [bjInstruction, setBjInstruction] = useState('')
+  const [bjType, setBjType] = useState('Review Jujur (Ceplas-ceplos & Obyektif)')
+  const [bjPromptCount, setBjPromptCount] = useState('2')
+  const [bjSceneCount, setBjSceneCount] = useState('4')
+  const [isGeneratingBj, setIsGeneratingBj] = useState(false)
+  const [generatedBj, setGeneratedBj] = useState(null)
+
   // --- THREAD AFFILIATE STATES ---
   const [threadTitle, setThreadTitle] = useState('')
   const [threadDesc, setThreadDesc] = useState('')
@@ -275,7 +286,7 @@ function App() {
     if (activeTab === 'product_data' || activeTab === 'thread') {
       fetchProducts();
     }
-    if (activeTab === 'bank_storyboard' || activeTab === 'storyboard' || activeTab === 'cooking_content') {
+    if (activeTab === 'bank_storyboard' || activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot') {
       fetchBankStoryboard();
     }
   }, [activeTab]);
@@ -660,6 +671,81 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
     }
   }
 
+  const handleGenerateBangJenggot = async () => {
+    if (!bjDesc || !apiKey) {
+      alert("Pastikan Deskripsi Produk dan API Key sudah diisi.");
+      return;
+    }
+    
+    setIsGeneratingBj(true)
+    setGeneratedBj(null)
+    
+    try {
+      let userContent = [];
+      userContent.push({ type: "text", text: `Deskripsi Produk: ${bjDesc}\nTipe Konten: ${bjType}\nJumlah Bagian Video: ${bjPromptCount}\nJumlah Scene per Bagian: ${bjSceneCount}\nInstruksi Khusus: ${bjInstruction || 'Terserah AI'}` });
+
+      let base64Image = null;
+      if (bjFile) {
+        base64Image = await fileToBase64(bjFile);
+      } else if (bjImage && typeof bjImage === 'string' && bjImage.startsWith('http')) {
+        base64Image = bjImage;
+      }
+      if (base64Image) {
+        userContent.push({ type: "image_url", image_url: { url: base64Image } });
+      }
+
+      const systemPrompt = `Anda adalah seorang Sutradara Iklan dan Content Creator spesialis Review Produk/POV. Pengguna akan memberikan deskripsi dan gambar produk (opsional), beserta instruksi khusus.
+PENTING TENTANG GAMBAR: JIKA PADA GAMBAR REFERENSI TERDAPAT MANUSIA, WAJAH, ATAU TANGAN, ABAIKAN SEPENUHNYA! FOKUS HANYA PADA BENTUK PRODUKNYA SAJA. JANGAN MENGIDENTIFIKASI ORANG/WAJAH.
+Tugas Anda adalah mendeskripsikan secara visual urutan adegan (scene) untuk video review atau POV. Model/aktor utamanya adalah seorang PRIA BERJENGGOT.
+Anda harus mendeskripsikan ekspresi pria berjenggot ini, gesturnya, dan interaksinya dengan produk atau dengan kamera (jika POV).
+Video ini dibagi menjadi ${bjPromptCount} Bagian berurutan (misal: Bagian 1 perkenalan masalah, Bagian 2 menunjukkan produk, dst).
+Ini BUKAN variasi, melainkan SATU cerita visual yang menyambung.
+
+ATURAN OUTPUT:
+1. Pisahkan setiap Bagian dengan simbol "---" agar sistem bisa memotongnya.
+2. Setiap Bagian HANYA berisi deskripsi adegan visual berbahasa Inggris yang sangat detail.
+3. Deskripsi harus berfokus pada penampilan "a bearded man" (pria berjenggot), ekspresi wajahnya, pergerakan kamera, dan interaksi dengan produk.
+4. Jangan menulis narasi atau percakapan, murni deskripsi visual (Scene 1, Scene 2, dst).
+
+FORMAT UNTUK SETIAP BAGIAN:
+
+BAGIAN [Nomor]: [Fokus Adegan]
+
+Scene 1: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 1)
+Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
+... (hingga ${bjSceneCount} Scene)`;
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": "1inference"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userContent }
+          ],
+          temperature: 0.8
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+      const data = await response.json();
+      let generatedText = data.choices[0].message.content.trim().replace(/\*\*/g, ""); 
+      
+      const blocks = generatedText.split('---').map(b => b.trim()).filter(b => b.length > 0);
+      setGeneratedBj(blocks);
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsGeneratingBj(false)
+    }
+  }
+
   const LogoSVG = () => (
     <svg viewBox="0 0 100 100" className="logo-svg" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -704,7 +790,7 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
         </div>
         <nav className="sidebar-nav">
           <div className="accordion-menu">
-            <button className={`nav-item ${(activeTab === 'storyboard' || activeTab === 'cooking_content') ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
+            <button className={`nav-item ${(activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot') ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
               <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
               <span className="nav-arrow" style={{transform: isStoryboardAccordionOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s'}}>&gt;</span>
             </button>
@@ -715,6 +801,9 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
                 </button>
                 <button className={`nav-item ${activeTab === 'cooking_content' ? 'active' : ''}`} onClick={() => {setActiveTab('cooking_content'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
                   <div className="nav-item-content">Konten Masak</div>
+                </button>
+                <button className={`nav-item ${activeTab === 'bang_jenggot' ? 'active' : ''}`} onClick={() => {setActiveTab('bang_jenggot'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
+                  <div className="nav-item-content">Bang Jenggot</div>
                 </button>
               </div>
             )}
@@ -1086,6 +1175,152 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
         </div>
       </div>
     </div>
+    </div>
+  );
+
+  const renderBangJenggotForm = () => (
+    <div className="tab-pane fade-in">
+      <div className="header-container">
+        <h2 className="desktop-title">🧔 Storyboard Bang Jenggot</h2>
+        <p className="subtitle">Ubah produk Anda menjadi storyboard review / POV dengan model aktor pria berjenggot.</p>
+      </div>
+
+      <div className="two-column-layout">
+        <div className="input-column fade-in">
+          <div className="glass-panel">
+            <h3 className="section-title">Pengaturan Konten</h3>
+            
+            <div className="input-group">
+              <label><span className="icon">📦</span> PILIH DARI BANK STORYBOARD (AUTO-FILL)</label>
+              <select className="select-input" onChange={(e) => {
+                const selectedId = e.target.value;
+                if (!selectedId) {
+                  setBjDesc(''); setBjImage(null); setBjFile(null);
+                } else {
+                  const item = bankData.find(d => d.id == selectedId);
+                  if (item) {
+                    let parsed = {};
+                    try { parsed = JSON.parse(item.result); } catch(e) {}
+                    setBjDesc(`${item.product_desc} - ${parsed.desc || ''}`);
+                    if (parsed.imgUrl) {
+                      setBjImage(parsed.imgUrl);
+                      setBjFile(null); 
+                    }
+                  }
+                }
+              }}>
+                <option value="">-- Kosongkan (Isi Manual) --</option>
+                {bankData.map(item => {
+                  let parsed = {};
+                  try { parsed = JSON.parse(item.result); } catch(e) {}
+                  return (
+                    <option key={item.id} value={item.id}>{item.product_desc} - {parsed.desc?.substring(0, 30)}...</option>
+                  )
+                })}
+              </select>
+            </div>
+            
+            <div className="input-group">
+              <label>Gambar Produk (Opsional)</label>
+              <div className="image-upload-wrapper">
+              {bjImage ? (
+                <div className="image-preview">
+                  <img src={bjImage} alt="Preview" />
+                  <button className="btn-secondary" onClick={() => { setBjImage(null); setBjFile(null); }}>Hapus / Ganti Gambar</button>
+                </div>
+              ) : (
+                <label className="upload-placeholder">
+                  <input type="file" accept="image/*" onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      setBjFile(file);
+                      const reader = new FileReader();
+                      reader.onload = (e) => setBjImage(e.target.result);
+                      reader.readAsDataURL(file);
+                    }
+                  }} hidden />
+                  <span className="upload-icon">⬆️</span>
+                  <span>Klik untuk upload gambar produk</span>
+                  <small>Biar AI mengenali bentuk produk</small>
+                </label>
+              )}
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label>Deskripsi Produk (Wajib)</label>
+              <textarea 
+                className="text-input" 
+                placeholder="Masukkan deskripsi produk, benefit, atau keunggulan produk."
+                value={bjDesc}
+                onChange={(e) => setBjDesc(e.target.value)}
+                rows="4"
+              />
+            </div>
+            
+            <div className="input-group">
+              <label>Tipe Konten Review</label>
+              <select value={bjType} onChange={(e) => setBjType(e.target.value)} className="select-input">
+                <option value="Review Jujur (Ceplas-ceplos & Obyektif)">Review Jujur (Ceplas-ceplos & Obyektif)</option>
+                <option value="Unboxing Estetik & Pemakaian Pertama">Unboxing Estetik & Pemakaian Pertama</option>
+                <option value="Sketsa Komedi POV (Lucu & Relate)">Sketsa Komedi POV (Lucu & Relate)</option>
+                <option value="Tutorial Edukasi Penggunaan">Tutorial Edukasi Penggunaan</option>
+              </select>
+            </div>
+
+            <div className="settings-row">
+              <div className="input-group" style={{flex: 1}}>
+                <label>Berapa Bagian Video?</label>
+                <input type="number" min="1" max="5" value={bjPromptCount} onChange={(e) => setBjPromptCount(e.target.value)} className="select-input" />
+              </div>
+              <div className="input-group" style={{flex: 1}}>
+                <label>Scene per Bagian?</label>
+                <input type="number" min="2" max="6" value={bjSceneCount} onChange={(e) => setBjSceneCount(e.target.value)} className="select-input" />
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label>Instruksi Khusus (Opsional)</label>
+              <textarea 
+                className="text-input" 
+                placeholder="Misal: 'Bikin aktornya kelihatan kaget pas liat hasil bajunya.' atau 'Awalnya sedih, terus senyum.'"
+                value={bjInstruction}
+                onChange={(e) => setBjInstruction(e.target.value)}
+                rows="2"
+              />
+            </div>
+            
+            <button className="btn-primary generate-btn" onClick={handleGenerateBangJenggot} disabled={!bjDesc || isGeneratingBj || !apiKey}>
+              {isGeneratingBj ? 'Menyiapkan Skenario...' : '🧔 Generate Storyboard Jenggot'}
+            </button>
+          </div>
+        </div>
+
+        <div className="output-column fade-in">
+          {generatedBj ? (
+            <div className="results-container">
+              {generatedBj.map((promptText, index) => (
+                <div key={index} className="prompt-card fade-in">
+                  <div className="prompt-header">
+                    <h3>Bagian {index + 1}</h3>
+                    <button className="btn-copy" onClick={() => handleCopy(promptText, index)}>
+                      {copiedIndex === index ? '✅ Copied!' : '📋 Copy'}
+                    </button>
+                  </div>
+                  <pre className="prompt-text">{promptText}</pre>
+                </div>
+              ))}
+              
+              <div className="action-buttons-bottom" style={{marginTop: '1rem', display: 'flex', gap: '1rem'}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(generatedBj, 'Bang Jenggot', bjDesc)} disabled={isSaving} style={{flex: 1}}>
+                  {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
+                </button>
+              </div>
+            </div>
+          ) : <EmptyStateRight />}
+          </div>
+        </div>
+      </div>
   );
 
   const handleGenerateThread = async () => {
@@ -2250,7 +2485,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
   const renderDatabase = () => {
     let filteredHistory = [];
     if (activeDatabaseCategory === 'Storyboard') {
-      filteredHistory = history.filter(item => item.type === 'Storyboard' || item.type === 'Konten Masak');
+      filteredHistory = history.filter(item => item.type === 'Storyboard' || item.type === 'Konten Masak' || item.type === 'Bang Jenggot');
     } else if (activeDatabaseCategory === 'Threads Affiliate') {
       filteredHistory = history.filter(item => item.type === 'Utas Affiliate');
     } else if (activeDatabaseCategory === 'Threads Umum') {
@@ -2478,6 +2713,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         </div>
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'cooking_content' && renderCookingContentForm()}
+        {activeTab === 'bang_jenggot' && renderBangJenggotForm()}
         {activeTab === 'bank_storyboard' && renderBankStoryboardForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'video_script' && renderVideoScriptForm()}
