@@ -1174,6 +1174,7 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
           </div>
         </div>
       </div>
+    </div>
   );
 
   const renderBangJenggotForm = () => (
@@ -1195,7 +1196,7 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
                 if (!selectedId) {
                   setBjDesc(''); setBjImage(null); setBjFile(null);
                 } else {
-                  const item = bankData.find(d => d.id == selectedId);
+                  const item = bankStoryboardData.find(d => d.id == selectedId);
                   if (item) {
                     let parsed = {};
                     try { parsed = JSON.parse(item.result); } catch(e) {}
@@ -1208,7 +1209,7 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
                 }
               }}>
                 <option value="">-- Kosongkan (Isi Manual) --</option>
-                {bankData.map(item => {
+                {bankStoryboardData.map(item => {
                   let parsed = {};
                   try { parsed = JSON.parse(item.result); } catch(e) {}
                   return (
