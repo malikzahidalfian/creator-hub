@@ -897,13 +897,17 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
                   }
                 }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
                   <option value="">-- Kosongkan (Isi Manual) --</option>
-                  {bankStoryboardData.map(item => {
-                    let parsed = {};
-                    try { parsed = JSON.parse(item.result); } catch(e) {}
-                    return (
-                      <option key={item.id} value={item.id}>{item.product_desc} - {parsed.desc?.substring(0, 30)}...</option>
-                    )
-                  })}
+                  {Object.keys(groupedBankData).map(cat => (
+                    <optgroup key={cat} label={`📁 ${cat}`}>
+                      {groupedBankData[cat].map(item => {
+                        let parsed = {};
+                        try { parsed = JSON.parse(item.result); } catch(e) {}
+                        return (
+                          <option key={item.id} value={item.id}>{parsed.desc?.substring(0, 40)}...</option>
+                        )
+                      })}
+                    </optgroup>
+                  ))}
                 </select>
               </div>
               
@@ -1065,13 +1069,17 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
                 }
               }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
                 <option value="">-- Kosongkan (Isi Manual) --</option>
-                {bankStoryboardData.map(item => {
-                  let parsed = {};
-                  try { parsed = JSON.parse(item.result); } catch(e) {}
-                  return (
-                    <option key={item.id} value={item.id}>{item.product_desc} - {parsed.desc?.substring(0, 30)}...</option>
-                  )
-                })}
+                {Object.keys(groupedBankData).map(cat => (
+                  <optgroup key={cat} label={`📁 ${cat}`}>
+                    {groupedBankData[cat].map(item => {
+                      let parsed = {};
+                      try { parsed = JSON.parse(item.result); } catch(e) {}
+                      return (
+                        <option key={item.id} value={item.id}>{parsed.desc?.substring(0, 40)}...</option>
+                      )
+                    })}
+                  </optgroup>
+                ))}
               </select>
             </div>
             
@@ -1209,13 +1217,17 @@ Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
                 }
               }}>
                 <option value="">-- Kosongkan (Isi Manual) --</option>
-                {bankStoryboardData.map(item => {
-                  let parsed = {};
-                  try { parsed = JSON.parse(item.result); } catch(e) {}
-                  return (
-                    <option key={item.id} value={item.id}>{item.product_desc} - {parsed.desc?.substring(0, 30)}...</option>
-                  )
-                })}
+                {Object.keys(groupedBankData).map(cat => (
+                  <optgroup key={cat} label={`📁 ${cat}`}>
+                    {groupedBankData[cat].map(item => {
+                      let parsed = {};
+                      try { parsed = JSON.parse(item.result); } catch(e) {}
+                      return (
+                        <option key={item.id} value={item.id}>{parsed.desc?.substring(0, 40)}...</option>
+                      )
+                    })}
+                  </optgroup>
+                ))}
               </select>
             </div>
             
@@ -2328,6 +2340,14 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
   const uniqueBankCategories = ['Semua', ...new Set(bankStoryboardData.map(item => item.product_desc))];
   const filteredBankData = activeBankCategory === 'Semua' ? bankStoryboardData : bankStoryboardData.filter(item => item.product_desc === activeBankCategory);
 
+  // Group data by category for section view
+  const groupedBankData = {};
+  bankStoryboardData.forEach(item => {
+    const cat = item.product_desc || 'Lainnya';
+    if (!groupedBankData[cat]) groupedBankData[cat] = [];
+    groupedBankData[cat].push(item);
+  });
+
   const renderBankStoryboardForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
@@ -2354,26 +2374,28 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             </button>
           </div>
           
-          <div className="glass-panel" style={{padding: '1rem', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-            <h3 style={{marginBottom: '1rem'}}>Aset Tersimpan ({filteredBankData.length})</h3>
+          <div className="glass-panel" style={{padding: '1.5rem', background: 'transparent', border: 'none', boxShadow: 'none'}}>
+            <h3 style={{marginBottom: '1rem'}}>Aset Tersimpan ({bankStoryboardData.length})</h3>
             
-            <div style={{display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '1rem', marginBottom: '1rem'}}>
+            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingBottom: '1rem', marginBottom: '1rem', borderBottom: '1px solid var(--glass-border)'}}>
               {uniqueBankCategories.map((cat, idx) => (
                 <button 
                   key={idx} 
                   onClick={() => setActiveBankCategory(cat)}
                   style={{
-                    padding: '0.4rem 0.8rem', 
+                    padding: '0.5rem 1rem', 
                     borderRadius: '20px', 
-                    border: '1px solid var(--glass-border)', 
+                    border: activeBankCategory === cat ? '2px solid var(--primary-color)' : '1px solid var(--glass-border)', 
                     background: activeBankCategory === cat ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)',
                     color: activeBankCategory === cat ? 'white' : 'var(--text-secondary)',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
-                    fontSize: '0.8rem'
+                    fontSize: '0.8rem',
+                    fontWeight: activeBankCategory === cat ? '600' : '400',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  {cat}
+                  {cat} {cat !== 'Semua' && <span style={{opacity: 0.7, marginLeft: '4px'}}>({(groupedBankData[cat] || []).length})</span>}
                 </button>
               ))}
             </div>
@@ -2382,23 +2404,80 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               <div style={{textAlign: 'center', padding: '2rem'}}><span className="loading-spinner"></span> Memuat...</div>
             ) : filteredBankData.length === 0 ? (
               <EmptyStateRight />
+            ) : activeBankCategory === 'Semua' ? (
+              <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+                {Object.keys(groupedBankData).map(categoryName => (
+                  <div key={categoryName} style={{
+                    background: 'rgba(255,255,255,0.03)', 
+                    borderRadius: '12px', 
+                    border: '1px solid var(--glass-border)', 
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      padding: '0.8rem 1.2rem', 
+                      background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1))', 
+                      borderBottom: '1px solid var(--glass-border)',
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center'
+                    }}>
+                      <h4 style={{margin: 0, fontSize: '0.9rem', color: 'var(--primary-color)', textTransform: 'uppercase', letterSpacing: '1px'}}>
+                        📁 {categoryName}
+                      </h4>
+                      <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.1)', padding: '0.2rem 0.6rem', borderRadius: '10px'}}>
+                        {groupedBankData[categoryName].length} aset
+                      </span>
+                    </div>
+                    <div style={{padding: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem'}}>
+                      {groupedBankData[categoryName].map(item => {
+                        let parsed = {};
+                        try { parsed = JSON.parse(item.result); } catch(e) {}
+                        return (
+                          <div key={item.id} className="fade-in" style={{
+                            display: 'flex', gap: '0.8rem', padding: '0.8rem', 
+                            background: 'rgba(255,255,255,0.03)', borderRadius: '8px', 
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            alignItems: 'center',
+                            transition: 'background 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                          >
+                            {parsed.imgUrl && (
+                              <div style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)'}}>
+                                <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                              </div>
+                            )}
+                            <div style={{flex: 1, overflow: 'hidden'}}>
+                              <p style={{fontSize: '0.85rem', color: 'white', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                            </div>
+                            <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem', flexShrink: 0}}>
+                              Hapus
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '0.8rem'}}>
                 {filteredBankData.map(item => {
                   let parsed = {};
                   try { parsed = JSON.parse(item.result); } catch(e) {}
                   return (
-                    <div key={item.id} className="prompt-card fade-in" style={{display: 'flex', gap: '1rem', padding: '1rem'}}>
+                    <div key={item.id} className="prompt-card fade-in" style={{display: 'flex', gap: '1rem', padding: '1rem', alignItems: 'center'}}>
                       {parsed.imgUrl && (
-                        <div style={{width: '80px', height: '80px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)'}}>
+                        <div style={{width: '70px', height: '70px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)'}}>
                           <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                         </div>
                       )}
                       <div style={{flex: 1, overflow: 'hidden'}}>
-                        <h4 style={{margin: '0 0 0.5rem 0', fontSize: '0.75rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: '1px'}}>{item.product_desc}</h4>
-                        <p style={{fontSize: '0.85rem', color: 'white', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                        <h4 style={{margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: '1px'}}>{item.product_desc}</h4>
+                        <p style={{fontSize: '0.85rem', color: 'white', margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
                       </div>
-                      <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', alignSelf: 'flex-start'}}>
+                      <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', alignSelf: 'flex-start', fontSize: '0.75rem'}}>
                         Hapus
                       </button>
                     </div>
