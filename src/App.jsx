@@ -406,6 +406,16 @@ function App() {
     return () => window.removeEventListener('paste', handlePaste);
   }, [activeTab]);
 
+  // --- BANK STORYBOARD COMPUTED DATA ---
+  const uniqueBankCategories = ['Semua', ...new Set(bankStoryboardData.map(item => item.product_desc))];
+  const filteredBankData = activeBankCategory === 'Semua' ? bankStoryboardData : bankStoryboardData.filter(item => item.product_desc === activeBankCategory);
+  const groupedBankData = {};
+  bankStoryboardData.forEach(item => {
+    const cat = item.product_desc || 'Lainnya';
+    if (!groupedBankData[cat]) groupedBankData[cat] = [];
+    groupedBankData[cat].push(item);
+  });
+
   const fileToBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -2337,16 +2347,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
       </div>
     </div>
   );
-  const uniqueBankCategories = ['Semua', ...new Set(bankStoryboardData.map(item => item.product_desc))];
-  const filteredBankData = activeBankCategory === 'Semua' ? bankStoryboardData : bankStoryboardData.filter(item => item.product_desc === activeBankCategory);
-
-  // Group data by category for section view
-  const groupedBankData = {};
-  bankStoryboardData.forEach(item => {
-    const cat = item.product_desc || 'Lainnya';
-    if (!groupedBankData[cat]) groupedBankData[cat] = [];
-    groupedBankData[cat].push(item);
-  });
 
   const renderBankStoryboardForm = () => (
     <div className="content-wrapper fade-in">
