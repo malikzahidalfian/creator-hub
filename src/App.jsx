@@ -117,7 +117,9 @@ function App() {
   const [bankStoryboardData, setBankStoryboardData] = useState([]);
   const [isBankStoryboardLoading, setIsBankStoryboardLoading] = useState(false);
   const [bankCategory, setBankCategory] = useState('');
+  const [bankProductName, setBankProductName] = useState('');
   const [bankDesc, setBankDesc] = useState('');
+  const [bankProductLink, setBankProductLink] = useState('');
   const [bankImgUrl, setBankImgUrl] = useState('');
   const [isBankSaving, setIsBankSaving] = useState(false);
   const [activeBankCategory, setActiveBankCategory] = useState('Semua');
@@ -354,13 +356,15 @@ function App() {
   };
 
   const handleSaveBank = () => {
-    if (!bankCategory || !bankDesc) return alert("Kategori dan Deskripsi wajib diisi!");
+    if (!bankCategory || !bankProductName) return alert("Kategori dan Nama Produk wajib diisi!");
     const bankPayload = JSON.stringify({
+      name: bankProductName,
       desc: bankDesc,
+      link: bankProductLink,
       imgUrl: bankImgUrl
     });
     saveToSupabase(bankPayload, 'Bank Storyboard', bankCategory);
-    setBankDesc(''); setBankImgUrl('');
+    setBankProductName(''); setBankDesc(''); setBankProductLink(''); setBankImgUrl('');
   };
 
   const handleDeleteBank = async (id) => {
@@ -713,16 +717,24 @@ Ini BUKAN variasi, melainkan SATU cerita visual yang menyambung.
 
 ATURAN OUTPUT:
 1. Pisahkan setiap Bagian dengan simbol "---" agar sistem bisa memotongnya.
-2. Setiap Bagian HANYA berisi deskripsi adegan visual berbahasa Inggris yang sangat detail.
-3. Deskripsi harus berfokus pada penampilan "a bearded man" (pria berjenggot), ekspresi wajahnya, pergerakan kamera, dan interaksi dengan produk.
-4. Jangan menulis narasi atau percakapan, murni deskripsi visual (Scene 1, Scene 2, dst).
+2. SEMUA OUTPUT HARUS DALAM BAHASA INDONESIA.
+3. Setiap Scene harus memiliki 2 komponen:
+   a. VISUAL: Deskripsi visual adegan (ekspresi aktor, gerakan kamera, pencahayaan, interaksi produk)
+   b. VOICE OVER / DIALOG: Teks yang diucapkan oleh pria berjenggot tersebut di scene itu (dalam bahasa Indonesia, gaya santai/natural)
+4. Deskripsi harus berfokus pada penampilan pria berjenggot, ekspresi wajahnya, pergerakan kamera, dan interaksi dengan produk.
 
 FORMAT UNTUK SETIAP BAGIAN:
 
 BAGIAN [Nomor]: [Fokus Adegan]
 
-Scene 1: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 1)
-Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
+Scene 1:
+VISUAL: (Deskripsi visual detail dalam bahasa Indonesia)
+VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesia)"
+
+Scene 2:
+VISUAL: (Deskripsi visual detail dalam bahasa Indonesia)
+VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesia)"
+
 ... (hingga ${bjSceneCount} Scene)`;
 
       const response = await fetch("/api/generate", {
@@ -2357,19 +2369,41 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           <div className="glass-panel input-section">
             <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>Tambah Aset Baru</h3>
             <div className="input-group">
-              <label>Kategori Produk</label>
-              <input type="text" className="api-key-input" placeholder="Contoh: Peralatan Dapur, Sepatu, Skincare..." value={bankCategory} onChange={(e) => setBankCategory(e.target.value)} />
-              <small style={{display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)'}}>Bebas ketik kategori apapun.</small>
+              <label>Nama Produk</label>
+              <input type="text" className="api-key-input" style={{color: '#1a1a2e'}} placeholder="Contoh: Wajan Granit Anti Lengket 24cm" value={bankProductName} onChange={(e) => setBankProductName(e.target.value)} />
             </div>
             <div className="input-group">
-              <label>Deskripsi Produk / Nama Aset</label>
-              <textarea placeholder="Contoh: Wajan anti lengket granit 24cm gagang kayu..." value={bankDesc} onChange={(e) => setBankDesc(e.target.value)} rows="3" />
+              <label>Deskripsi Produk</label>
+              <textarea placeholder="Jelaskan keunggulan / spesifikasi produk..." value={bankDesc} onChange={(e) => setBankDesc(e.target.value)} rows="3" />
+            </div>
+            <div className="input-group">
+              <label>Link Produk (Shopee/TikTok)</label>
+              <input type="text" className="api-key-input" placeholder="https://shope.ee/..." value={bankProductLink} onChange={(e) => setBankProductLink(e.target.value)} />
             </div>
             <div className="input-group">
               <label>Link Gambar Produk (URL)</label>
-              <input type="text" className="api-key-input" placeholder="https://..." value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} />
+              <input type="text" className="api-key-input" placeholder="https://cf.shopee.co.id/file/..." value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} />
             </div>
-            <button className="btn-primary generate-btn" onClick={handleSaveBank} disabled={!bankCategory || !bankDesc || isSaving}>
+            <div className="input-group">
+              <label>Kategori Produk</label>
+              <div style={{position: 'relative'}}>
+                <input 
+                  type="text" 
+                  className="api-key-input" 
+                  list="bank-category-list"
+                  placeholder="Ketik baru atau pilih yang sudah ada..." 
+                  value={bankCategory} 
+                  onChange={(e) => setBankCategory(e.target.value)} 
+                />
+                <datalist id="bank-category-list">
+                  {[...new Set(bankStoryboardData.map(item => item.product_desc))].map((cat, idx) => (
+                    <option key={idx} value={cat} />
+                  ))}
+                </datalist>
+              </div>
+              <small style={{display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)'}}>Ketik kategori baru atau pilih dari daftar yang sudah ada.</small>
+            </div>
+            <button className="btn-primary generate-btn" onClick={handleSaveBank} disabled={!bankCategory || !bankProductName || isSaving}>
               {isSaving ? 'Menyimpan...' : '💾 Simpan ke Bank'}
             </button>
           </div>
@@ -2449,7 +2483,9 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                               </div>
                             )}
                             <div style={{flex: 1, overflow: 'hidden'}}>
-                              <p style={{fontSize: '0.85rem', color: 'white', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                              <h4 style={{margin: '0 0 0.3rem 0', fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
+                              <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                              {parsed.link && <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', fontWeight: '600'}}>🔗 Link Produk</a>}
                             </div>
                             <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem', flexShrink: 0}}>
                               Hapus
@@ -2474,8 +2510,9 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                         </div>
                       )}
                       <div style={{flex: 1, overflow: 'hidden'}}>
-                        <h4 style={{margin: '0 0 0.4rem 0', fontSize: '0.75rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: '1px'}}>{item.product_desc}</h4>
-                        <p style={{fontSize: '0.85rem', color: 'white', margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                        <h4 style={{margin: '0 0 0.3rem 0', fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
+                        <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                        {parsed.link && <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', fontWeight: '600'}}>🔗 Link Produk</a>}
                       </div>
                       <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', alignSelf: 'flex-start', fontSize: '0.75rem'}}>
                         Hapus
