@@ -677,11 +677,11 @@ Efek Suara (Sound Effects):
       
       const asmrRule = cookType.includes('ASMR') ? '\n5. PENTING: Karena ini video ASMR, format output setiap scene WAJIB mengikuti struktur template ASMR khusus yang sudah disediakan di bawah.' : '';
 
-      let formatInstructionStr = "WAJIB ISI TEMPLATE DI BAWAH INI DENGAN DESKRIPSI VISUAL YANG SESUAI:\n\n";
+      let formatInstructionStr = "WAJIB ISI TEMPLATE DI BAWAH INI DENGAN DESKRIPSI VISUAL YANG SESUAI (DILARANG MERUBAH FORMAT ATAU MENAMBAH SIMBOL --- SENDIRI):\n\n";
       let globalSceneIndex = 1;
       
       for(let p=1; p<=promptCountNum; p++) {
-        formatInstructionStr += `BAGIAN ${p}: [Tulis Judul Fokus Adegan]\n\n`;
+        formatInstructionStr += `PROMPT ${p}: [Tulis Judul Fokus Adegan]\n\n`;
         const baseTime = (p - 1) * 10;
         
         for(let i=1; i<=sceneCountNum; i++) {
@@ -708,12 +708,11 @@ Efek Suara (Sound Effects):
 PENTING TENTANG GAMBAR: JIKA PADA GAMBAR TERDAPAT MANUSIA, WAJAH, ATAU TANGAN, ABAIKAN SEPENUHNYA! FOKUS HANYA PADA BENTUK ALAT MASAKNYA SAJA (PANCI/WAJAN). JANGAN PERNAH MENGIDENTIFIKASI ATAU MENYEBUTKAN ORANG/TANGAN/WAJAH SAMA SEKALI.
 
 Tugas Anda adalah membuat storyboard video berurutan yang menceritakan proses memasak dari awal hingga akhir.
-Ini BUKAN variasi cerita, melainkan SATU cerita visual utuh yang dibagi-bagi ke dalam beberapa bagian.
 
 ATURAN OUTPUT:
-1. Pisahkan setiap BAGIAN dengan simbol "---" (sudah disediakan di template).
-2. SEMUA OUTPUT HARUS DALAM BAHASA INDONESIA. Deskripsi harus sangat lengkap, rinci, dan mendetail.
-3. Deskripsi harus berfokus pada estetika visual: pencahayaan, pergerakan kamera, tekstur makanan, dan penggunaan alat masak.
+1. WAJIB ISI template yang diberikan. DILARANG KERAS merubah strukturnya.
+2. JANGAN PERNAH menambahkan pemisah "---" di antara Scene! Simbol "---" HANYA boleh ada di antara PROMPT 1 dan PROMPT 2 (sudah disediakan di template).
+3. SEMUA OUTPUT HARUS DALAM BAHASA INDONESIA. Deskripsi harus sangat lengkap, rinci, dan mendetail.
 4. Jangan menulis narasi atau percakapan, murni deskripsi visual.${asmrRule}
 
 ${formatInstructionStr}`;
@@ -1275,7 +1274,7 @@ VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesi
               {generatedCook.map((promptText, index) => (
                 <div key={index} className="prompt-card fade-in">
                   <div className="prompt-header">
-                    <h3>Bagian {index + 1}</h3>
+                    <h3>Prompt {index + 1}</h3>
                     <button className="btn-copy" onClick={() => handleCopy(promptText, index)}>
                       {copiedIndex === index ? '✅ Copied!' : '📋 Copy'}
                     </button>
