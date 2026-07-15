@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('storyboard')
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('storyboard_api_key') || '')
   
   // --- GEMINI API KEYS STATES ---
@@ -283,13 +283,13 @@ function App() {
   };
 
   useEffect(() => {
-    if (activeTab === 'history') {
+    if (activeTab === 'dashboard' || activeTab === 'history') {
       fetchHistory();
     }
-    if (activeTab === 'product_data' || activeTab === 'thread') {
+    if (activeTab === 'dashboard' || activeTab === 'product_data' || activeTab === 'thread') {
       fetchProducts();
     }
-    if (activeTab === 'bank_storyboard' || activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot') {
+    if (activeTab === 'dashboard' || activeTab === 'bank_storyboard' || activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot') {
       fetchBankStoryboard();
     }
   }, [activeTab]);
@@ -693,7 +693,7 @@ Efek Suara (Sound Effects):
             formatInstructionStr += `Video memasak ASMR super realistis dari [nama/bagian makanan]. Pengambilan gambar close-up tangan yang sedang menyiapkan bahan di dapur estetik yang bersih.\n`;
             formatInstructionStr += `Detail visual: [Tulis detail visual spesifik di scene ini: bahan segar, tekstur, minyak mendesis, uap, dll. Pencahayaan lembut hangat, sinematik].\n`;
             formatInstructionStr += `Fokus audio: [Tulis suara ASMR spesifik: memotong, mengiris, menggoreng, dll. Tanpa musik latar, tanpa suara manusia, hanya suara memasak alami].\n`;
-            formatInstructionStr += `Kamera: [Tulis pergerakan kamera: close-up makro, slow motion, transisi halus, fokus pada tekstur makanan].\n`;
+            formatInstructionStr += `Kamera: [Tulis pergerakan kamera: slow motion, transisi halus, fokus utama pada wajan/panci, sesekali zoom/close-up ke makanan].\n`;
             formatInstructionStr += `Gaya: ultra realistis, 4K, kualitas iklan makanan, sangat detail, visual yang memuaskan.\n`;
             formatInstructionStr += `Negative prompt: no text, no subtitles, no watermark.\n\n`;
           } else {
@@ -713,7 +713,8 @@ ATURAN OUTPUT:
 1. WAJIB ISI template yang diberikan. DILARANG KERAS merubah strukturnya.
 2. JANGAN PERNAH menambahkan pemisah "---" di antara Scene! Simbol "---" HANYA boleh ada di antara PROMPT 1 dan PROMPT 2 (sudah disediakan di template).
 3. SEMUA OUTPUT HARUS DALAM BAHASA INDONESIA. Deskripsi harus sangat lengkap, rinci, dan mendetail.
-4. Jangan menulis narasi atau percakapan, murni deskripsi visual.${asmrRule}
+4. Jangan menulis narasi atau percakapan, murni deskripsi visual.
+5. ATURAN KAMERA PENTING: Jangan selalu close-up ke masakan! Fokus utama visual harus menyorot ALAT MASAK (wajan / panci / produk). Hanya sesekali boleh zoom ke tekstur makanan.${asmrRule}
 
 ${formatInstructionStr}`;
 
@@ -868,6 +869,81 @@ VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesi
     </div>
   );
 
+  const renderDashboard = () => {
+    const recentActivity = history.slice(0, 5);
+    
+    return (
+      <div className="content-wrapper fade-in">
+        <div className="content-panel">
+          <div className="header-container" style={{marginBottom: '2rem'}}>
+            <h2 className="desktop-title">🏠 Dashboard Utama</h2>
+            <p className="subtitle">Selamat datang di Creator Hub AI. Pantau statistik dan akses fitur cepat dari sini.</p>
+          </div>
+
+          <div className="dashboard-stats" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem'}}>
+            <div className="glass-panel" style={{textAlign: 'center', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center'}}>
+              <h3 style={{fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--primary-color)'}}>{history.length}</h3>
+              <p style={{margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Total Riwayat (History)</p>
+            </div>
+            <div className="glass-panel" style={{textAlign: 'center', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center'}}>
+              <h3 style={{fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--primary-color)'}}>{bankStoryboardData.length}</h3>
+              <p style={{margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Bank Storyboard</p>
+            </div>
+            <div className="glass-panel" style={{textAlign: 'center', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center'}}>
+              <h3 style={{fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--primary-color)'}}>{productsData.length}</h3>
+              <p style={{margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Data Produk Tersimpan</p>
+            </div>
+          </div>
+
+          <h3 className="section-title" style={{marginBottom: '1rem'}}>Akses Cepat (Quick Actions)</h3>
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '2.5rem'}}>
+            <button className="glass-panel" style={{cursor: 'pointer', textAlign: 'left', padding: '1.5rem', transition: 'all 0.2s'}} onClick={() => setActiveTab('storyboard')} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+              <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem'}}>🎬 Storyboard Umum</h4>
+              <p style={{margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Buat storyboard AI generik.</p>
+            </button>
+            <button className="glass-panel" style={{cursor: 'pointer', textAlign: 'left', padding: '1.5rem', transition: 'all 0.2s'}} onClick={() => setActiveTab('cooking_content')} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+              <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem'}}>🍳 Konten Masak</h4>
+              <p style={{margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Storyboard masakan & ASMR.</p>
+            </button>
+            <button className="glass-panel" style={{cursor: 'pointer', textAlign: 'left', padding: '1.5rem', transition: 'all 0.2s'}} onClick={() => setActiveTab('bang_jenggot')} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+              <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem'}}>🧔 Bang Jenggot</h4>
+              <p style={{margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Video review POV narasi.</p>
+            </button>
+            <button className="glass-panel" style={{cursor: 'pointer', textAlign: 'left', padding: '1.5rem', transition: 'all 0.2s'}} onClick={() => setActiveTab('product_data')} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+              <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem'}}>📦 Tambah Data Produk</h4>
+              <p style={{margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Simpan informasi produk Anda.</p>
+            </button>
+          </div>
+
+          <h3 className="section-title" style={{marginBottom: '1rem'}}>Aktivitas Terakhir</h3>
+          <div className="glass-panel" style={{padding: '1.5rem'}}>
+            {isHistoryLoading ? (
+              <p style={{color: 'var(--text-secondary)'}}>Memuat aktivitas...</p>
+            ) : recentActivity.length > 0 ? (
+              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                {recentActivity.map(item => (
+                  <div key={item.id} style={{display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)'}}>
+                    <div>
+                      <h4 style={{margin: '0 0 0.3rem 0', fontSize: '0.95rem'}}>{item.product_desc || 'Tanpa Judul'}</h4>
+                      <span style={{fontSize: '0.75rem', background: 'var(--primary-color)', padding: '0.1rem 0.5rem', borderRadius: '12px', color: 'white'}}>{item.type}</span>
+                    </div>
+                    <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'right'}}>
+                      {new Date(item.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}
+                      <br/>
+                      {new Date(item.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{color: 'var(--text-secondary)'}}>Belum ada aktivitas.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderSidebar = () => (
     <>
       {isMobileMenuOpen && <div className="mobile-overlay fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>}
@@ -878,6 +954,9 @@ VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesi
           <button className="hamburger-btn close-btn" onClick={() => setIsMobileMenuOpen(false)}>✕</button>
         </div>
         <nav className="sidebar-nav">
+          <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => {setActiveTab('dashboard'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🏠</span> Dashboard</div>
+          </button>
           <div className="accordion-menu">
             <button className={`nav-item ${(activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot') ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
               <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
@@ -1425,7 +1504,7 @@ VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesi
                       {copiedIndex === index ? '✅ Copied!' : '📋 Copy'}
                     </button>
                   </div>
-                  <pre className="prompt-content">{promptText}</pre>
+                  <pre className="prompt-content" style={{whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word'}}>{promptText}</pre>
                 </div>
               ))}
               
@@ -2912,6 +2991,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           <button className="hamburger-btn" onClick={() => setIsMobileMenuOpen(true)}>☰</button>
           <h2>Creator Hub AI</h2>
         </div>
+        {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'cooking_content' && renderCookingContentForm()}
         {activeTab === 'bang_jenggot' && renderBangJenggotForm()}
