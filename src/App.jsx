@@ -52,6 +52,7 @@ function App() {
   const [cookPromptCount, setCookPromptCount] = useState('2')
   const [cookSceneCount, setCookSceneCount] = useState('4')
   const [isGeneratingCook, setIsGeneratingCook] = useState(false)
+  const [isGeneratingCookIdea, setIsGeneratingCookIdea] = useState(false)
   const [generatedCook, setGeneratedCook] = useState(null)
   const [isStoryboardAccordionOpen, setIsStoryboardAccordionOpen] = useState(false)
 
@@ -610,6 +611,42 @@ Efek Suara (Sound Effects):
     }
   }
 
+  const handleGenerateCookIdea = async () => {
+    if (!cookDesc || !apiKey) {
+      alert("Pastikan Deskripsi Produk dan API Key sudah diisi sebelum minta ide AI.");
+      return;
+    }
+    
+    setIsGeneratingCookIdea(true);
+    
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Provider": "1inference"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: "Anda adalah asisten kreatif pembuat ide konten memasak. Berikan SATU ide hidangan yang sangat spesifik dan menggugah selera (dalam 1-2 kalimat) yang cocok dimasak menggunakan alat masak yang disebutkan. Jawab langsung idenya, tanpa basa-basi." },
+            { role: "user", content: `Alat masak: ${cookDesc}\nTipe Konten: ${cookType}` }
+          ],
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      const data = await response.json();
+      setCookInstruction(data.choices[0].message.content.trim());
+    } catch (err) {
+      alert("Gagal membuat ide: " + err.message);
+    } finally {
+      setIsGeneratingCookIdea(false);
+    }
+  };
+
   // --- GENERATE KONTEN MASAK ---
   const handleGenerateCooking = async () => {
     if (!cookDesc || !apiKey) {
@@ -634,6 +671,8 @@ Efek Suara (Sound Effects):
         userContent.push({ type: "image_url", image_url: { url: base64Image } });
       }
 
+      const asmrRule = cookType.includes('ASMR') ? '\n5. PENTING: Karena ini video ASMR, WAJIB tambahkan kalimat ini persis di akhir bahasa Inggris setiap Scene: "negative prompt: no text, no subtitle, no music, no watermark."' : '';
+
       const systemPrompt = `Anda adalah seorang ahli visual dan penulis naskah kreatif. Pengguna akan memberikan deskripsi dan gambar alat masak (opsional), beserta instruksi hidangan.
 PENTING TENTANG GAMBAR: JIKA PADA GAMBAR TERDAPAT MANUSIA, WAJAH, ATAU TANGAN, ABAIKAN SEPENUHNYA! FOKUS HANYA PADA BENTUK ALAT MASAKNYA SAJA (PANCI/WAJAN). JANGAN PERNAH MENGIDENTIFIKASI ATAU MENYEBUTKAN ORANG/TANGAN/WAJAH SAMA SEKALI.
 Tugas Anda adalah mendeskripsikan secara visual urutan adegan memasak yang estetis dan profesional, dibagi menjadi ${cookPromptCount} Bagian berurutan (misal: persiapan, proses memasak, penyajian).
@@ -644,7 +683,7 @@ ATURAN OUTPUT:
 1. Pisahkan setiap Bagian dengan simbol "---" agar sistem bisa memotongnya.
 2. Setiap Bagian HANYA berisi deskripsi adegan visual berbahasa Inggris yang sangat detail.
 3. Deskripsi harus berfokus pada estetika visual: pencahayaan (lighting), pergerakan kamera (panning, macro shot), tekstur makanan, dan bagaimana alat masak digunakan secara elegan.
-4. Jangan menulis narasi atau percakapan, murni deskripsi visual (Scene 1, Scene 2, dst).
+4. Jangan menulis narasi atau percakapan, murni deskripsi visual (Scene 1, Scene 2, dst).${asmrRule}
 
 FORMAT UNTUK SETIAP BAGIAN:
 
@@ -925,7 +964,7 @@ VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesi
                         let parsed = {};
                         try { parsed = JSON.parse(item.result); } catch(e) {}
                         return (
-                          <option key={item.id} value={item.id}>{parsed.desc?.substring(0, 40)}...</option>
+                          <option key={item.id} value={item.id}>{parsed.name || (parsed.desc ? parsed.desc.substring(0, 40) + '...' : 'Tanpa Nama')}</option>
                         )
                       })}
                     </optgroup>
@@ -1097,7 +1136,7 @@ VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesi
                       let parsed = {};
                       try { parsed = JSON.parse(item.result); } catch(e) {}
                       return (
-                        <option key={item.id} value={item.id}>{parsed.desc?.substring(0, 40)}...</option>
+                        <option key={item.id} value={item.id}>{parsed.name || (parsed.desc ? parsed.desc.substring(0, 40) + '...' : 'Tanpa Nama')}</option>
                       )
                     })}
                   </optgroup>
@@ -1165,7 +1204,28 @@ VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesi
             </div>
 
             <div className="input-group">
-              <label>Instruksi Khusus (Masak apa hari ini?)</label>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem'}}>
+                <label style={{margin: 0}}>Instruksi Khusus (Masak apa hari ini?)</label>
+                <button 
+                  onClick={handleGenerateCookIdea} 
+                  disabled={!cookDesc || isGeneratingCookIdea || !apiKey}
+                  style={{
+                    background: 'var(--primary-color)', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '20px', 
+                    padding: '0.3rem 0.8rem', 
+                    fontSize: '0.75rem', 
+                    cursor: 'pointer',
+                    opacity: (!cookDesc || isGeneratingCookIdea || !apiKey) ? 0.6 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  {isGeneratingCookIdea ? 'Memikirkan...' : '💡 Tanya AI'}
+                </button>
+              </div>
               <textarea 
                 placeholder="Contoh: Bikin menu nasi gila, harus ada adegan telur diorak-arik..."
                 value={cookInstruction}
@@ -1245,7 +1305,7 @@ VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesi
                       let parsed = {};
                       try { parsed = JSON.parse(item.result); } catch(e) {}
                       return (
-                        <option key={item.id} value={item.id}>{parsed.desc?.substring(0, 40)}...</option>
+                        <option key={item.id} value={item.id}>{parsed.name || (parsed.desc ? parsed.desc.substring(0, 40) + '...' : 'Tanpa Nama')}</option>
                       )
                     })}
                   </optgroup>
