@@ -1425,7 +1425,7 @@ VOICE OVER: "(Dialog/narasi yang diucapkan pria berjenggot dalam bahasa Indonesi
                       {copiedIndex === index ? '✅ Copied!' : '📋 Copy'}
                     </button>
                   </div>
-                  <pre className="prompt-text">{promptText}</pre>
+                  <pre className="prompt-content">{promptText}</pre>
                 </div>
               ))}
               
