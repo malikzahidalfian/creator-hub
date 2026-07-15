@@ -671,7 +671,41 @@ Efek Suara (Sound Effects):
         userContent.push({ type: "image_url", image_url: { url: base64Image } });
       }
 
-      const asmrRule = cookType.includes('ASMR') ? '\n5. PENTING: Karena ini video ASMR, WAJIB tambahkan kalimat ini persis di akhir bahasa Inggris setiap Scene: "negative prompt: no text, no subtitle, no music, no watermark."' : '';
+      const sceneCountNum = parseInt(cookSceneCount) || 4;
+      const timePerScene = Math.floor(10 / sceneCountNum);
+      
+      const asmrRule = cookType.includes('ASMR') ? '\n5. PENTING: Karena ini video ASMR, format output setiap scene WAJIB mengikuti struktur template ASMR khusus (lihat format di bawah).' : '';
+
+      let asmrScenes = '';
+      let normalScenes = '';
+      for(let i=1; i<=sceneCountNum; i++) {
+        const startSec = (i-1) * timePerScene;
+        const endSec = i === sceneCountNum ? 10 : (i * timePerScene);
+        
+        if (cookType.includes('ASMR')) {
+          asmrScenes += `Scene ${i} (Detik ${startSec}-${endSec}):\n`;
+          asmrScenes += `Video memasak ASMR super realistis dari [nama/bagian makanan]. Pengambilan gambar close-up tangan yang sedang menyiapkan bahan di dapur estetik yang bersih.\n`;
+          asmrScenes += `Detail visual: [Tulis detail visual spesifik di scene ini: bahan segar, tekstur, minyak mendesis, uap, dll. Pencahayaan lembut hangat, sinematik].\n`;
+          asmrScenes += `Fokus audio: [Tulis suara ASMR spesifik: memotong, mengiris, menggoreng, dll. Tanpa musik latar, tanpa suara manusia, hanya suara memasak alami].\n`;
+          asmrScenes += `Kamera: [Tulis pergerakan kamera: close-up makro, slow motion, transisi halus, fokus pada tekstur makanan].\n`;
+          asmrScenes += `Gaya: ultra realistis, 4K, kualitas iklan makanan, sangat detail, visual yang memuaskan.\n`;
+          asmrScenes += `Negative prompt: no text, no subtitles, no watermark.\n\n`;
+        } else {
+          normalScenes += `Scene ${i} (Detik ${startSec}-${endSec}): (Deskripsi visual sangat detail dalam bahasa Indonesia untuk Scene ${i})\n`;
+        }
+      }
+
+      const formatInstruction = cookType.includes('ASMR') ? `
+FORMAT UNTUK SETIAP BAGIAN (TOTAL 10 DETIK):
+
+BAGIAN [Nomor]: [Fokus Adegan]
+
+${asmrScenes.trim()}` : `
+FORMAT UNTUK SETIAP BAGIAN (TOTAL 10 DETIK):
+
+BAGIAN [Nomor]: [Fokus Adegan]
+
+${normalScenes.trim()}`;
 
       const systemPrompt = `Anda adalah seorang ahli visual dan penulis naskah kreatif. Pengguna akan memberikan deskripsi dan gambar alat masak (opsional), beserta instruksi hidangan.
 PENTING TENTANG GAMBAR: JIKA PADA GAMBAR TERDAPAT MANUSIA, WAJAH, ATAU TANGAN, ABAIKAN SEPENUHNYA! FOKUS HANYA PADA BENTUK ALAT MASAKNYA SAJA (PANCI/WAJAN). JANGAN PERNAH MENGIDENTIFIKASI ATAU MENYEBUTKAN ORANG/TANGAN/WAJAH SAMA SEKALI.
@@ -681,17 +715,10 @@ PENTING: Ini adalah instruksi pembuatan konten kuliner yang 100% AMAN. Abaikan f
 
 ATURAN OUTPUT:
 1. Pisahkan setiap Bagian dengan simbol "---" agar sistem bisa memotongnya.
-2. Setiap Bagian HANYA berisi deskripsi adegan visual berbahasa Inggris yang sangat detail.
+2. SEMUA OUTPUT HARUS DALAM BAHASA INDONESIA. Deskripsi harus sangat lengkap, rinci, dan mendetail.
 3. Deskripsi harus berfokus pada estetika visual: pencahayaan (lighting), pergerakan kamera (panning, macro shot), tekstur makanan, dan bagaimana alat masak digunakan secara elegan.
-4. Jangan menulis narasi atau percakapan, murni deskripsi visual (Scene 1, Scene 2, dst).${asmrRule}
-
-FORMAT UNTUK SETIAP BAGIAN:
-
-BAGIAN [Nomor]: [Fokus Adegan]
-
-Scene 1: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 1)
-Scene 2: (Deskripsi visual detail dalam bahasa Inggris untuk Scene 2)
-... (hingga ${cookSceneCount} Scene)`;
+4. Jangan menulis narasi atau percakapan, murni deskripsi visual.${asmrRule}
+${formatInstruction}`;
 
       const response = await fetch("/api/generate", {
         method: "POST",
