@@ -1704,9 +1704,13 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${apiKey}`,
+          'X-Provider': '1inference'
+        },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "gpt-4o",
           messages: [{ role: "user", content: promptText }]
         })
       });
@@ -1722,7 +1726,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
         type: 'UGC Style (Voice Over)',
         prompt: `Durasi: ${ugcDuration}s | Variasi: ${ugcVariantCount}\nDeskripsi: ${ugcProductDesc}`,
         result: data.choices[0].message.content,
-        model: "google/gemini-2.5-flash"
+        model: "gpt-4o"
       });
       
     } catch (error) {
