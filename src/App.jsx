@@ -533,7 +533,17 @@ Berikan output dengan format:
     setGeneratedPrompts([])
     
     try {
-      const base64Image = await fileToBase64(productFile);
+      let userContentItems = [
+        { type: "text", text: `Product Description: ${productDesc}\n\nKey Selling Points (Context):\n${storySellingPoint}` }
+      ];
+      if (productFile) {
+        userContentItems.push({ type: "image_url", image_url: { url: await fileToBase64(productFile) } });
+      } else if (productImage && typeof productImage === 'string') {
+        const urls = productImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+        for (const u of urls) {
+          userContentItems.push({ type: "image_url", image_url: { url: u } });
+        }
+      }
       
       const systemPrompt = `You are an expert prompt engineer for AI Video Generators (like Google Veo 3) and AI Image Generators (like Midjourney/DALL-E 3). 
 Your task is to create a SINGLE, CONTINUOUS storytelling animation commercial based on a product image, description, and its key selling points.
@@ -592,11 +602,7 @@ Efek Suara (Sound Effects):
           model: "gpt-4o",
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: [
-                { type: "text", text: `Product Description: ${productDesc}\n\nKey Selling Points (Context):\n${storySellingPoint}` },
-                { type: "image_url", image_url: { url: base64Image } }
-              ]
-            }
+            { role: "user", content: userContentItems }
           ],
           temperature: 0.7
         })
@@ -767,14 +773,13 @@ ${formatInstructionStr}`;
       let userContent = [];
       userContent.push({ type: "text", text: `Deskripsi Produk: ${bjDesc}\nTipe Konten: ${bjType}\nJumlah Bagian Video: ${bjPromptCount}\nJumlah Scene per Bagian: ${bjSceneCount}\nInstruksi Khusus: ${bjInstruction || 'Terserah AI'}` });
 
-      let base64Image = null;
       if (bjFile) {
-        base64Image = await fileToBase64(bjFile);
-      } else if (bjImage && typeof bjImage === 'string' && bjImage.startsWith('http')) {
-        base64Image = bjImage;
-      }
-      if (base64Image) {
-        userContent.push({ type: "image_url", image_url: { url: base64Image } });
+        userContent.push({ type: "image_url", image_url: { url: await fileToBase64(bjFile) } });
+      } else if (bjImage && typeof bjImage === 'string') {
+        const urls = bjImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+        for (const u of urls) {
+          userContent.push({ type: "image_url", image_url: { url: u } });
+        }
       }
 
       let systemPrompt = "";
@@ -1242,9 +1247,13 @@ VOICE OVER: "(Dialog/narasi)"
                 <label>Gambar Produk</label>
                 <div className="image-upload-wrapper">
                 {productImage ? (
-                  <div className="image-preview">
-                    <img src={productImage} alt="Preview" />
-                    <button className="btn-secondary" onClick={() => { setProductImage(null); setProductFile(null); }}>Ganti Gambar</button>
+                  <div className="image-preview" style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                    {productImage.startsWith('http') ? (
+                      productImage.split(/[\n,]+/).map((u, i) => u.trim() && u.startsWith('http') && <img key={i} src={u.trim()} alt="Preview" style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} />)
+                    ) : (
+                      <img src={productImage} alt="Preview" style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} />
+                    )}
+                    <button className="btn-secondary" style={{alignSelf: 'center'}} onClick={() => { setProductImage(null); setProductFile(null); }}>Ganti Gambar</button>
                   </div>
                 ) : (
                   <label className="upload-placeholder">
@@ -1581,9 +1590,13 @@ VOICE OVER: "(Dialog/narasi)"
               <label>Gambar Produk (Opsional)</label>
               <div className="image-upload-wrapper">
               {bjImage ? (
-                <div className="image-preview">
-                  <img src={bjImage} alt="Preview" />
-                  <button className="btn-secondary" onClick={() => { setBjImage(null); setBjFile(null); }}>Hapus / Ganti Gambar</button>
+                <div className="image-preview" style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                  {bjImage.startsWith('http') ? (
+                    bjImage.split(/[\n,]+/).map((u, i) => u.trim() && u.startsWith('http') && <img key={i} src={u.trim()} alt="Preview" style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} />)
+                  ) : (
+                    <img src={bjImage} alt="Preview" style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} />
+                  )}
+                  <button className="btn-secondary" style={{alignSelf: 'center'}} onClick={() => { setBjImage(null); setBjFile(null); }}>Hapus / Ganti Gambar</button>
                 </div>
               ) : (
                 <label className="upload-placeholder">
@@ -2536,12 +2549,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               {!apiKey && <small style={{display: 'block', color: '#ef4444', marginTop: '0.3rem'}}>API Key diperlukan untuk fitur ini.</small>}
             </div>
             <div className="input-group">
-              <label>Link Produk (Shopee/TikTok)</label>
-              <input type="text" className="api-key-input" placeholder="https://shope.ee/..." value={bankProductLink} onChange={(e) => setBankProductLink(e.target.value)} />
-            </div>
-            <div className="input-group">
-              <label>Link Gambar Produk (URL)</label>
-              <input type="text" className="api-key-input" placeholder="https://cf.shopee.co.id/file/..." value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} />
+              <label>Link Gambar Produk (Bisa lebih dari 1, pisahkan dengan Enter atau Koma)</label>
+              <textarea className="api-key-input" placeholder="https://cf.shopee.co.id/file/...\nhttps://cf.shopee.co.id/file/..." value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} rows="3" />
             </div>
             <div className="input-group">
               <label>Kategori Produk</label>
