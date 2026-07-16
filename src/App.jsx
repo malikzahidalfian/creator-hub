@@ -1722,12 +1722,11 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
 
       setGeneratedUgc(data.choices[0].message.content);
       
-      saveToHistory({
-        type: 'UGC Style (Voice Over)',
-        prompt: `Durasi: ${ugcDuration}s | Variasi: ${ugcVariantCount}\nDeskripsi: ${ugcProductDesc}`,
-        result: data.choices[0].message.content,
-        model: "gpt-4o"
-      });
+      saveToSupabase(
+        data.choices[0].message.content,
+        'UGC Style (Voice Over)',
+        `Durasi: ${ugcDuration}s | Variasi: ${ugcVariantCount}\nDeskripsi: ${ugcProductDesc}`
+      );
       
     } catch (error) {
       alert("Error: " + error.message);
