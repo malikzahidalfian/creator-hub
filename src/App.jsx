@@ -125,10 +125,8 @@ function App() {
   const [isBankSaving, setIsBankSaving] = useState(false);
   const [activeBankCategory, setActiveBankCategory] = useState('Semua');
 
-  // --- SELLING POINT STATES ---
-  const [sellingProductInfo, setSellingProductInfo] = useState('')
+  // --- BANK USP STATE ---
   const [isGeneratingSelling, setIsGeneratingSelling] = useState(false)
-  const [generatedSelling, setGeneratedSelling] = useState(null)
 
   const stylesList = [
     "Kartun 3D lucu, warna cerah, karakter Indonesia",
@@ -549,9 +547,16 @@ STRICT INSTRUCTIONS:
 6. Content Style/Tone requested: "${storyContentStyle}".
 ${specialInstruction ? `7. SPECIAL INSTRUCTIONS FROM USER: "${specialInstruction}". YOU MUST FOLLOW THIS STRICTLY.` : ''}
 8. CRITICAL VISUAL CONSISTENCY: Read the highly detailed physical description of the product provided in the context. You MUST inject this exact, detailed physical description of the product into EVERY SINGLE "Prompt Visual" and "Prompt Siap Tempel ke Veo 3" without fail. Do not use generic pronouns like "the product", always describe its exact shape, color, and texture in every scene to lock the visual consistency.
-9. Provide the output in plain text. DO NOT USE MARKDOWN ASTERISKS (**).
-10. Separate each main Prompt block with a separator line "---" so the system can parse it.
-11. End each prompt block by providing a "Prompt Siap Tempel ke Veo 3" (in English), "Narasi (Voice Over)", and "Efek Suara".
+9. THE STORY MUST BE BUILT AROUND THE SPECIFIC PROBLEM AND BENEFIT OF THE PRODUCT. Do NOT reuse generic storylines. The scenario must feel natural and relevant to the product category. Show a clear cause (problem) and effect (solution).
+10. REQUIRED FLOW ACROSS PROMPTS:
+    - Show a realistic problem related to the product
+    - Make the situation slightly relatable or emotional
+    - Introduce the product naturally
+    - Demonstrate how it solves the problem
+    - Show clear result
+11. Provide the output in plain text. DO NOT USE MARKDOWN ASTERISKS (**).
+12. Separate each main Prompt block with a separator line "---" so the system can parse it.
+13. End each prompt block by providing a "Prompt Siap Tempel ke Veo 3" (in English), "Narasi (Voice Over)", and "Efek Suara".
 
 FOLLOW THIS EXACT FORMAT TEMPLATE FOR EVERY PROMPT:
 
@@ -780,6 +785,7 @@ PENTING TENTANG GAMBAR: JIKA PADA GAMBAR REFERENSI TERDAPAT MANUSIA, WAJAH, ATAU
 Tugas Anda adalah mendeskripsikan secara visual urutan adegan (scene) untuk video unboxing sinematik. Model/aktor utamanya adalah seorang PRIA BERJENGGOT.
 Anda harus mendeskripsikan ekspresi pria berjenggot ini, gesturnya, dan interaksinya dengan produk atau dengan kamera.
 Video ini dibagi menjadi ${bjPromptCount} Bagian berurutan. Ini BUKAN variasi, melainkan SATU cerita visual yang menyambung.
+PENTING: CERITA HARUS DIBANGUN BERDASARKAN MASALAH SPESIFIK (PAIN POINTS) DAN MANFAAT PRODUK. DILARANG MENGGUNAKAN ALUR CERITA GENERIK (Do NOT reuse generic storylines). Skenario harus terasa natural, spesifik dengan kategori produk, dan menunjukkan sebab-akibat (masalah -> solusi) yang jelas.
 
 ATURAN MUTLAK VISUAL:
 1. Bentuk, warna, dan ukuran produk HARUS selalu konsisten di semua scene.
@@ -827,6 +833,7 @@ PENTING TENTANG GAMBAR: JIKA PADA GAMBAR REFERENSI TERDAPAT MANUSIA, WAJAH, ATAU
 Tugas Anda adalah mendeskripsikan secara visual urutan adegan (scene) untuk sketsa komedi pendek yang melibatkan produk. Model/aktor utamanya adalah seorang PRIA BERJENGGOT.
 Anda harus mendeskripsikan ekspresi pria berjenggot ini, gesturnya, dan interaksinya dengan produk atau situasi.
 Video ini dibagi menjadi ${bjPromptCount} Bagian berurutan. Ini BUKAN variasi, melainkan SATU cerita visual yang menyambung.
+PENTING: CERITA HARUS DIBANGUN BERDASARKAN MASALAH SPESIFIK (PAIN POINTS) DAN MANFAAT PRODUK. DILARANG MENGGUNAKAN ALUR CERITA GENERIK (Do NOT reuse generic storylines). Skenario harus terasa natural, spesifik dengan kategori produk, dan menunjukkan sebab-akibat (masalah -> solusi) yang jelas.
 
 ATURAN MUTLAK VISUAL:
 1. Bentuk, warna, dan ukuran produk HARUS selalu konsisten di semua scene.
@@ -872,6 +879,7 @@ VOICE OVER: "(Dialog/narasi)"
 PENTING TENTANG GAMBAR: JIKA PADA GAMBAR REFERENSI TERDAPAT MANUSIA, WAJAH, ATAU TANGAN, ABAIKAN SEPENUHNYA! FOKUS HANYA PADA BENTUK PRODUKNYA SAJA. JANGAN MENGIDENTIFIKASI ORANG/WAJAH.
 Tugas Anda adalah mendeskripsikan secara visual urutan adegan (scene) untuk video tutorial singkat cara penggunaan produk. Narator/aktor utamanya adalah seorang PRIA BERJENGGOT.
 Video ini dibagi menjadi ${bjPromptCount} Bagian berurutan. Ini BUKAN variasi, melainkan SATU cerita visual yang menyambung.
+PENTING: CERITA HARUS DIBANGUN BERDASARKAN MASALAH SPESIFIK (PAIN POINTS) DAN MANFAAT PRODUK. DILARANG MENGGUNAKAN ALUR CERITA GENERIK (Do NOT reuse generic storylines). Skenario harus terasa natural, spesifik dengan kategori produk, dan menunjukkan sebab-akibat (masalah -> solusi) yang jelas.
 
 ATURAN MUTLAK VISUAL (GLOBAL RULES):
 1. Produk HARUS 100% konsisten di semua frame (tidak boleh berubah bentuk, warna, atau ukuran / no shape shifting).
@@ -920,6 +928,7 @@ PENTING TENTANG GAMBAR: JIKA PADA GAMBAR REFERENSI TERDAPAT MANUSIA, WAJAH, ATAU
 Tugas Anda adalah mendeskripsikan secara visual urutan adegan (scene) untuk video review atau POV. Model/aktor utamanya adalah seorang PRIA BERJENGGOT.
 Anda harus mendeskripsikan ekspresi pria berjenggot ini, gesturnya, dan interaksinya dengan produk atau dengan kamera (jika POV).
 Video ini dibagi menjadi ${bjPromptCount} Bagian berurutan. Ini BUKAN variasi, melainkan SATU cerita visual yang menyambung.
+PENTING: CERITA HARUS DIBANGUN BERDASARKAN MASALAH SPESIFIK (PAIN POINTS) DAN MANFAAT PRODUK. DILARANG MENGGUNAKAN ALUR CERITA GENERIK (Do NOT reuse generic storylines). Skenario harus terasa natural, spesifik dengan kategori produk, dan menunjukkan sebab-akibat (masalah -> solusi) yang jelas.
 
 ATURAN MUTLAK VISUAL:
 1. Bentuk, warna, dan ukuran produk HARUS selalu konsisten di semua scene.
@@ -1149,10 +1158,7 @@ VOICE OVER: "(Dialog/narasi)"
             <div className="nav-item-content"><span className="icon">📰</span> Threads Umum</div>
             <span className="nav-arrow">&gt;</span>
           </button>
-          <button className={`nav-item ${activeTab === 'selling_point' ? 'active' : ''}`} onClick={() => {setActiveTab('selling_point'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🎯</span> Selling Point</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
+
           <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => {setActiveTab('history'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🗄️</span> Database</div>
             <span className="nav-arrow">&gt;</span>
@@ -2105,18 +2111,17 @@ Aturan Penulisan Skrip:
     }
   };
 
-  const handleGenerateSelling = async () => {
-    if (!sellingProductInfo || !apiKey) {
-      alert("Pastikan Deskripsi/Tautan Produk dan API Key sudah diisi.");
+  const handleGenerateBankUSP = async () => {
+    if (!bankDesc || !apiKey) {
+      alert("Pastikan Deskripsi Produk dan API Key sudah diisi.");
       return;
     }
     
     setIsGeneratingSelling(true)
-    setGeneratedSelling(null)
     
     try {
       const systemPrompt = `Anda adalah seorang manajer produk berpengalaman. Tugas Anda adalah mengidentifikasi poin penjualan produk dan memecahkan masalah nyata yang dihadapi pelanggan.
-Pengguna akan memberi Anda tautan atau deskripsi produk.
+Pengguna akan memberi Anda nama dan deskripsi produk.
 OUTPUT WAJIB DALAM BENTUK JSON DENGAN STRUKTUR BERIKUT:
 {
   "target_market": ["List siapa yang cocok menggunakan produk ini"],
@@ -2142,7 +2147,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           model: "gpt-4o",
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: `Deskripsi/Tautan Produk:\n${sellingProductInfo}` }
+            { role: "user", content: `Nama Produk: ${bankProductName}\nDeskripsi Produk:\n${bankDesc}` }
           ],
           temperature: 0.7
         })
@@ -2155,7 +2160,21 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
          generatedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
       }
       
-      setGeneratedSelling(generatedText);
+      try {
+        const parsed = JSON.parse(generatedText);
+        let uspText = "\n\n=== HASIL ANALISIS SELLING POINT (AI) ===\n";
+        if (parsed.usp && parsed.usp.length > 0) uspText += "⭐ USP: " + parsed.usp.join(", ") + "\n";
+        if (parsed.target_market && parsed.target_market.length > 0) uspText += "🎯 Target Market: " + parsed.target_market.join(", ") + "\n";
+        if (parsed.pain_points && parsed.pain_points.length > 0) uspText += "💥 Pain Points (Masalah): " + parsed.pain_points.join(", ") + "\n";
+        if (parsed.solutions && parsed.solutions.length > 0) {
+          uspText += "✅ Solusi: " + parsed.solutions.map(s => s.solusi).join(", ") + "\n";
+        }
+        if (parsed.emotional_hook && parsed.emotional_hook.length > 0) uspText += "🧠 Emotional Hook: " + parsed.emotional_hook.join(", ") + "\n";
+        
+        setBankDesc(prev => prev + uspText);
+      } catch(err) {
+        setBankDesc(prev => prev + "\n\n=== HASIL ANALISIS SELLING POINT (AI) ===\n" + generatedText);
+      }
     } catch (error) {
       alert("Error: " + error.message);
     } finally {
@@ -2225,194 +2244,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     </div>
   );
 
-  const renderSellingForm = () => {
-    let parsedSelling = null;
-    if (generatedSelling) {
-      try {
-        parsedSelling = JSON.parse(generatedSelling);
-      } catch(e) {
-        // If not json, parsedSelling remains null
-      }
-    }
 
-    return (
-    <div className="content-wrapper fade-in">
-      <div className="content-panel">
-        <h2 className="desktop-title">🎯 Analisis Selling Point</h2>
-        <p className="subtitle">Bedah masalah pelanggan dan temukan poin penjualan yang paling tajam dari sebuah produk.</p>
-        <div className="layout-grid">
-          <div className="glass-panel input-section">
-            <div className="input-group">
-              <label>Deskripsi atau Tautan Produk</label>
-              <textarea placeholder="Contoh: Sepatu lari anti air merek X..." value={sellingProductInfo} onChange={(e) => setSellingProductInfo(e.target.value)} rows="5" />
-            </div>
-            
-            <button className="btn-primary generate-btn" onClick={handleGenerateSelling} disabled={!sellingProductInfo || isGeneratingSelling || !apiKey}>
-              {isGeneratingSelling ? 'Menganalisis...' : '✨ Temukan Selling Point'}
-            </button>
-            {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
-          </div>
-          
-          <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-          {generatedSelling ? (
-            <div className="prompts-container">
-              <div className="prompt-card fade-in">
-                <div className="prompt-header">
-                  <h3>Hasil Analisis</h3>
-                  <button className="btn-copy" onClick={() => handleCopy(generatedSelling, 'selling')}>
-                    {copiedIndex === 'selling' ? '✅ Copied!' : '📋 Copy'}
-                  </button>
-                </div>
-                
-                {parsedSelling && parsedSelling.target_market ? (
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1.5rem', background: '#ffffff', borderRadius: '0 0 12px 12px', color: '#1e293b'}}>
-                    
-                    {/* 1. TARGET MARKET */}
-                    <div>
-                      <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🔍</span> 1. TARGET MARKET (Siapa yang paling cocok)</h4>
-                      <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155'}}>
-                        {parsedSelling.target_market.map((item, i) => <li key={i}>{item}</li>)}
-                      </ul>
-                    </div>
-                    
-                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
-                    
-                    {/* 2. PAIN POINTS */}
-                    <div>
-                      <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>💥</span> 2. MASALAH UTAMA CUSTOMER (Pain Points)</h4>
-                      <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 'bold', color: '#b91c1c'}}><span>❌</span> Masalah yang sering dialami pengguna:</div>
-                      <ol style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155', fontWeight: 'bold'}}>
-                        {parsedSelling.pain_points.map((item, i) => <li key={i}>{item}</li>)}
-                      </ol>
-                    </div>
-
-                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
-
-                    {/* 3. SOLUTIONS */}
-                    {parsedSelling.solutions && (
-                      <div>
-                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>✅</span> 3. SOLUSI YANG DITAWARKAN PRODUK</h4>
-                        <div style={{overflowX: 'auto'}}>
-                          <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem', fontSize: '0.95rem'}}>
-                            <thead>
-                              <tr style={{background: '#f1f5f9', borderBottom: '2px solid #cbd5e1'}}>
-                                <th style={{padding: '0.75rem', textAlign: 'left', width: '50%'}}>Masalah Customer</th>
-                                <th style={{padding: '0.75rem', textAlign: 'left', width: '50%'}}>Solusi dari Produk</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {parsedSelling.solutions.map((item, i) => (
-                                <tr key={i} style={{borderBottom: '1px solid #e2e8f0'}}>
-                                  <td style={{padding: '0.75rem', color: '#475569'}}>{item.masalah}</td>
-                                  <td style={{padding: '0.75rem', color: '#047857', fontWeight: '500'}}>{item.solusi}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-
-                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
-
-                    {/* 4. USP */}
-                    {parsedSelling.usp && (
-                      <div>
-                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>⭐</span> 4. UNIQUE SELLING POINT (USP)</h4>
-                        <div style={{marginBottom: '0.5rem', fontWeight: 'bold', color: '#ea580c'}}>🔥 Ini yang bikin produk “KEJUALAN”:</div>
-                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155', fontWeight: 'bold'}}>
-                          {parsedSelling.usp.map((item, i) => <li key={i}>{item}</li>)}
-                        </ul>
-                      </div>
-                    )}
-
-                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
-
-                    {/* 5. EMOTIONAL HOOK */}
-                    {parsedSelling.emotional_hook && (
-                      <div>
-                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🧠</span> 5. EMOTIONAL HOOK (Kenapa orang beli)</h4>
-                        <div style={{marginBottom: '0.5rem', fontStyle: 'italic', color: '#475569'}}>Produk ini bukan cuma barang, tapi:</div>
-                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155'}}>
-                          {parsedSelling.emotional_hook.map((item, i) => <li key={i}>{item}</li>)}
-                        </ul>
-                      </div>
-                    )}
-
-                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
-
-                    {/* 6. MARKETING ANGLES */}
-                    {parsedSelling.marketing_angles && (
-                      <div>
-                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🎯</span> 6. ANGLE MARKETING PALING KUAT</h4>
-                        <div style={{marginBottom: '0.8rem', color: '#475569'}}>Beberapa angle yang bisa dipakai untuk jualan:</div>
-                        <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                          {parsedSelling.marketing_angles.map((item, i) => (
-                            <div key={i}>
-                              <div style={{fontWeight: 'bold', color: '#334155'}}>{i+1}. {item.angle}</div>
-                              <div style={{color: '#0284c7', fontStyle: 'italic', marginTop: '0.2rem'}}>“{item.copy}”</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
-
-                    {/* 7. AD HOOKS */}
-                    {parsedSelling.ad_hooks && (
-                      <div>
-                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🎬</span> 7. CONTOH HOOK IKLAN (HIGH CONVERT)</h4>
-                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#16a34a', fontWeight: '500', fontStyle: 'italic'}}>
-                          {parsedSelling.ad_hooks.map((item, i) => <li key={i}>“{item}”</li>)}
-                        </ul>
-                      </div>
-                    )}
-
-                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
-
-                    {/* 8. POSITIONING */}
-                    {parsedSelling.positioning && (
-                      <div>
-                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>📦</span> 8. POSITIONING PRODUK</h4>
-                        <div style={{fontWeight: 'bold', color: '#4f46e5', marginBottom: '0.5rem'}}>👉 {parsedSelling.positioning.title}</div>
-                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155'}}>
-                          {parsedSelling.positioning.details.map((item, i) => <li key={i}>{item}</li>)}
-                        </ul>
-                      </div>
-                    )}
-
-                    <hr style={{border: 'none', borderTop: '1px solid #e2e8f0'}} />
-
-                    {/* 9. VIRAL POTENTIAL */}
-                    {parsedSelling.viral_potential && (
-                      <div>
-                        <h4 style={{fontSize: '1.1rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><span style={{fontSize: '1.4rem'}}>🚀</span> 9. POTENSI VIRAL (Kenapa bisa laku keras)</h4>
-                        <div style={{marginBottom: '0.5rem', color: '#475569'}}>Produk ini punya:</div>
-                        <ul style={{paddingLeft: '1.5rem', lineHeight: '1.6', color: '#334155', fontWeight: '500'}}>
-                          {parsedSelling.viral_potential.map((item, i) => <li key={i}>{item}</li>)}
-                        </ul>
-                      </div>
-                    )}
-
-                  </div>
-                ) : (
-                  <pre className="prompt-content" style={{padding: '1rem', whiteSpace: 'pre-wrap'}}>{generatedSelling}</pre>
-                )}
-              </div>
-              <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
-                <button className="btn-secondary" onClick={() => saveToSupabase([generatedSelling], 'Selling Point', sellingProductInfo.substring(0,30))} disabled={isSaving} style={{flex: 1}}>
-                  {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
-                </button>
-              </div>
-            </div>
-          ) : <EmptyStateRight />}
-          </div>
-        </div>
-      </div>
-    </div>
-    );
-  };
 
   const renderImageGenForm = () => (
     <div className="content-wrapper fade-in">
@@ -2692,7 +2524,16 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             </div>
             <div className="input-group">
               <label>Deskripsi Produk</label>
-              <textarea placeholder="Jelaskan keunggulan / spesifikasi produk..." value={bankDesc} onChange={(e) => setBankDesc(e.target.value)} rows="3" />
+              <textarea placeholder="Jelaskan keunggulan / spesifikasi produk..." value={bankDesc} onChange={(e) => setBankDesc(e.target.value)} rows="6" />
+              <button 
+                className="btn-primary" 
+                style={{marginTop: '0.5rem', background: 'var(--active-gradient)', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem'}}
+                onClick={handleGenerateBankUSP}
+                disabled={!bankProductName || !bankDesc || isGeneratingSelling || !apiKey}
+              >
+                {isGeneratingSelling ? 'Menyusun USP...' : '✨ Generate Selling Point'}
+              </button>
+              {!apiKey && <small style={{display: 'block', color: '#ef4444', marginTop: '0.3rem'}}>API Key diperlukan untuk fitur ini.</small>}
             </div>
             <div className="input-group">
               <label>Link Produk (Shopee/TikTok)</label>
@@ -3154,7 +2995,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'product_data' && renderProductDataForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
-        {activeTab === 'selling_point' && renderSellingForm()}
         {activeTab === 'history' && renderDatabase()}
         {activeTab === 'settings' && renderSettings()}
       </main>
