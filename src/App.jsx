@@ -113,6 +113,7 @@ function App() {
   const [prodDesc, setProdDesc] = useState('');
   const [prodLink, setProdLink] = useState('');
   const [prodImgUrl, setProdImgUrl] = useState('');
+  const [editingProductId, setEditingProductId] = useState(null);
 
   // --- BANK STORYBOARD STATES ---
   const [bankStoryboardData, setBankStoryboardData] = useState([]);
@@ -120,8 +121,8 @@ function App() {
   const [bankCategory, setBankCategory] = useState('');
   const [bankProductName, setBankProductName] = useState('');
   const [bankDesc, setBankDesc] = useState('');
-  const [bankProductLink, setBankProductLink] = useState('');
   const [bankImgUrl, setBankImgUrl] = useState('');
+  const [editingBankId, setEditingBankId] = useState(null);
   const [isBankSaving, setIsBankSaving] = useState(false);
   const [activeBankCategory, setActiveBankCategory] = useState('Semua');
 
@@ -165,6 +166,12 @@ function App() {
   const [activeDatabaseCategory, setActiveDatabaseCategory] = useState('Storyboard');
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
   const [imageInputs, setImageInputs] = useState({});
+
+  // --- TIKTOK SCRAPER STATES ---
+  const [tiktokUrl, setTiktokUrl] = useState('');
+  const [isTiktokLoading, setIsTiktokLoading] = useState(false);
+  const [tiktokResult, setTiktokResult] = useState(null);
+  const [tiktokError, setTiktokError] = useState(null);
 
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
@@ -292,12 +299,13 @@ function App() {
     }
   }, [activeTab]);
 
-  const saveToSupabase = async (blocks, type, desc) => {
+  const saveToSupabase = async (blocks, type, desc, updateId = null) => {
     setIsSaving(true);
     const resultText = Array.isArray(blocks) ? blocks.join('\n\n---\n\n') : blocks;
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/prompts`, {
-        method: 'POST',
+      const url = updateId ? `${supabaseUrl}/rest/v1/prompts?id=eq.${updateId}` : `${supabaseUrl}/rest/v1/prompts`;
+      const response = await fetch(url, {
+        method: updateId ? 'PATCH' : 'POST',
         headers: {
           'apikey': supabaseKey,
           'Authorization': `Bearer ${supabaseKey}`,
@@ -312,8 +320,14 @@ function App() {
       });
       if (response.ok) {
         if (type !== 'Data Produk' && type !== 'Bank Storyboard') alert("Berhasil disimpan permanen ke Database!");
-        if (type === 'Data Produk') fetchProducts(); // Refresh data
-        if (type === 'Bank Storyboard') fetchBankStoryboard(); // Refresh bank data
+        if (type === 'Data Produk') {
+          fetchProducts(); // Refresh data
+          setEditingProductId(null);
+        }
+        if (type === 'Bank Storyboard') {
+          fetchBankStoryboard(); // Refresh bank data
+          setEditingBankId(null);
+        }
       } else {
         const err = await response.json();
         alert("Gagal: " + (err.message || JSON.stringify(err)));
@@ -325,6 +339,17 @@ function App() {
     }
   };
 
+  const handleEditProduct = (item) => {
+    setEditingProductId(item.id);
+    setProdTitle(item.product_desc || '');
+    let parsed = {};
+    try { parsed = JSON.parse(item.result); } catch(e) {}
+    setProdDesc(parsed.desc || '');
+    setProdLink(parsed.link || '');
+    setProdImgUrl(parsed.imgUrl || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSaveProduct = () => {
     if (!prodTitle || !prodDesc || !prodLink) return alert("Judul, Deskripsi, dan Link wajib diisi!");
     const productPayload = JSON.stringify({
@@ -332,7 +357,7 @@ function App() {
       link: prodLink,
       imgUrl: prodImgUrl
     });
-    saveToSupabase(productPayload, 'Data Produk', prodTitle);
+    saveToSupabase(productPayload, 'Data Produk', prodTitle, editingProductId);
     setProdTitle(''); setProdDesc(''); setProdLink(''); setProdImgUrl('');
   };
 
@@ -354,16 +379,26 @@ function App() {
     }
   };
 
+  const handleEditBank = (item) => {
+    setEditingBankId(item.id);
+    setBankCategory(item.product_desc || '');
+    let parsed = {};
+    try { parsed = JSON.parse(item.result); } catch(e) {}
+    setBankProductName(parsed.name || '');
+    setBankDesc(parsed.desc || '');
+    setBankImgUrl(parsed.imgUrl || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSaveBank = () => {
     if (!bankCategory || !bankProductName) return alert("Kategori dan Nama Produk wajib diisi!");
     const bankPayload = JSON.stringify({
       name: bankProductName,
       desc: bankDesc,
-      link: bankProductLink,
       imgUrl: bankImgUrl
     });
-    saveToSupabase(bankPayload, 'Bank Storyboard', bankCategory);
-    setBankProductName(''); setBankDesc(''); setBankProductLink(''); setBankImgUrl('');
+    saveToSupabase(bankPayload, 'Bank Storyboard', bankCategory, editingBankId);
+    setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory('');
   };
 
   const handleDeleteBank = async (id) => {
@@ -1256,6 +1291,10 @@ VOICE OVER: "(Dialog/narasi)"
           </button>
           <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => {setActiveTab('settings'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🔑</span> API Key</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'tiktok_scraper' ? 'active' : ''}`} onClick={() => {setActiveTab('tiktok_scraper'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🎵</span> Tiktok Scraper</div>
             <span className="nav-arrow">&gt;</span>
           </button>
         </nav>
@@ -2638,7 +2677,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             </div>
             <div className="input-group">
               <label>Link Gambar Produk (Bisa lebih dari 1, pisahkan dengan Enter atau Koma)</label>
-              <textarea className="api-key-input" placeholder="https://cf.shopee.co.id/file/...\nhttps://cf.shopee.co.id/file/..." value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} rows="3" />
+              <textarea className="api-key-input" placeholder={`https://cf.shopee.co.id/file/...\nhttps://cf.shopee.co.id/file/...`} value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} rows="3" />
             </div>
             <div className="input-group">
               <label>Kategori Produk</label>
@@ -2659,9 +2698,19 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               </div>
               <small style={{display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)'}}>Ketik kategori baru atau pilih dari daftar yang sudah ada.</small>
             </div>
-            <button className="btn-primary generate-btn" onClick={handleSaveBank} disabled={!bankCategory || !bankProductName || isSaving}>
-              {isSaving ? 'Menyimpan...' : '💾 Simpan ke Bank'}
-            </button>
+            <div style={{display: 'flex', gap: '0.5rem', flexDirection: 'column'}}>
+              <button className="btn-primary generate-btn" onClick={handleSaveBank} disabled={!bankCategory || !bankProductName || isSaving}>
+                {isSaving ? 'Menyimpan...' : (editingBankId ? '💾 Update di Bank' : '💾 Simpan ke Bank')}
+              </button>
+              {editingBankId && (
+                <button className="btn-secondary" onClick={() => {
+                  setEditingBankId(null);
+                  setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory('');
+                }}>
+                  ❌ Batal Edit
+                </button>
+              )}
+            </div>
           </div>
           
           <div className="glass-panel" style={{padding: '1.5rem', background: 'transparent', border: 'none', boxShadow: 'none'}}>
@@ -2743,9 +2792,14 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                               <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
                               {parsed.link && <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', fontWeight: '600'}}>🔗 Link Produk</a>}
                             </div>
-                            <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem', flexShrink: 0}}>
-                              Hapus
-                            </button>
+                            <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem', flexShrink: 0}}>
+                              <button onClick={() => handleEditBank(item)} style={{background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
+                                Edit
+                              </button>
+                              <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
+                                Hapus
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -2770,9 +2824,14 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                         <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
                         {parsed.link && <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', fontWeight: '600'}}>🔗 Link Produk</a>}
                       </div>
-                      <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', alignSelf: 'flex-start', fontSize: '0.75rem'}}>
-                        Hapus
-                      </button>
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem', alignSelf: 'flex-start'}}>
+                        <button onClick={() => handleEditBank(item)} style={{background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
+                          Edit
+                        </button>
+                        <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
+                          Hapus
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -2811,9 +2870,19 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 Klik kanan gambar di Shopee \u2192 Copy image address / Salin tautan gambar, lalu paste di sini.
               </small>
             </div>
-            <button className="btn-primary generate-btn" onClick={handleSaveProduct} disabled={!prodTitle || !prodDesc || !prodLink || isSaving}>
-              {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
-            </button>
+            <div style={{display: 'flex', gap: '0.5rem', flexDirection: 'column'}}>
+              <button className="btn-primary generate-btn" onClick={handleSaveProduct} disabled={!prodTitle || !prodDesc || !prodLink || isSaving}>
+                {isSaving ? 'Menyimpan...' : (editingProductId ? '💾 Update Database' : '💾 Simpan ke Database')}
+              </button>
+              {editingProductId && (
+                <button className="btn-secondary" onClick={() => {
+                  setEditingProductId(null);
+                  setProdTitle(''); setProdDesc(''); setProdLink(''); setProdImgUrl('');
+                }}>
+                  ❌ Batal Edit
+                </button>
+              )}
+            </div>
           </div>
           
           <div className="glass-panel" style={{padding: '1rem', background: 'transparent', border: 'none', boxShadow: 'none'}}>
@@ -2839,9 +2908,14 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                         <p style={{fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
                         <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none'}}>🔗 Link Produk</a>
                       </div>
-                      <button onClick={() => handleDeleteProduct(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', alignSelf: 'flex-start'}}>
-                        Hapus
-                      </button>
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem', alignSelf: 'flex-start'}}>
+                        <button onClick={() => handleEditProduct(item)} style={{background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
+                          Edit
+                        </button>
+                        <button onClick={() => handleDeleteProduct(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
+                          Hapus
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -3002,6 +3076,96 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     localStorage.setItem('gemini_api_keys', JSON.stringify(newKeys));
   };
 
+  const handleTiktokScrape = async () => {
+    if (!tiktokUrl) return;
+    setIsTiktokLoading(true);
+    setTiktokError(null);
+    setTiktokResult(null);
+
+    try {
+      const response = await fetch('/api/scrape-tiktok', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: tiktokUrl })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Gagal mengambil data dari TikTok');
+      }
+      
+      setTiktokResult(data);
+    } catch (error) {
+      setTiktokError(error.message);
+    } finally {
+      setIsTiktokLoading(false);
+    }
+  };
+
+  const renderTiktokScraperForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">Tiktok Scraper</h2>
+        <p className="subtitle">Ambil judul dan deskripsi dari link TikTok dengan mudah.</p>
+        
+        <div className="layout-grid">
+          <div className="glass-panel" style={{gridColumn: '1 / -1'}}>
+            <div className="input-group">
+              <label>Link TikTok</label>
+              <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
+                <input
+                  type="text"
+                  value={tiktokUrl}
+                  onChange={(e) => setTiktokUrl(e.target.value)}
+                  placeholder="Masukkan URL TikTok (contoh: https://vt.tiktok.com/...)"
+                  style={{flex: 1, padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: 'white'}}
+                />
+                <button 
+                  className="btn-primary" 
+                  onClick={handleTiktokScrape}
+                  disabled={isTiktokLoading || !tiktokUrl}
+                  style={{minWidth: '120px'}}
+                >
+                  {isTiktokLoading ? 'Loading...' : 'Scrape'}
+                </button>
+              </div>
+            </div>
+            
+            {tiktokError && (
+              <div className="error-message" style={{marginTop: '1rem', color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)'}}>
+                {tiktokError}
+              </div>
+            )}
+
+            {tiktokResult && (
+              <div className="result-container fade-in" style={{marginTop: '2rem'}}>
+                <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>Hasil Scrape:</h3>
+                
+                <div style={{background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Judul / Deskripsi:</label>
+                    <div style={{background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', fontSize: '0.95rem', lineHeight: '1.5', whiteSpace: 'pre-wrap'}}>
+                      {tiktokResult.title}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Author:</label>
+                    <div style={{background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', fontSize: '0.95rem'}}>
+                      {tiktokResult.author_name}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderSettings = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
@@ -3093,6 +3257,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
         {activeTab === 'history' && renderDatabase()}
+        {activeTab === 'tiktok_scraper' && renderTiktokScraperForm()}
         {activeTab === 'settings' && renderSettings()}
       </main>
     </div>
