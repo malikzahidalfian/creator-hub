@@ -803,7 +803,8 @@ ALUR / FLOW VIDEO:
 ATURAN OUTPUT (PENTING):
 1. Pisahkan setiap Bagian HANYA dengan simbol "---". Dilarang menyisipkan "---" antar scene.
 2. SEMUA OUTPUT HARUS DALAM BAHASA INDONESIA.
-3. Setiap Scene harus memiliki 2 komponen:
+3. DURASI VOICE OVER: Total durasi Voice Over untuk SETIAP BAGIAN (gabungan dialog semua scene di dalam 1 bagian) HARUS PAS 10 detik. Maksimal gunakan total 20-25 kata per Bagian. JANGAN KEPANJANGAN.
+4. Setiap Scene harus memiliki 2 komponen:
    a. VISUAL: (Sesuai aturan mutlak visual, kamera, dan alur di atas)
    b. VOICE OVER: "(Dialog dalam bahasa Indonesia)"
 
@@ -848,7 +849,8 @@ ALUR / FLOW VIDEO:
 ATURAN OUTPUT (PENTING):
 1. Pisahkan setiap Bagian HANYA dengan simbol "---". Dilarang menyisipkan "---" antar scene.
 2. SEMUA OUTPUT HARUS DALAM BAHASA INDONESIA.
-3. Setiap Scene harus memiliki 2 komponen:
+3. DURASI VOICE OVER: Total durasi Voice Over untuk SETIAP BAGIAN (gabungan dialog semua scene di dalam 1 bagian) HARUS PAS 10 detik. Maksimal gunakan total 20-25 kata per Bagian. JANGAN KEPANJANGAN.
+4. Setiap Scene harus memiliki 2 komponen:
    a. VISUAL: (Sesuai aturan mutlak visual, kamera, dan alur di atas)
    b. VOICE OVER: "(Dialog dalam bahasa Indonesia)"
 
@@ -894,7 +896,8 @@ ALUR / FLOW VIDEO:
 ATURAN OUTPUT (PENTING):
 1. Pisahkan setiap Bagian HANYA dengan simbol "---". Dilarang menyisipkan "---" antar scene.
 2. SEMUA OUTPUT HARUS DALAM BAHASA INDONESIA.
-3. Setiap Scene harus memiliki 2 komponen:
+3. DURASI VOICE OVER: Total durasi Voice Over untuk SETIAP BAGIAN (gabungan dialog semua scene di dalam 1 bagian) HARUS PAS 10 detik. Maksimal gunakan total 20-25 kata per Bagian. JANGAN KEPANJANGAN.
+4. Setiap Scene harus memiliki 2 komponen:
    a. VISUAL: (Sesuai aturan mutlak visual, kamera, dan alur di atas)
    b. VOICE OVER: "(Dialog dalam bahasa Indonesia)"
 
@@ -935,7 +938,8 @@ ALUR / FLOW VIDEO:
 ATURAN OUTPUT (PENTING):
 1. Pisahkan setiap Bagian HANYA dengan simbol "---". Dilarang menyisipkan "---" antar scene.
 2. SEMUA OUTPUT HARUS DALAM BAHASA INDONESIA.
-3. Setiap Scene harus memiliki 2 komponen:
+3. DURASI VOICE OVER: Total durasi Voice Over untuk SETIAP BAGIAN (gabungan dialog semua scene di dalam 1 bagian) HARUS PAS 10 detik. Maksimal gunakan total 20-25 kata per Bagian. JANGAN KEPANJANGAN.
+4. Setiap Scene harus memiliki 2 komponen:
    a. VISUAL: (Sesuai aturan mutlak visual dan alur di atas)
    b. VOICE OVER: "(Dialog dalam bahasa Indonesia)"
 
