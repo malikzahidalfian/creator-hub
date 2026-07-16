@@ -173,6 +173,14 @@ function App() {
   const [tiktokResult, setTiktokResult] = useState(null);
   const [tiktokError, setTiktokError] = useState(null);
 
+  // --- UGC STYLE STATES ---
+  const [ugcProductDesc, setUgcProductDesc] = useState('');
+  const [ugcVariantCount, setUgcVariantCount] = useState('3');
+  const [ugcDuration, setUgcDuration] = useState('20');
+  const [ugcInstruction, setUgcInstruction] = useState('');
+  const [isGeneratingUgc, setIsGeneratingUgc] = useState(false);
+  const [generatedUgc, setGeneratedUgc] = useState(null);
+
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
     try {
@@ -1246,7 +1254,7 @@ VOICE OVER: "(Dialog/narasi)"
             <div className="nav-item-content"><span className="icon">🏠</span> Dashboard</div>
           </button>
           <div className="accordion-menu">
-            <button className={`nav-item ${(activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot') ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
+            <button className={`nav-item ${(activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot' || activeTab === 'ugc_style') ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
               <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
               <span className="nav-arrow" style={{transform: isStoryboardAccordionOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s'}}>&gt;</span>
             </button>
@@ -1260,6 +1268,9 @@ VOICE OVER: "(Dialog/narasi)"
                 </button>
                 <button className={`nav-item ${activeTab === 'bang_jenggot' ? 'active' : ''}`} onClick={() => {setActiveTab('bang_jenggot'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
                   <div className="nav-item-content">Bang Jenggot</div>
+                </button>
+                <button className={`nav-item ${activeTab === 'ugc_style' ? 'active' : ''}`} onClick={() => {setActiveTab('ugc_style'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
+                  <div className="nav-item-content">UGC Style (Voice Over)</div>
                 </button>
               </div>
             )}
@@ -1661,6 +1672,177 @@ VOICE OVER: "(Dialog/narasi)"
               </div>
             </div>
           ) : <EmptyStateRight />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const handleGenerateUgc = async () => {
+    if (!ugcProductDesc || !apiKey) return;
+    setIsGeneratingUgc(true);
+    setGeneratedUgc(null);
+    setCopiedIndex(null);
+
+    const promptText = `Anda adalah seorang ahli pembuat naskah Voice Over (VO) bergaya User Generated Content (UGC) untuk TikTok/Reels/Shorts.
+
+Tugas: Buatkan ${ugcVariantCount} variasi Naskah Voice Over untuk mempromosikan produk berikut.
+Total durasi untuk setiap variasi harus pas untuk video berdurasi ${ugcDuration} detik (Asumsi kecepatan baca 2-2.5 kata per detik, jadi untuk ${ugcDuration} detik usahakan panjangnya sekitar ${Math.floor(ugcDuration * 2.2)} kata).
+
+Data Produk:
+${ugcProductDesc}
+
+${ugcInstruction ? `Instruksi Tambahan: ${ugcInstruction}\n` : ''}
+
+Ketentuan Format Script UGC (Harus terdiri dari 3 bagian ini):
+1. HOOK: Kalimat pancingan di awal yang bikin orang berhenti scrolling.
+2. ISI: Penjelasan singkat keunggulan produk / solusi dari masalah penonton.
+3. CTA: Call To Action (ajakan klik keranjang kuning / beli sekarang).
+
+Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap variasi dengan rapi), jangan berikan pengantar atau penjelasan tambahan. Cukup berikan script-nya saja.`;
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: "user", content: promptText }]
+        })
+      });
+      const data = await response.json();
+      
+      if (!response.ok || data.error) {
+        throw new Error(data.error?.message || data.error || 'Gagal generate');
+      }
+
+      setGeneratedUgc(data.choices[0].message.content);
+      
+      saveToHistory({
+        type: 'UGC Style (Voice Over)',
+        prompt: `Durasi: ${ugcDuration}s | Variasi: ${ugcVariantCount}\nDeskripsi: ${ugcProductDesc}`,
+        result: data.choices[0].message.content,
+        model: "google/gemini-2.5-flash"
+      });
+      
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsGeneratingUgc(false);
+    }
+  };
+
+  const renderUgcForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">📱 UGC Style (Voice Over Script)</h2>
+        <p className="subtitle">Hasilkan naskah Voice Over untuk konten UGC dengan struktur Hook, Isi, dan CTA.</p>
+        
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <h3 style={{marginBottom: '1rem'}}>Pengaturan Konten</h3>
+            
+            <div className="input-group">
+              <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>🗃️ Pilih dari Bank Storyboard (Auto-fill)</label>
+              <select onChange={(e) => {
+                const selectedId = e.target.value;
+                if (!selectedId) {
+                  setUgcProductDesc(''); 
+                  return;
+                }
+                const item = bankStoryboardData.find(p => p.id == selectedId);
+                if (item) {
+                  let parsed = {};
+                  try { parsed = JSON.parse(item.result); } catch(err){}
+                  setUgcProductDesc(parsed.desc || parsed.name || '');
+                }
+              }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
+                <option value="">-- Kosongkan (Isi Manual) --</option>
+                {Object.keys(groupedBankData).map(cat => (
+                  <optgroup key={cat} label={`📁 ${cat}`}>
+                    {groupedBankData[cat].map(item => {
+                      let parsed = {};
+                      try { parsed = JSON.parse(item.result); } catch(e) {}
+                      return (
+                        <option key={item.id} value={item.id}>{parsed.name || (parsed.desc ? parsed.desc.substring(0, 40) + '...' : 'Tanpa Nama')}</option>
+                      )
+                    })}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            
+            <div className="input-group">
+              <label>Deskripsi Produk / Masalah</label>
+              <textarea 
+                placeholder="Jelaskan produk Anda atau masalah apa yang ingin diselesaikan..."
+                value={ugcProductDesc}
+                onChange={(e) => setUgcProductDesc(e.target.value)}
+                rows="4"
+              />
+            </div>
+            
+            <div style={{display: 'flex', gap: '1rem', marginBottom: '1rem'}}>
+              <div className="input-group" style={{flex: 1, marginBottom: 0}}>
+                <label>Durasi Video</label>
+                <select value={ugcDuration} onChange={(e) => setUgcDuration(e.target.value)} className="select-input">
+                  <option value="10">10 Detik</option>
+                  <option value="20">20 Detik</option>
+                  <option value="30">30 Detik</option>
+                  <option value="40">40 Detik</option>
+                  <option value="50">50 Detik</option>
+                  <option value="60">60 Detik</option>
+                </select>
+              </div>
+              
+              <div className="input-group" style={{flex: 1, marginBottom: 0}}>
+                <label>Jumlah Variasi Script</label>
+                <select value={ugcVariantCount} onChange={(e) => setUgcVariantCount(e.target.value)} className="select-input">
+                  <option value="1">1 Variasi</option>
+                  <option value="2">2 Variasi</option>
+                  <option value="3">3 Variasi</option>
+                  <option value="4">4 Variasi</option>
+                  <option value="5">5 Variasi</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label>Instruksi Tambahan (Opsional)</label>
+              <input 
+                type="text"
+                placeholder="Contoh: Gunakan bahasa gaul Jaksel, tekankan promo diskon..."
+                value={ugcInstruction}
+                onChange={(e) => setUgcInstruction(e.target.value)}
+                className="api-key-input"
+              />
+            </div>
+
+            <button className="btn-primary generate-btn" onClick={handleGenerateUgc} disabled={!ugcProductDesc || isGeneratingUgc || !apiKey}>
+              {isGeneratingUgc ? 'Menulis Naskah...' : '📝 Generate Script UGC'}
+            </button>
+            {!apiKey && <small style={{display: 'block', color: '#ef4444', marginTop: '0.3rem'}}>API Key diperlukan untuk fitur ini.</small>}
+          </div>
+
+          <div className="glass-panel" style={{display: 'flex', flexDirection: 'column'}}>
+            <h3 style={{marginBottom: '1rem'}}>Hasil Generate</h3>
+            {isGeneratingUgc ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p>AI sedang menulis variasi Hook, Isi, dan CTA...</p>
+              </div>
+            ) : generatedUgc ? (
+              <div className="result-container fade-in" style={{flex: 1}}>
+                <div style={{display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem'}}>
+                  <button className="btn-secondary" onClick={() => copyToClipboard(generatedUgc, 'ugc-full')} style={{fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>
+                    {copiedIndex === 'ugc-full' ? 'Tersalin! ✅' : '📋 Copy Semua'}
+                  </button>
+                </div>
+                <div style={{background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'pre-wrap', fontSize: '0.95rem', lineHeight: '1.6'}}>
+                  {generatedUgc}
+                </div>
+              </div>
+            ) : <EmptyStateRight />}
           </div>
         </div>
       </div>
@@ -3250,6 +3432,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'cooking_content' && renderCookingContentForm()}
         {activeTab === 'bang_jenggot' && renderBangJenggotForm()}
+        {activeTab === 'ugc_style' && renderUgcForm()}
         {activeTab === 'bank_storyboard' && renderBankStoryboardForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'video_script' && renderVideoScriptForm()}
