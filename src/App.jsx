@@ -180,6 +180,8 @@ function App() {
   const [ugcInstruction, setUgcInstruction] = useState('');
   const [isGeneratingUgc, setIsGeneratingUgc] = useState(false);
   const [generatedUgc, setGeneratedUgc] = useState(null);
+  const [ugcImage, setUgcImage] = useState(null);
+  const [ugcFile, setUgcFile] = useState(null);
 
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
@@ -1678,8 +1680,16 @@ VOICE OVER: "(Dialog/narasi)"
     </div>
   );
 
+  const handleUgcImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUgcFile(file);
+      setUgcImage(URL.createObjectURL(file));
+    }
+  };
+
   const handleGenerateUgc = async () => {
-    if (!ugcProductDesc || !apiKey) return;
+    if ((!ugcProductDesc && !ugcImage && !ugcFile) || !apiKey) return;
     setIsGeneratingUgc(true);
     setGeneratedUgc(null);
     setCopiedIndex(null);
@@ -1702,6 +1712,16 @@ Ketentuan Format Script UGC (Harus terdiri dari 3 bagian ini):
 Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap variasi dengan rapi), jangan berikan pengantar atau penjelasan tambahan. Cukup berikan script-nya saja.`;
 
     try {
+      let userContentItems = [{ type: "text", text: promptText }];
+      if (ugcFile) {
+        userContentItems.push({ type: "image_url", image_url: { url: await fileToBase64(ugcFile) } });
+      } else if (ugcImage && typeof ugcImage === 'string') {
+        const urls = ugcImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+        for (const u of urls) {
+          userContentItems.push({ type: "image_url", image_url: { url: u } });
+        }
+      }
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 
@@ -1711,7 +1731,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
         },
         body: JSON.stringify({
           model: "gpt-4o",
-          messages: [{ role: "user", content: promptText }]
+          messages: [{ role: "user", content: userContentItems }]
         })
       });
       const data = await response.json();
@@ -1758,6 +1778,10 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
                   let parsed = {};
                   try { parsed = JSON.parse(item.result); } catch(err){}
                   setUgcProductDesc(parsed.desc || parsed.name || '');
+                  if (parsed.imgUrl) {
+                    setUgcImage(parsed.imgUrl);
+                    setUgcFile(null);
+                  }
                 }
               }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
                 <option value="">-- Kosongkan (Isi Manual) --</option>
@@ -1775,6 +1799,29 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
               </select>
             </div>
             
+            <div className="input-group">
+              <label>Gambar Produk (Opsional)</label>
+              <div className="image-upload-wrapper">
+              {ugcImage ? (
+                <div className="image-preview" style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                  {typeof ugcImage === 'string' && ugcImage.startsWith('http') ? (
+                    ugcImage.split(/[\n,]+/).map((u, i) => u.trim() && u.startsWith('http') && <img key={i} src={u.trim()} alt="Preview" style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} />)
+                  ) : (
+                    <img src={ugcImage} alt="Preview" style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} />
+                  )}
+                  <button className="btn-secondary" style={{alignSelf: 'center'}} onClick={() => { setUgcImage(null); setUgcFile(null); }}>Ganti Gambar</button>
+                </div>
+              ) : (
+                <label className="upload-placeholder">
+                  <input type="file" accept="image/*" onChange={handleUgcImageUpload} hidden />
+                  <span className="upload-icon">⬆️</span>
+                  <span>Klik untuk upload atau paste<br/>(CTRL+V)</span>
+                  <small>PNG, JPG, WEBP hingga 10MB</small>
+                </label>
+              )}
+              </div>
+            </div>
+
             <div className="input-group">
               <label>Deskripsi Produk / Masalah</label>
               <textarea 
