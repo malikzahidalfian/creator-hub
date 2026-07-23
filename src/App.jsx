@@ -183,6 +183,13 @@ function App() {
   const [ugcImage, setUgcImage] = useState(null);
   const [ugcFile, setUgcFile] = useState(null);
 
+  // --- BANK GAMBAR STATES ---
+  const [imageBankData, setImageBankData] = useState([]);
+  const [isImageBankLoading, setIsImageBankLoading] = useState(false);
+  const [uploadImgFile, setUploadImgFile] = useState(null);
+  const [uploadImgName, setUploadImgName] = useState('');
+  const [isUploadingImg, setIsUploadingImg] = useState(false);
+
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
     try {
@@ -297,6 +304,26 @@ function App() {
     }
   };
 
+  const fetchImageBank = async () => {
+    setIsImageBankLoading(true);
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?type=eq.Bank%20Gambar&select=id,product_desc,result,created_at&order=created_at.desc`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setImageBankData(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsImageBankLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'dashboard' || activeTab === 'history') {
       fetchHistory();
@@ -306,6 +333,9 @@ function App() {
     }
     if (activeTab === 'dashboard' || activeTab === 'bank_storyboard' || activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot') {
       fetchBankStoryboard();
+    }
+    if (activeTab === 'dashboard' || activeTab === 'bank_gambar') {
+      fetchImageBank();
     }
   }, [activeTab]);
 
@@ -1256,7 +1286,7 @@ VOICE OVER: "(Dialog/narasi)"
             <div className="nav-item-content"><span className="icon">🏠</span> Dashboard</div>
           </button>
           <div className="accordion-menu">
-            <button className={`nav-item ${(activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot' || activeTab === 'ugc_style') ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
+            <button className={`nav-item ${(activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot' || activeTab === 'ugc_style' || activeTab === 'bank_gambar') ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
               <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
               <span className="nav-arrow" style={{transform: isStoryboardAccordionOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s'}}>&gt;</span>
             </button>
@@ -1273,6 +1303,9 @@ VOICE OVER: "(Dialog/narasi)"
                 </button>
                 <button className={`nav-item ${activeTab === 'ugc_style' ? 'active' : ''}`} onClick={() => {setActiveTab('ugc_style'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
                   <div className="nav-item-content">UGC Style (Voice Over)</div>
+                </button>
+                <button className={`nav-item ${activeTab === 'bank_gambar' ? 'active' : ''}`} onClick={() => {setActiveTab('bank_gambar'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
+                  <div className="nav-item-content">Bank Gambar</div>
                 </button>
               </div>
             )}
@@ -2882,6 +2915,127 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     </div>
   );
 
+  const handleUploadImageBank = async () => {
+    if (!uploadImgFile || !uploadImgName || !apiKey) return;
+    setIsUploadingImg(true);
+    try {
+      const base64Data = await fileToBase64(uploadImgFile);
+      
+      const response = await fetch(`${supabaseUrl}/rest/v1/prompts`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          type: 'Bank Gambar',
+          product_desc: uploadImgName,
+          result: base64Data
+        })
+      });
+
+      if (response.ok) {
+        alert("Gambar berhasil di-upload ke Bank Gambar!");
+        setUploadImgFile(null);
+        setUploadImgName('');
+        fetchImageBank();
+      } else {
+        alert("Gagal mengunggah gambar.");
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsUploadingImg(false);
+    }
+  };
+
+  const handleCopyImage = async (base64) => {
+    try {
+      const fetchResponse = await fetch(base64);
+      const blob = await fetchResponse.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ [blob.type]: blob })
+      ]);
+      alert("Gambar berhasil disalin ke clipboard!");
+    } catch (err) {
+      alert("Gagal menyalin gambar. Browser Anda mungkin tidak mendukung fitur ini.");
+      console.error(err);
+    }
+  };
+
+  const renderImageBankForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">🖼️ Bank Gambar</h2>
+        <p className="subtitle">Unggah dan simpan gambar-gambar untuk kebutuhan visual Anda.</p>
+        
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <h3 style={{marginBottom: '1rem'}}>Upload Gambar Baru</h3>
+            
+            <div className="input-group">
+              <label>Nama / Judul Gambar</label>
+              <input 
+                type="text" 
+                placeholder="Contoh: Panci Merah Tampak Atas" 
+                value={uploadImgName} 
+                onChange={(e) => setUploadImgName(e.target.value)} 
+                className="api-key-input"
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Pilih File Gambar</label>
+              <div className="image-upload-wrapper">
+                {uploadImgFile ? (
+                  <div className="image-preview" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem'}}>
+                    <img src={URL.createObjectURL(uploadImgFile)} alt="Preview" style={{width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px'}} />
+                    <button className="btn-secondary" onClick={() => setUploadImgFile(null)}>Batal / Ganti</button>
+                  </div>
+                ) : (
+                  <label className="upload-placeholder">
+                    <input type="file" accept="image/*" onChange={(e) => setUploadImgFile(e.target.files[0])} hidden />
+                    <span className="upload-icon">⬆️</span>
+                    <span>Klik untuk pilih file gambar</span>
+                    <small>PNG, JPG, WEBP (Ideal &lt; 2MB agar hemat database)</small>
+                  </label>
+                )}
+              </div>
+            </div>
+
+            <button className="btn-primary generate-btn" onClick={handleUploadImageBank} disabled={!uploadImgFile || !uploadImgName || isUploadingImg || !apiKey}>
+              {isUploadingImg ? 'Mengunggah...' : '📤 Upload ke Bank Gambar'}
+            </button>
+          </div>
+
+          <div className="glass-panel" style={{display: 'flex', flexDirection: 'column'}}>
+            <h3 style={{marginBottom: '1rem'}}>Koleksi Gambar Saya</h3>
+            {isImageBankLoading ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p>Memuat galeri...</p>
+              </div>
+            ) : imageBankData.length > 0 ? (
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem'}}>
+                {imageBankData.map(item => (
+                  <div key={item.id} style={{background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid rgba(255,255,255,0.1)'}}>
+                    <img src={item.result} alt={item.product_desc} style={{width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.5rem'}} />
+                    <span style={{fontSize: '0.8rem', textAlign: 'center', marginBottom: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'}}>{item.product_desc}</span>
+                    <button className="btn-secondary" onClick={() => handleCopyImage(item.result)} style={{padding: '0.3rem 0.6rem', fontSize: '0.75rem', width: '100%'}}>📋 Copy</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyStateRight />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderBankStoryboardForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
@@ -3483,6 +3637,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'cooking_content' && renderCookingContentForm()}
         {activeTab === 'bang_jenggot' && renderBangJenggotForm()}
         {activeTab === 'ugc_style' && renderUgcForm()}
+        {activeTab === 'bank_gambar' && renderImageBankForm()}
         {activeTab === 'bank_storyboard' && renderBankStoryboardForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
         {activeTab === 'video_script' && renderVideoScriptForm()}
