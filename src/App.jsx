@@ -190,6 +190,13 @@ function App() {
   const [uploadImgName, setUploadImgName] = useState('');
   const [isUploadingImg, setIsUploadingImg] = useState(false);
 
+  // --- TTS STATES ---
+  const [ttsInputText, setTtsInputText] = useState('');
+  const [ttsVoice, setTtsVoice] = useState('af_sky');
+  const [ttsModel, setTtsModel] = useState('venice-kokoro-tts');
+  const [isGeneratingTts, setIsGeneratingTts] = useState(false);
+  const [generatedAudioUrl, setGeneratedAudioUrl] = useState(null);
+
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
     try {
@@ -1316,6 +1323,10 @@ VOICE OVER: "(Dialog/narasi)"
           </button>
           <button className={`nav-item ${activeTab === 'image_gen' ? 'active' : ''}`} onClick={() => {setActiveTab('image_gen'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">🎨</span> AI Image</div>
+            <span className="nav-arrow">&gt;</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'tts' ? 'active' : ''}`} onClick={() => {setActiveTab('tts'); setIsMobileMenuOpen(false);}}>
+            <div className="nav-item-content"><span className="icon">🗣️</span> Text to Speech</div>
             <span className="nav-arrow">&gt;</span>
           </button>
           <button className={`nav-item ${activeTab === 'product_data' ? 'active' : ''}`} onClick={() => {setActiveTab('product_data'); setIsMobileMenuOpen(false);}}>
@@ -3623,6 +3634,152 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
   );
 
   if (!isAuthenticated) return renderLogin();
+  const handleGenerateTts = async () => {
+    if (!ttsInputText || !apiKey) return;
+    setIsGeneratingTts(true);
+    setGeneratedAudioUrl(null);
+    try {
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: ttsModel,
+          input: ttsInputText,
+          voice: ttsVoice,
+          response_format: 'mp3'
+        })
+      });
+
+      if (!response.ok) {
+        const errObj = await response.json().catch(() => ({}));
+        throw new Error(errObj.error || 'Gagal generate audio TTS');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setGeneratedAudioUrl(url);
+    } catch (e) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsGeneratingTts(false);
+    }
+  };
+
+  const renderTtsForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel">
+        <h2 className="desktop-title">🗣️ Text to Speech</h2>
+        <p className="subtitle">Ubah naskah / skrip Anda menjadi suara (audio) menggunakan AI.</p>
+        
+        <div className="layout-grid">
+          <div className="glass-panel input-section">
+            <h3 style={{marginBottom: '1rem'}}>Pengaturan Suara</h3>
+            
+            <div className="input-group">
+              <label>Model AI</label>
+              <select className="select-input" value={ttsModel} onChange={(e) => {
+                setTtsModel(e.target.value);
+                if (e.target.value === 'venice-kokoro-tts') setTtsVoice('af_sky');
+                if (e.target.value === 'venice-qwen-tts') setTtsVoice('Vivian');
+                if (e.target.value === 'tts-minimax-speech-02-hd') setTtsVoice('WiseWoman');
+              }}>
+                <option value="venice-kokoro-tts">Kokoro (venice-kokoro-tts)</option>
+                <option value="venice-qwen-tts">Qwen 3 (venice-qwen-tts)</option>
+                <option value="tts-minimax-speech-02-hd">MiniMax (tts-minimax-speech-02-hd)</option>
+              </select>
+            </div>
+
+            <div className="input-group">
+              <label>Karakter Suara (Voice)</label>
+              <select className="select-input" value={ttsVoice} onChange={(e) => setTtsVoice(e.target.value)}>
+                {ttsModel === 'venice-kokoro-tts' && (
+                  <>
+                    <option value="af_sky">af_sky (Female)</option>
+                    <option value="af_bella">af_bella (Female)</option>
+                    <option value="am_adam">am_adam (Male)</option>
+                    <option value="af_nova">af_nova (Female)</option>
+                    <option value="am_onyx">am_onyx (Male)</option>
+                    <option value="am_puck">am_puck (Male)</option>
+                    <option value="bf_alice">bf_alice (Female)</option>
+                    <option value="bf_emma">bf_emma (Female)</option>
+                  </>
+                )}
+                {ttsModel === 'venice-qwen-tts' && (
+                  <>
+                    <option value="Vivian">Vivian (Female)</option>
+                    <option value="Serena">Serena (Female)</option>
+                    <option value="Ono_Anna">Ono_Anna (Female)</option>
+                    <option value="Sohee">Sohee (Female)</option>
+                    <option value="Uncle_Fu">Uncle_Fu (Male)</option>
+                    <option value="Dylan">Dylan (Male)</option>
+                    <option value="Eric">Eric (Male)</option>
+                    <option value="Ryan">Ryan (Male)</option>
+                    <option value="Aiden">Aiden (Male)</option>
+                  </>
+                )}
+                {ttsModel === 'tts-minimax-speech-02-hd' && (
+                  <>
+                    <option value="WiseWoman">WiseWoman</option>
+                    <option value="FriendlyPerson">FriendlyPerson</option>
+                    <option value="DeepVoiceMan">DeepVoiceMan</option>
+                    <option value="CasualGuy">CasualGuy</option>
+                    <option value="PatientMan">PatientMan</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            <div className="input-group">
+              <label>Teks / Skrip (Max 4096 karakter)</label>
+              <textarea 
+                placeholder="Masukkan teks yang ingin diubah menjadi suara..." 
+                value={ttsInputText} 
+                onChange={(e) => setTtsInputText(e.target.value)} 
+                rows="6"
+                maxLength="4096"
+              />
+              <small style={{display: 'block', textAlign: 'right', marginTop: '0.3rem', color: 'var(--text-secondary)'}}>
+                {ttsInputText.length}/4096
+              </small>
+            </div>
+
+            <button className="btn-primary generate-btn" onClick={handleGenerateTts} disabled={!ttsInputText || isGeneratingTts || !apiKey}>
+              {isGeneratingTts ? 'Memproses Audio...' : '🔊 Generate Suara'}
+            </button>
+            {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
+          </div>
+
+          <div className="glass-panel" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px'}}>
+            {isGeneratingTts ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p>AI sedang mensintesis suara Anda...</p>
+              </div>
+            ) : generatedAudioUrl ? (
+              <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem'}}>
+                <h3 style={{color: 'var(--primary-color)'}}>✨ Audio Berhasil Dibuat!</h3>
+                <audio controls src={generatedAudioUrl} style={{width: '100%'}} />
+                
+                <a 
+                  href={generatedAudioUrl} 
+                  download={`TTS_${ttsModel}_${ttsVoice}_${new Date().getTime()}.mp3`}
+                  className="btn-primary" 
+                  style={{textDecoration: 'none', textAlign: 'center', width: '100%'}}
+                >
+                  ⬇️ Download MP3
+                </a>
+              </div>
+            ) : (
+              <EmptyStateRight />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="app-layout">
@@ -3640,6 +3797,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'bank_gambar' && renderImageBankForm()}
         {activeTab === 'bank_storyboard' && renderBankStoryboardForm()}
         {activeTab === 'image_gen' && renderImageGenForm()}
+        {activeTab === 'tts' && renderTtsForm()}
         {activeTab === 'video_script' && renderVideoScriptForm()}
         {activeTab === 'product_data' && renderProductDataForm()}
         {activeTab === 'thread' && renderThreadForm()}
