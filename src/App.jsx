@@ -194,6 +194,8 @@ function App() {
   const [ttsInputText, setTtsInputText] = useState('');
   const [ttsVoice, setTtsVoice] = useState('af_sky');
   const [ttsModel, setTtsModel] = useState('venice-kokoro-tts');
+  const [ttsSpeed, setTtsSpeed] = useState('1');
+  const [ttsInstruction, setTtsInstruction] = useState('');
   const [isGeneratingTts, setIsGeneratingTts] = useState(false);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState(null);
 
@@ -1357,17 +1359,6 @@ VOICE OVER: "(Dialog/narasi)"
         </nav>
 
       <div className="sidebar-bottom">
-        <div style={{background: 'var(--active-gradient)', padding: '1.2rem', borderRadius: '16px', color: 'white', marginBottom: '1rem', boxShadow: '0 10px 25px rgba(99,102,241,0.3)'}}>
-          <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', marginBottom: '0.5rem'}}>
-            <span style={{color: '#fbbf24'}}>⭐</span> Upgrade ke Pro
-          </div>
-          <p style={{fontSize: '0.75rem', opacity: 0.9, marginBottom: '1rem', lineHeight: 1.4}}>
-            Dapatkan fitur premium dan akses tanpa batas.
-          </p>
-          <button style={{width: '100%', padding: '0.6rem', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600'}}>
-            Upgrade Sekarang
-          </button>
-        </div>
         <div className="copyright">
           © 2025 Creator Hub AI<br/>All rights reserved.
         </div>
@@ -2207,11 +2198,38 @@ Link Afiliasi Saya: ${threadLink || '[ISI_LINK_NANTI]'}`;
     setViralIdeas([])
 
     try {
-      const systemPrompt = `Anda adalah seorang ahli riset konten viral media sosial. 
-Tugas Anda adalah memberikan 5 hingga 10 ide topik atau judul artikel yang paling hangat (trending) dan sangat berpotensi viral saat ini untuk kategori: ${categoryToSearch}.
-OUTPUT WAJIB DALAM BENTUK JSON ARRAY (Hanya array of strings).
-Contoh: ["Misteri hilangnya kapal X di segitiga bermuda", "Fakta gelap di balik industri fast fashion", "Konspirasi terbaru tentang AI"]
-PASTIKAN OUTPUT MURNI JSON ARRAY TANPA FORMATTING MARKDOWN \`\`\`json !`;
+      const systemPrompt = `Bertindaklah sebagai seorang analis tren konten dan riset pasar.
+Tugasmu adalah mencari topik yang sedang paling banyak dibahas dalam 7 hari terakhir dari kategori yang saya tentukan.
+Kategori: ${categoryToSearch}
+
+Lakukan analisis berdasarkan berbagai sumber seperti:
+- Google Trends
+- Berita terbaru
+- Media sosial (TikTok, Instagram, X, Threads, Facebook)
+- YouTube, Reddit, Forum/Komunitas
+
+Ketentuan:
+- Prioritaskan topik yang benar-benar sedang tren dalam 7 hari terakhir, bukan topik lama.
+- Urutkan berdasarkan potensi viral tertinggi.
+- Jika ada lebih dari 10 topik, tampilkan maksimal 10.
+- Jika suatu topik mulai menurun, beri tanda.
+- Fokus pada tren yang relevan untuk pasar Indonesia.
+
+OUTPUT WAJIB DALAM BENTUK JSON ARRAY OF OBJECTS (Tanpa format markdown \`\`\`json).
+Gunakan persis struktur kunci berikut untuk setiap topik:
+[
+  {
+    "judul": "Judul/topik",
+    "ringkasan": "Ringkasan mengapa viral",
+    "popularitas": "Sangat Tinggi / Tinggi / Sedang",
+    "audiens": "Target audiens",
+    "peluang": "Peluang dijadikan konten",
+    "ide_konten": ["Ide 1", "Ide 2", "Ide 3", "Ide 4", "Ide 5"],
+    "hook": ["Hook 1", "Hook 2"],
+    "kata_kunci": ["keyword1", "keyword2"],
+    "data_pendukung": "Bukti/data tren terkini"
+  }
+]`;
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -2224,7 +2242,7 @@ PASTIKAN OUTPUT MURNI JSON ARRAY TANPA FORMATTING MARKDOWN \`\`\`json !`;
           model: "gpt-4o",
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: `Berikan 5-10 ide viral untuk kategori: ${categoryToSearch}` }
+            { role: "user", content: `Berikan analisis tren viral 7 hari terakhir untuk kategori: ${categoryToSearch}` }
           ],
           temperature: 0.8
         })
@@ -2261,17 +2279,18 @@ PASTIKAN OUTPUT MURNI JSON ARRAY TANPA FORMATTING MARKDOWN \`\`\`json !`;
     
     try {
       const isPendek = genThreadLength.includes("Pendek");
+      const appendSourceInstruction = genThreadSource ? `\n- WAJIB TAMPILKAN LINK/SUMBER REFERENSI INI DI AKHIR UTAS (di bagian/tweet paling bawah): ${genThreadSource}` : '';
       
       let lengthInstructions = isPendek 
         ? `Kamu harus membuat 5 hingga 10 utas (thread) PENDEK yang BERBEDA/TERPISAH.
 - Masing-masing utas HANYA berisi 1 paragraf pancingan (sekitar 2-3 kalimat).
 - Setiap utas harus dirancang khusus untuk mengundang komentar keras, perdebatan, atau rasa penasaran dari netizen.
-- Pisahkan antar utas dengan "---".`
+- Pisahkan antar utas dengan "---".${appendSourceInstruction}`
         : `Kamu harus membuat 1 utas (thread) BERANTAI PANJANG.
 - Utas harus dibagi menjadi tepat ${genThreadLengthCount} bagian/tweet berurutan.
 - PENTING: SETIAP bagian/tweet HARUS PENDEK (maksimal 3-4 kalimat per tweet/bagian). JANGAN MENULIS PARAGRAF PANJANG! Buatlah konten yang snackable.
 - SETIAP tweet (kecuali tweet terakhir) WAJIB ditutup dengan HOOK atau kalimat gantung/cliffhanger yang membuat pembaca tidak sabar membaca tweet selanjutnya.
-- Pisahkan setiap tweet/bagian utas dengan "---".`;
+- Pisahkan setiap tweet/bagian utas dengan "---".${appendSourceInstruction}`;
 
       const systemPrompt = `Kamu adalah Kreator Konten Viral tingkat dewa di X (Twitter) dan Threads.
 Tugasmu adalah membuat konten organik murni berdasarkan topik yang diberikan untuk mendapatkan ribuan likes, retweets, dan interaksi.
@@ -2845,12 +2864,37 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             
             {viralIdeas.length > 0 && (
               <div className="fade-in" style={{marginBottom: '1.5rem', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--primary-color)'}}>
-                <label style={{color: 'var(--primary-color)', fontSize: '0.85rem', marginBottom: '0.5rem', display: 'block', fontWeight: 'bold'}}>✨ Ide Topik Viral (Klik untuk memilih):</label>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+                <label style={{color: 'var(--primary-color)', fontSize: '1rem', marginBottom: '1rem', display: 'block', fontWeight: 'bold'}}>✨ Analisis Topik Viral 7 Hari Terakhir</label>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
                   {viralIdeas.map((idea, idx) => (
-                    <button key={idx} onClick={() => setGenThreadTopic(idea)} style={{background: 'rgba(255,255,255,0.1)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)', padding: '0.6rem', borderRadius: '6px', textAlign: 'left', cursor: 'pointer', fontSize: '0.85rem'}} className="idea-btn">
-                      {idea}
-                    </button>
+                    <div key={idx} style={{background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)'}}>
+                      <h4 style={{color: '#fbbf24', marginBottom: '0.5rem', fontSize: '1.1rem'}}>{idea.judul || idea}</h4>
+                      {typeof idea === 'object' && (
+                        <div style={{fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5'}}>
+                          <p><strong>Ringkasan:</strong> {idea.ringkasan}</p>
+                          <p><strong>Popularitas:</strong> <span style={{color: '#ef4444'}}>{idea.popularitas}</span> | <strong>Audiens:</strong> {idea.audiens}</p>
+                          <p><strong>Data/Sumber:</strong> {idea.data_pendukung}</p>
+                          
+                          <div style={{marginTop: '0.5rem'}}>
+                            <strong>Ide Konten:</strong>
+                            <ul style={{margin: '0.2rem 0 0.5rem 1.2rem', padding: 0}}>
+                              {Array.isArray(idea.ide_konten) && idea.ide_konten.map((ic, i) => <li key={i}>{ic}</li>)}
+                            </ul>
+                          </div>
+
+                          <div style={{marginTop: '0.5rem'}}>
+                            <strong>Contoh Hook:</strong>
+                            <ul style={{margin: '0.2rem 0 0.5rem 1.2rem', padding: 0}}>
+                              {Array.isArray(idea.hook) && idea.hook.map((hk, i) => <li key={i}>{hk}</li>)}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <button onClick={() => setGenThreadTopic(typeof idea === 'object' ? idea.judul : idea)} className="btn-primary" style={{marginTop: '1rem', width: '100%', fontSize: '0.8rem', padding: '0.5rem'}}>
+                        Gunakan Topik Ini
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -3639,6 +3683,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     setIsGeneratingTts(true);
     setGeneratedAudioUrl(null);
     try {
+      const finalInputText = ttsInstruction ? `[Instruksi: ${ttsInstruction}] ${ttsInputText}` : ttsInputText;
       const response = await fetch('/api/tts', {
         method: 'POST',
         headers: {
@@ -3647,9 +3692,10 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         },
         body: JSON.stringify({
           model: ttsModel,
-          input: ttsInputText,
+          input: finalInputText,
           voice: ttsVoice,
-          response_format: 'mp3'
+          response_format: 'mp3',
+          speed: parseFloat(ttsSpeed)
         })
       });
 
@@ -3730,6 +3776,23 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                   </>
                 )}
               </select>
+            </div>
+
+            <div className="input-group">
+              <label>Kecepatan Suara ({ttsSpeed}x)</label>
+              <input type="range" min="0.25" max="4.0" step="0.25" value={ttsSpeed} onChange={(e) => setTtsSpeed(e.target.value)} style={{width: '100%', accentColor: 'var(--primary-color)'}} />
+            </div>
+
+            <div className="input-group">
+              <label>Instruksi Nada / Gaya Bicara (Opsional)</label>
+              <input 
+                type="text" 
+                placeholder="Contoh: Baca dengan nada sedih dan pelan" 
+                value={ttsInstruction} 
+                onChange={(e) => setTtsInstruction(e.target.value)} 
+                className="api-key-input"
+              />
+              <small style={{display: 'block', color: 'var(--text-secondary)', marginTop: '0.3rem'}}>Instruksi ini akan disisipkan di awal teks untuk memberikan konteks kepada AI.</small>
             </div>
 
             <div className="input-group">
