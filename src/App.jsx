@@ -2269,17 +2269,32 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
   }
 
   const handleGenerateGenThread = async () => {
-    if (!genThreadTopic || !apiKey) {
-      alert("Pastikan Topik/Ide Cerita dan API Key sudah diisi.");
+    if (!genThreadSource || !apiKey) {
+      alert("Pastikan Link Berita/Artikel dan API Key sudah diisi.");
       return;
     }
     
-    setIsGeneratingGenThread(true)
-    setGeneratedGenThread(null)
+    setIsGeneratingGenThread(true);
+    setGeneratedGenThread(null);
     
     try {
+      // 1. Scrape the article first
+      let articleContent = "";
+      try {
+        const scrapeRes = await fetch("/api/scrape-article", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: genThreadSource })
+        });
+        if (!scrapeRes.ok) throw new Error("Gagal mengambil teks dari URL");
+        const scrapeData = await scrapeRes.json();
+        articleContent = scrapeData.content || "";
+      } catch (scrapeErr) {
+        alert("Peringatan: Gagal mengekstrak isi artikel secara otomatis dari URL tersebut. AI hanya akan menebak berdasarkan URL atau instruksi Anda.\nDetail: " + scrapeErr.message);
+      }
+
       const isPendek = genThreadLength.includes("Pendek");
-      const appendSourceInstruction = genThreadSource ? `\n- WAJIB TAMPILKAN LINK/SUMBER REFERENSI INI DI AKHIR UTAS (di bagian/tweet paling bawah): ${genThreadSource}` : '';
+      const appendSourceInstruction = `\n- WAJIB TAMPILKAN LINK BERITA INI DI AKHIR UTAS (di bagian/tweet paling bawah): ${genThreadSource}`;
       
       let lengthInstructions = isPendek 
         ? `Kamu harus membuat 5 hingga 10 utas (thread) PENDEK yang BERBEDA/TERPISAH.
@@ -2293,21 +2308,29 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
 - Pisahkan setiap tweet/bagian utas dengan "---".${appendSourceInstruction}`;
 
       const systemPrompt = `Kamu adalah Kreator Konten Viral tingkat dewa di X (Twitter) dan Threads.
-Tugasmu adalah membuat konten organik murni berdasarkan topik yang diberikan untuk mendapatkan ribuan likes, retweets, dan interaksi.
+Tugasmu adalah membuat konten organik murni berdasarkan artikel berita yang diberikan untuk mendapatkan ribuan likes, retweets, dan interaksi.
 TIDAK ADA UNSUR JUALAN SAMA SEKALI.
 
 ATURAN MUTLAK (DILARANG KERAS MENGGUNAKAN BAHASA AI/ROBOT):
 1. Gaya Bahasa / Diksi: ${genThreadLanguageStyle}. TULISLAH LAYAKNYA MANUSIA ASLI DI TWITTER/X.
 2. DILARANG KERAS menggunakan kata-kata kaku khas AI seperti: "Di era digital ini", "Kesimpulannya", "Mari kita bahas", "Tak dapat dipungkiri".
-3. Gunakan singkatan wajar orang Indonesia jika gaya bahasanya santai (misal: yg, dgn, bgt, pdhl, udh, kek, lo, gue, dll). Jangan terlalu kaku. Jangan terlihat seperti robot.
+3. Gunakan singkatan wajar orang Indonesia jika gaya bahasanya santai (misal: yg, dgn, bgt, pdhl, udh, kek, lo, gue, dll). Jangan terlalu kaku.
 4. Tema/Tone Emosi: ${genThreadTone}. Sesuaikan emosi tulisan dengan tone ini!
-5. Jika ada sumber referensi yang diberikan, gabungkan secara natural ke dalam cerita tanpa menyebut "Berdasarkan referensi".
+5. Gabungkan cerita secara natural tanpa menyebut "Berdasarkan referensi".
 6. Pisahkan setiap tweet/bagian dengan "---" agar sistem bisa memotongnya.
 7. PENTING (FORMAT PANJANG/PENDEK): 
 ${lengthInstructions}`;
 
-      const userPrompt = `Topik / Ide Cerita: ${genThreadTopic}
-Sumber Referensi (Opsional): ${genThreadSource || 'Gunakan pengetahuanmu sendiri'}`;
+      let userPrompt = `Link Sumber Berita: ${genThreadSource}\n`;
+      if (articleContent) {
+        userPrompt += `\nIsi Artikel (Gunakan ini sebagai bahan utama utasanmu):\n"""\n${articleContent}\n"""\n`;
+      } else {
+        userPrompt += `\n(Gunakan pengetahuanmu tentang link tersebut atau tebak dari URL-nya)\n`;
+      }
+      
+      if (genThreadInstruction) {
+        userPrompt += `\nINSTRUKSI KHUSUS DARI USER:\n${genThreadInstruction}\n`;
+      }
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -2841,72 +2864,17 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
   const renderGenThreadForm = () => (
     <div className="content-wrapper fade-in">
       <div className="content-panel">
-        <h2 className="desktop-title">Utas Bebas (Viral Umum)</h2>
-        <p className="subtitle">Buat konten murni untuk engagement tanpa unsur jualan.</p>
+        <h2 className="desktop-title">Utas dari Berita/Artikel</h2>
+        <p className="subtitle">Ubah link berita atau artikel apapun menjadi thread/utas yang viral dan engaging sesuai kehendak Anda.</p>
         <div className="layout-grid">
           <div className="glass-panel input-section">
             <div className="input-group">
-              <label>Kategori</label>
-              <select value={genThreadCategory} onChange={(e) => setGenThreadCategory(e.target.value)} className="select-input">
-                {categoriesList.map((cat, idx) => <option key={idx} value={cat}>{cat}</option>)}
-              </select>
-            </div>
-            
-            {genThreadCategory === 'Custom...' && (
-              <div className="input-group fade-in">
-                <input type="text" className="api-key-input" placeholder="Ketik kategori bebas (misal: Anime, Tanaman Hias)..." value={genThreadCustomCategory} onChange={(e) => setGenThreadCustomCategory(e.target.value)} />
-              </div>
-            )}
-            
-            <button className="btn-secondary" onClick={handleGenerateViralIdeas} disabled={isGeneratingIdeas || !apiKey} style={{marginBottom: '1rem', width: '100%', fontSize: '0.85rem'}}>
-              {isGeneratingIdeas ? 'Menganalisis Tren Viral...' : '🔍 Pencari Ide Viral (Dapatkan 5-10 Ide Panas)'}
-            </button>
-            
-            {viralIdeas.length > 0 && (
-              <div className="fade-in" style={{marginBottom: '1.5rem', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--primary-color)'}}>
-                <label style={{color: 'var(--primary-color)', fontSize: '1rem', marginBottom: '1rem', display: 'block', fontWeight: 'bold'}}>✨ Analisis Topik Viral 7 Hari Terakhir</label>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                  {viralIdeas.map((idea, idx) => (
-                    <div key={idx} style={{background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)'}}>
-                      <h4 style={{color: '#fbbf24', marginBottom: '0.5rem', fontSize: '1.1rem'}}>{idea.judul || idea}</h4>
-                      {typeof idea === 'object' && (
-                        <div style={{fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5'}}>
-                          <p><strong>Ringkasan:</strong> {idea.ringkasan}</p>
-                          <p><strong>Popularitas:</strong> <span style={{color: '#ef4444'}}>{idea.popularitas}</span> | <strong>Audiens:</strong> {idea.audiens}</p>
-                          <p><strong>Data/Sumber:</strong> {idea.data_pendukung}</p>
-                          
-                          <div style={{marginTop: '0.5rem'}}>
-                            <strong>Ide Konten:</strong>
-                            <ul style={{margin: '0.2rem 0 0.5rem 1.2rem', padding: 0}}>
-                              {Array.isArray(idea.ide_konten) && idea.ide_konten.map((ic, i) => <li key={i}>{ic}</li>)}
-                            </ul>
-                          </div>
-
-                          <div style={{marginTop: '0.5rem'}}>
-                            <strong>Contoh Hook:</strong>
-                            <ul style={{margin: '0.2rem 0 0.5rem 1.2rem', padding: 0}}>
-                              {Array.isArray(idea.hook) && idea.hook.map((hk, i) => <li key={i}>{hk}</li>)}
-                            </ul>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <button onClick={() => setGenThreadTopic(typeof idea === 'object' ? idea.judul : idea)} className="btn-primary" style={{marginTop: '1rem', width: '100%', fontSize: '0.8rem', padding: '0.5rem'}}>
-                        Gunakan Topik Ini
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="input-group">
-              <label>Topik / Ide Cerita</label>
-              <textarea placeholder="Pilih dari ide di atas atau ketik sendiri..." value={genThreadTopic} onChange={(e) => setGenThreadTopic(e.target.value)} rows="3" />
+              <label>Link Berita / Artikel (Wajib)</label>
+              <input type="text" className="api-key-input" placeholder="Masukkan URL berita (Contoh: https://kompas.com/...)" value={genThreadSource} onChange={(e) => setGenThreadSource(e.target.value)} />
             </div>
             <div className="input-group">
-              <label>Sumber Referensi (Opsional)</label>
-              <input type="text" className="api-key-input" placeholder="Link berita atau buku acuan..." value={genThreadSource} onChange={(e) => setGenThreadSource(e.target.value)} />
+              <label>Instruksi Utas (Opsional)</label>
+              <textarea placeholder="Contoh: Bikin utas ini marah-marah ke pemerintah, bahas dari sudut pandang warga biasa..." value={genThreadInstruction} onChange={(e) => setGenThreadInstruction(e.target.value)} rows="3" />
             </div>
             <div className="input-group">
               <label>Gaya Bahasa (Diksi)</label>
@@ -2938,8 +2906,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               </div>
             )}
             
-            <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadTopic || isGeneratingGenThread || !apiKey}>
-              {isGeneratingGenThread ? 'Menyusun Utas...' : '✨ Generate Utas Viral'}
+            <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadSource || isGeneratingGenThread || !apiKey}>
+              {isGeneratingGenThread ? 'Memproses Berita & Menyusun Utas...' : '✨ Generate Utas Berita'}
             </button>
             {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
           </div>
@@ -3708,7 +3676,19 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
       const url = URL.createObjectURL(blob);
       setGeneratedAudioUrl(url);
     } catch (e) {
-      alert("Error: " + e.message);
+      let errorMsg = e.message;
+      if (errorMsg.includes('no_healthy_sellers')) {
+        errorMsg = "Mohon maaf, model AI yang Anda pilih saat ini sedang tidak tersedia atau sibuk di server pusat (no_healthy_sellers). Silakan coba model lain seperti Kokoro atau Qwen 3.";
+      } else {
+        // Try to parse the nested JSON error message if possible
+        try {
+          const parsedStr = typeof errorMsg === 'string' ? JSON.parse(errorMsg) : null;
+          if (parsedStr && parsedStr.detail && parsedStr.detail.error && parsedStr.detail.error.message) {
+            errorMsg = parsedStr.detail.error.message;
+          }
+        } catch(err) {}
+      }
+      alert("Gagal memproses suara:\n" + errorMsg);
     } finally {
       setIsGeneratingTts(false);
     }
