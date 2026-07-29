@@ -78,6 +78,7 @@ function App() {
   // --- GENERAL VIRAL THREAD STATES ---
   const [genThreadTopic, setGenThreadTopic] = useState('')
   const [genThreadSource, setGenThreadSource] = useState('')
+  const [genThreadInstruction, setGenThreadInstruction] = useState('')
   const [genThreadTone, setGenThreadTone] = useState('Misteri / Menegangkan')
   const [genThreadLength, setGenThreadLength] = useState('Utas Pendek (5-10 Pancingan Komentar)')
   const [genThreadLengthCount, setGenThreadLengthCount] = useState(5)
