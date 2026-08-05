@@ -80,8 +80,8 @@ function App() {
   const [genThreadSource, setGenThreadSource] = useState('')
   const [genThreadInstruction, setGenThreadInstruction] = useState('')
   const [genThreadTone, setGenThreadTone] = useState('Misteri / Menegangkan')
-  const [genThreadLength, setGenThreadLength] = useState('Utas Pendek (5-10 Pancingan Komentar)')
   const [genThreadLengthCount, setGenThreadLengthCount] = useState(5)
+  const [genThreadAffiliateProduct, setGenThreadAffiliateProduct] = useState('')
   const [genThreadLanguageStyle, setGenThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
   const [threadLanguageStyle, setThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
   const [threadAngle, setThreadAngle] = useState('Storytelling (Bercerita pengalaman pribadi)')
@@ -1333,7 +1333,7 @@ VOICE OVER: "(Dialog/narasi)"
             <span className="nav-arrow">&gt;</span>
           </button>
           <button className={`nav-item ${activeTab === 'product_data' ? 'active' : ''}`} onClick={() => {setActiveTab('product_data'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">📦</span> Data Produk</div>
+            <div className="nav-item-content"><span className="icon">📦</span> Produk Threads</div>
             <span className="nav-arrow">&gt;</span>
           </button>
           <button className={`nav-item ${activeTab === 'thread' ? 'active' : ''}`} onClick={() => {setActiveTab('thread'); setIsMobileMenuOpen(false);}}>
@@ -2294,23 +2294,24 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
         alert("Peringatan: Gagal mengekstrak isi artikel secara otomatis dari URL tersebut. AI hanya akan menebak berdasarkan URL atau instruksi Anda.\nDetail: " + scrapeErr.message);
       }
 
-      const isPendek = genThreadLength.includes("Pendek");
-      const appendSourceInstruction = `\n- WAJIB TAMPILKAN LINK BERITA INI DI AKHIR UTAS (di bagian/tweet paling bawah): ${genThreadSource}`;
+      let appendSourceInstruction = `\n- WAJIB TAMPILKAN LINK BERITA INI DI AKHIR UTAS (di bagian/tweet paling bawah): ${genThreadSource}`;
+      if (genThreadAffiliateProduct) {
+        appendSourceInstruction += `\n- DI TWEET TERAKHIR JUGA, promosikan produk affiliate berikut secara halus (soft selling), tuliskan deskripsinya dan beri link-nya jika ada: """${genThreadAffiliateProduct}"""`;
+      }
       
-      let lengthInstructions = isPendek 
-        ? `Kamu harus membuat 5 hingga 10 utas (thread) PENDEK yang BERBEDA/TERPISAH.
-- Masing-masing utas HANYA berisi 1 paragraf pancingan (sekitar 2-3 kalimat).
-- Setiap utas harus dirancang khusus untuk mengundang komentar keras, perdebatan, atau rasa penasaran dari netizen.
-- Pisahkan antar utas dengan "---".${appendSourceInstruction}`
-        : `Kamu harus membuat 1 utas (thread) BERANTAI PANJANG.
+      let lengthInstructions = `Kamu harus membuat 1 utas (thread) BERANTAI.
 - Utas harus dibagi menjadi tepat ${genThreadLengthCount} bagian/tweet berurutan.
 - PENTING: SETIAP bagian/tweet HARUS PENDEK (maksimal 3-4 kalimat per tweet/bagian). JANGAN MENULIS PARAGRAF PANJANG! Buatlah konten yang snackable.
 - SETIAP tweet (kecuali tweet terakhir) WAJIB ditutup dengan HOOK atau kalimat gantung/cliffhanger yang membuat pembaca tidak sabar membaca tweet selanjutnya.
 - Pisahkan setiap tweet/bagian utas dengan "---".${appendSourceInstruction}`;
 
+      const sellingRule = genThreadAffiliateProduct
+        ? "Kamu boleh mempromosikan produk secara halus di bagian akhir utas."
+        : "TIDAK ADA UNSUR JUALAN SAMA SEKALI.";
+
       const systemPrompt = `Kamu adalah Kreator Konten Viral tingkat dewa di X (Twitter) dan Threads.
 Tugasmu adalah membuat konten organik murni berdasarkan artikel berita yang diberikan untuk mendapatkan ribuan likes, retweets, dan interaksi.
-TIDAK ADA UNSUR JUALAN SAMA SEKALI.
+${sellingRule}
 
 ATURAN MUTLAK (DILARANG KERAS MENGGUNAKAN BAHASA AI/ROBOT):
 1. Gaya Bahasa / Diksi: ${genThreadLanguageStyle}. TULISLAH LAYAKNYA MANUSIA ASLI DI TWITTER/X.
@@ -2894,18 +2895,29 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               </select>
             </div>
             <div className="input-group">
-              <label>Panjang Utas</label>
-              <select value={genThreadLength} onChange={(e) => setGenThreadLength(e.target.value)} className="select-input">
-                <option value="Utas Pendek (5-10 Pancingan Komentar)">Utas Pendek (5-10 Pancingan Komentar)</option>
-                <option value="Utas Panjang (Berantai dengan Hook)">Utas Panjang (Berantai dengan Hook)</option>
+              <label>Jumlah Cuitan / Tweet (Panjang Utas)</label>
+              <input type="number" min="2" max="20" className="api-key-input" value={genThreadLengthCount} onChange={(e) => setGenThreadLengthCount(e.target.value)} />
+            </div>
+
+            <div className="input-group">
+              <label>Sisipkan Produk Affiliate (Opsional)</label>
+              <select onChange={(e) => {
+                const selectedId = e.target.value;
+                if (!selectedId) {
+                  setGenThreadAffiliateProduct('');
+                  return;
+                }
+                const item = bankStoryboardData.find(p => p.id == selectedId);
+                if(item) {
+                  setGenThreadAffiliateProduct((item.product_desc || '') + (item.result ? '\n' + item.result : ''));
+                }
+              }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
+                <option value="">Tidak perlu sisipkan produk</option>
+                {bankStoryboardData.map(d => (
+                  <option key={d.id} value={d.id}>{d.product_desc || 'Produk Tanpa Nama'}</option>
+                ))}
               </select>
             </div>
-            {!genThreadLength.includes("Pendek") && (
-              <div className="input-group fade-in">
-                <label>Jumlah Tweet dalam Utas</label>
-                <input type="number" min="2" max="20" className="api-key-input" value={genThreadLengthCount} onChange={(e) => setGenThreadLengthCount(e.target.value)} />
-              </div>
-            )}
             
             <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadSource || isGeneratingGenThread || !apiKey}>
               {isGeneratingGenThread ? 'Memproses Berita & Menyusun Utas...' : '✨ Generate Utas Berita'}
@@ -3253,39 +3265,43 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     </div>
   );
 
-  const renderProductDataForm = () => (
-    <div className="content-wrapper fade-in">
-      <div className="content-panel">
-        <h2 className="desktop-title">📦 Bank Data Produk</h2>
-        <p className="subtitle">Simpan data produk Anda di sini agar bisa digunakan otomatis saat membuat utas.</p>
+  const renderProductDataForm = () => {
+    const lightInputStyle = {background: '#ffffff', color: '#1e293b', border: '1px solid #cbd5e1'};
+    const lightLabelStyle = {color: '#334155'};
+    
+    return (
+    <div className="content-wrapper fade-in" style={{background: '#f0f9ff', padding: '2rem', minHeight: '100vh'}}>
+      <div className="content-panel" style={{background: '#ffffff', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 20px rgba(0,0,0,0.08)'}}>
+        <h2 className="desktop-title" style={{color: '#0369a1'}}>📦 Produk Threads</h2>
+        <p className="subtitle" style={{color: '#475569'}}>Simpan data produk Anda di sini agar bisa digunakan otomatis saat membuat utas.</p>
         <div className="layout-grid">
-          <div className="glass-panel input-section">
-            <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>Tambah Produk Baru</h3>
+          <div className="glass-panel input-section" style={{background: '#f8fafc', border: '1px solid #e2e8f0', boxShadow: 'none'}}>
+            <h3 style={{marginBottom: '1rem', color: '#0369a1'}}>Tambah Produk Baru</h3>
             <div className="input-group">
-              <label>Judul Produk</label>
-              <input type="text" className="api-key-input" placeholder="Contoh: Sepatu Sneakers Pria..." value={prodTitle} onChange={(e) => setProdTitle(e.target.value)} />
+              <label style={lightLabelStyle}>Judul Produk</label>
+              <input type="text" className="api-key-input" style={lightInputStyle} placeholder="Contoh: Sepatu Sneakers Pria..." value={prodTitle} onChange={(e) => setProdTitle(e.target.value)} />
             </div>
             <div className="input-group">
-              <label>Deskripsi / Benefit Produk</label>
-              <textarea placeholder="Tuliskan spesifikasi atau keunggulan produk..." value={prodDesc} onChange={(e) => setProdDesc(e.target.value)} rows="3" />
+              <label style={lightLabelStyle}>Deskripsi / Benefit Produk</label>
+              <textarea style={{...lightInputStyle, width: '100%', padding: '0.8rem', borderRadius: '8px', boxSizing: 'border-box'}} placeholder="Tuliskan spesifikasi atau keunggulan produk..." value={prodDesc} onChange={(e) => setProdDesc(e.target.value)} rows="3" />
             </div>
             <div className="input-group">
-              <label>Link Affiliate (Shopee/TikTok)</label>
-              <input type="text" className="api-key-input" placeholder="https://shope.ee/..." value={prodLink} onChange={(e) => setProdLink(e.target.value)} />
+              <label style={lightLabelStyle}>Link Affiliate (Shopee/TikTok)</label>
+              <input type="text" className="api-key-input" style={lightInputStyle} placeholder="https://shope.ee/..." value={prodLink} onChange={(e) => setProdLink(e.target.value)} />
             </div>
             <div className="input-group">
-              <label>Link Gambar Produk (URL)</label>
-              <input type="text" className="api-key-input" placeholder="Contoh: https://cf.shopee.co.id/file/..." value={prodImgUrl} onChange={(e) => setProdImgUrl(e.target.value)} />
-              <small style={{display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)'}}>
-                Klik kanan gambar di Shopee \u2192 Copy image address / Salin tautan gambar, lalu paste di sini.
+              <label style={lightLabelStyle}>Link Gambar Produk (URL)</label>
+              <input type="text" className="api-key-input" style={lightInputStyle} placeholder="Contoh: https://cf.shopee.co.id/file/..." value={prodImgUrl} onChange={(e) => setProdImgUrl(e.target.value)} />
+              <small style={{display: 'block', marginTop: '0.5rem', color: '#64748b'}}>
+                Klik kanan gambar di Shopee → Copy image address / Salin tautan gambar, lalu paste di sini.
               </small>
             </div>
             <div style={{display: 'flex', gap: '0.5rem', flexDirection: 'column'}}>
-              <button className="btn-primary generate-btn" onClick={handleSaveProduct} disabled={!prodTitle || !prodDesc || !prodLink || isSaving}>
+              <button className="btn-primary generate-btn" style={{background: '#0ea5e9', color: 'white'}} onClick={handleSaveProduct} disabled={!prodTitle || !prodDesc || !prodLink || isSaving}>
                 {isSaving ? 'Menyimpan...' : (editingProductId ? '💾 Update Database' : '💾 Simpan ke Database')}
               </button>
               {editingProductId && (
-                <button className="btn-secondary" onClick={() => {
+                <button className="btn-secondary" style={{color: '#ef4444', borderColor: '#ef4444', background: 'transparent'}} onClick={() => {
                   setEditingProductId(null);
                   setProdTitle(''); setProdDesc(''); setProdLink(''); setProdImgUrl('');
                 }}>
@@ -3296,9 +3312,9 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           </div>
           
           <div className="glass-panel" style={{padding: '1rem', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-            <h3 style={{marginBottom: '1rem'}}>Galeri Produk ({productsData.length})</h3>
+            <h3 style={{marginBottom: '1rem', color: '#0369a1'}}>Galeri Produk ({productsData.length})</h3>
             {isProductsLoading ? (
-              <div style={{textAlign: 'center', padding: '2rem'}}><span className="loading-spinner"></span> Memuat...</div>
+              <div style={{textAlign: 'center', padding: '2rem', color: '#0369a1'}}><span className="loading-spinner"></span> Memuat...</div>
             ) : productsData.length === 0 ? (
               <EmptyStateRight />
             ) : (
@@ -3307,15 +3323,15 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                   let parsed = {};
                   try { parsed = JSON.parse(item.result); } catch(e) {}
                   return (
-                    <div key={item.id} className="prompt-card fade-in" style={{display: 'flex', gap: '1rem', padding: '1rem'}}>
+                    <div key={item.id} className="prompt-card fade-in" style={{display: 'flex', gap: '1rem', padding: '1rem', background: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.05)'}}>
                       {parsed.imgUrl && (
-                        <div style={{width: '80px', height: '80px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)'}}>
+                        <div style={{width: '80px', height: '80px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0'}}>
                           <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                         </div>
                       )}
                       <div style={{flex: 1, overflow: 'hidden'}}>
-                        <h4 style={{margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--primary-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{item.product_desc}</h4>
-                        <p style={{fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                        <h4 style={{margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#0369a1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{item.product_desc}</h4>
+                        <p style={{fontSize: '0.75rem', color: '#475569', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
                         <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none'}}>🔗 Link Produk</a>
                       </div>
                       <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem', alignSelf: 'flex-start'}}>
@@ -3335,7 +3351,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         </div>
       </div>
     </div>
-  );
+  )};
 
   const renderDatabase = () => {
     let filteredHistory = [];
