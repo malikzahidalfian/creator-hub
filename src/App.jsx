@@ -78,6 +78,8 @@ function App() {
   // --- GENERAL VIRAL THREAD STATES ---
   const [genThreadTopic, setGenThreadTopic] = useState('')
   const [genThreadSource, setGenThreadSource] = useState('')
+  const [genThreadInstruction, setGenThreadInstruction] = useState('')
+  const [genThreadTone, setGenThreadTone] = useState('Misteri / Menegangkan')
   const [genThreadLengthCount, setGenThreadLengthCount] = useState(5)
   const [genThreadAffiliateProduct, setGenThreadAffiliateProduct] = useState('')
   const [genThreadAffiliateProductName, setGenThreadAffiliateProductName] = useState('')
