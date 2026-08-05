@@ -78,10 +78,10 @@ function App() {
   // --- GENERAL VIRAL THREAD STATES ---
   const [genThreadTopic, setGenThreadTopic] = useState('')
   const [genThreadSource, setGenThreadSource] = useState('')
-  const [genThreadInstruction, setGenThreadInstruction] = useState('')
-  const [genThreadTone, setGenThreadTone] = useState('Misteri / Menegangkan')
   const [genThreadLengthCount, setGenThreadLengthCount] = useState(5)
   const [genThreadAffiliateProduct, setGenThreadAffiliateProduct] = useState('')
+  const [genThreadAffiliateProductName, setGenThreadAffiliateProductName] = useState('')
+  const [isSelectingGenThreadProduct, setIsSelectingGenThreadProduct] = useState(false)
   const [genThreadLanguageStyle, setGenThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
   const [threadLanguageStyle, setThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
   const [threadAngle, setThreadAngle] = useState('Storytelling (Bercerita pengalaman pribadi)')
@@ -2901,31 +2901,54 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
 
             <div className="input-group">
               <label>Sisipkan Produk Affiliate (Opsional)</label>
-              <select onChange={(e) => {
-                const selectedId = e.target.value;
-                if (!selectedId) {
-                  setGenThreadAffiliateProduct('');
-                  return;
-                }
-                const item = bankStoryboardData.find(p => p.id == selectedId);
-                if(item) {
-                  setGenThreadAffiliateProduct((item.product_desc || '') + (item.result ? '\n' + item.result : ''));
-                }
-              }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
-                <option value="">Tidak perlu sisipkan produk</option>
-                {bankStoryboardData.map(d => (
-                  <option key={d.id} value={d.id}>{d.product_desc || 'Produk Tanpa Nama'}</option>
-                ))}
-              </select>
+              <button className="btn-secondary" onClick={() => setIsSelectingGenThreadProduct(!isSelectingGenThreadProduct)} style={{width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                {genThreadAffiliateProductName ? `✅ ${genThreadAffiliateProductName}` : '🛒 Pilih Produk Affiliate...'}
+                <span>{isSelectingGenThreadProduct ? '▲' : '▼'}</span>
+              </button>
             </div>
             
-            <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadSource || isGeneratingGenThread || !apiKey}>
+            <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadSource || isGeneratingGenThread || !apiKey || isSelectingGenThreadProduct}>
               {isGeneratingGenThread ? 'Memproses Berita & Menyusun Utas...' : '✨ Generate Utas Berita'}
             </button>
             {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
           </div>
           <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-          {generatedGenThread ? (
+          {isSelectingGenThreadProduct ? (
+            <div className="prompts-container fade-in" style={{background: 'rgba(255,255,255,0.02)', padding: '1.5rem'}}>
+              <h3 style={{marginBottom: '0.5rem'}}>🛒 Pilih Produk Affiliate</h3>
+              <p className="subtitle" style={{marginBottom: '1.5rem'}}>Pilih produk yang ingin disisipkan di cuitan terakhir utas ini.</p>
+              
+              <div style={{display: 'flex', flexDirection: 'column', gap: '0.8rem'}}>
+                <button className="btn-secondary" style={{textAlign: 'left', borderColor: 'var(--border-color)', color: 'var(--text-secondary)'}} onClick={() => {
+                  setGenThreadAffiliateProduct('');
+                  setGenThreadAffiliateProductName('');
+                  setIsSelectingGenThreadProduct(false);
+                }}>
+                  ❌ Tidak perlu sisipkan produk (Kosongkan)
+                </button>
+                
+                {bankStoryboardData.map(item => {
+                  let parsed = {};
+                  try { parsed = JSON.parse(item.result); } catch(e) {}
+                  return (
+                    <button key={item.id} className="btn-secondary" style={{textAlign: 'left', display: 'flex', gap: '1rem', alignItems: 'center'}} onClick={() => {
+                      setGenThreadAffiliateProduct((item.product_desc || '') + (item.result ? '\n' + item.result : ''));
+                      setGenThreadAffiliateProductName(item.product_desc || 'Produk Tanpa Nama');
+                      setIsSelectingGenThreadProduct(false);
+                    }}>
+                      {parsed.imgUrl && (
+                        <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px'}} />
+                      )}
+                      <div style={{flex: 1, overflow: 'hidden'}}>
+                        <div style={{fontWeight: 'bold', color: 'var(--primary-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{item.product_desc || 'Produk Tanpa Nama'}</div>
+                        <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : generatedGenThread ? (
             <div className="prompts-container">
               {generatedGenThread.map((tweet, index) => (
                 <div key={index} className="prompt-card fade-in">
