@@ -1255,26 +1255,12 @@ VOICE OVER: "(Dialog/narasi)"
               <div className="stat-card-header">
                 <div className="stat-icon-box" style={{background: '#3b82f6'}}>📁</div>
                 <div>
-                  <div className="stat-title">Bank Storyboard</div>
+                  <div className="stat-title">Data Produk</div>
                   <h3 className="stat-value">{bankStoryboardData.length}</h3>
                 </div>
               </div>
               <div className="stat-footer">
                 <span className="stat-badge">↑ 8%</span>
-                <span>dari bulan lalu</span>
-              </div>
-            </div>
-            
-            <div className="stat-card-new">
-              <div className="stat-card-header">
-                <div className="stat-icon-box" style={{background: '#10b981'}}>📦</div>
-                <div>
-                  <div className="stat-title">Data Produk Tersimpan</div>
-                  <h3 className="stat-value">{productsData.length}</h3>
-                </div>
-              </div>
-              <div className="stat-footer">
-                <span className="stat-badge">↑ 5%</span>
                 <span>dari bulan lalu</span>
               </div>
             </div>
@@ -1313,11 +1299,11 @@ VOICE OVER: "(Dialog/narasi)"
               <div className="quick-action-arrow" style={{background: '#ffedd5', color: '#f97316'}}>➔</div>
             </button>
             
-            <button className="quick-action-btn" onClick={() => setActiveTab('product_data')}>
+            <button className="quick-action-btn" onClick={() => setActiveTab('bank_storyboard')}>
               <div className="quick-action-icon" style={{background: '#d1fae5', color: '#10b981'}}>🗃️</div>
               <div className="quick-action-text">
                 <div className="quick-action-title" style={{color: '#10b981'}}>Tambah Data Produk</div>
-                <div className="quick-action-desc">Simpan informasi produk Anda</div>
+                <div className="quick-action-desc">Simpan foto dan deskripsi produk Anda</div>
               </div>
               <div className="quick-action-arrow" style={{background: '#d1fae5', color: '#10b981'}}>➔</div>
             </button>
@@ -1452,12 +1438,7 @@ VOICE OVER: "(Dialog/narasi)"
             )}
           </div>
           <button className={`nav-item ${activeTab === 'bank_storyboard' ? 'active' : ''}`} onClick={() => {setActiveTab('bank_storyboard'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🗃️</span> Bank Storyboard</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
-
-          <button className={`nav-item ${activeTab === 'product_data' ? 'active' : ''}`} onClick={() => {setActiveTab('product_data'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">📦</span> Produk Threads</div>
+            <div className="nav-item-content"><span className="icon">🗃️</span> Data Produk</div>
             <span className="nav-arrow">&gt;</span>
           </button>
           <button className={`nav-item ${activeTab === 'thread' ? 'active' : ''}`} onClick={() => {setActiveTab('thread'); setIsMobileMenuOpen(false);}}>
@@ -1508,7 +1489,7 @@ VOICE OVER: "(Dialog/narasi)"
               </h3>
 
               <div className="input-group">
-                <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>🗃️ Pilih dari Bank Storyboard (Auto-fill)</label>
+                <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>🗃️ Pilih dari Data Produk (Auto-fill)</label>
                 <select onChange={(e) => {
                   const selectedId = e.target.value;
                   if (!selectedId) {
@@ -1684,7 +1665,7 @@ VOICE OVER: "(Dialog/narasi)"
             <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>Pengaturan Konten</h3>
 
             <div className="input-group">
-              <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>🗃️ Pilih dari Bank Storyboard (Auto-fill)</label>
+              <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>🗃️ Pilih dari Data Produk (Auto-fill)</label>
               <select onChange={(e) => {
                 const selectedId = e.target.value;
                 if (!selectedId) {
@@ -1926,7 +1907,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
             <h3 style={{marginBottom: '1rem'}}>Pengaturan Konten</h3>
             
             <div className="input-group">
-              <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>🗃️ Pilih dari Bank Storyboard (Auto-fill)</label>
+              <label style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>🗃️ Pilih dari Data Produk (Auto-fill)</label>
               <select onChange={(e) => {
                 const selectedId = e.target.value;
                 if (!selectedId) {
@@ -3312,8 +3293,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
 
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem'}}>
           <div>
-            <h2 className="desktop-title">🗃️ Bank Storyboard</h2>
-            <p className="subtitle">Simpan aset visual (Panci, Wajan, Produk) untuk mempermudah pembuatan Storyboard.</p>
+            <h2 className="desktop-title">🗃️ Data Produk</h2>
+            <p className="subtitle">Simpan data dan foto produk Anda di sini untuk mempermudah pembuatan konten.</p>
           </div>
           <button className="btn-primary" onClick={() => setIsAddProductModalOpen(true)} style={{padding: '0.6rem 1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
             <span style={{fontSize: '1.2rem'}}>+</span> Tambah Produk
@@ -3366,57 +3347,85 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               Belum ada aset tersimpan.
             </div>
           ) : (
-            <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+            <div style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
               {Object.keys(groupedBankData).map(categoryName => (
                 <div key={categoryName} className="category-folder fade-in" style={{
-                  background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden'
+                  background: 'transparent'
                 }}>
                   <div style={{
-                    padding: '0.8rem 1.2rem', 
-                    background: '#f1f5f9', 
-                    borderBottom: '1px solid #e2e8f0',
+                    padding: '0 0 1rem 0', 
                     display: 'flex', 
                     justifyContent: 'space-between', 
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    borderBottom: '2px solid #f1f5f9',
+                    marginBottom: '1rem'
                   }}>
-                    <h4 style={{margin: 0, fontSize: '0.9rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '1px'}}>
-                      📁 {categoryName}
-                    </h4>
-                    <span style={{fontSize: '0.75rem', color: '#64748b', background: '#e2e8f0', padding: '0.2rem 0.6rem', borderRadius: '10px'}}>
-                      {groupedBankData[categoryName].length} aset
-                    </span>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                      <h4 style={{margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: 'bold'}}>
+                        {categoryName}
+                      </h4>
+                      <span style={{fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '0.2rem 0.6rem', borderRadius: '10px'}}>
+                        {groupedBankData[categoryName].length} aset
+                      </span>
+                    </div>
+                    {activeBankCategory === 'Semua' && (
+                      <button 
+                        onClick={() => setActiveBankCategory(categoryName)}
+                        style={{background: 'transparent', border: 'none', color: '#0ea5e9', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', transition: 'color 0.2s'}}
+                        onMouseEnter={(e) => e.target.style.color = '#0284c7'}
+                        onMouseLeave={(e) => e.target.style.color = '#0ea5e9'}
+                      >
+                        Lihat Semua &rarr;
+                      </button>
+                    )}
                   </div>
-                  <div style={{padding: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem'}}>
+                  <div style={{
+                    display: activeBankCategory === 'Semua' ? 'flex' : 'grid', 
+                    gridTemplateColumns: activeBankCategory !== 'Semua' ? 'repeat(auto-fill, minmax(200px, 1fr))' : 'none',
+                    gap: '1rem',
+                    overflowX: activeBankCategory === 'Semua' ? 'auto' : 'visible',
+                    paddingBottom: activeBankCategory === 'Semua' ? '1rem' : '0',
+                    scrollBehavior: 'smooth'
+                  }} className="horizontal-scroll-container">
                     {groupedBankData[categoryName].map(item => {
                       let parsed = {};
                       try { parsed = JSON.parse(item.result); } catch(e) {}
                       return (
-                        <div key={item.id} className="fade-in" style={{
-                          display: 'flex', gap: '0.8rem', padding: '0.8rem', 
-                          background: '#fff', borderRadius: '8px', 
-                          border: '1px solid #f1f5f9',
-                          alignItems: 'center',
-                          transition: 'background 0.2s ease, box-shadow 0.2s ease'
+                        <div key={item.id} className="fade-in product-card" style={{
+                          display: 'flex', flexDirection: 'column', 
+                          width: activeBankCategory === 'Semua' ? '200px' : 'auto',
+                          minWidth: activeBankCategory === 'Semua' ? '200px' : 'auto',
+                          background: '#fff', borderRadius: '12px', 
+                          border: '1px solid #e2e8f0',
+                          overflow: 'hidden',
+                          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                          position: 'relative',
+                          boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)'; }}
                         >
-                          {parsed.imgUrl && (
-                            <div style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0'}}>
+                          {parsed.imgUrl ? (
+                            <div style={{width: '100%', height: '180px', background: '#f1f5f9'}}>
                               <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                             </div>
+                          ) : (
+                            <div style={{width: '100%', height: '180px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8'}}>
+                              <span style={{fontSize: '3rem'}}>📦</span>
+                            </div>
                           )}
-                          <div style={{flex: 1, overflow: 'hidden'}}>
-                            <h4 style={{margin: '0 0 0.3rem 0', fontSize: '0.9rem', color: '#1e293b', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
-                            <p style={{fontSize: '0.85rem', color: '#64748b', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
-                          </div>
-                          <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem', flexShrink: 0}}>
-                            <button onClick={() => handleEditBank(item)} style={{background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
-                              Edit
-                            </button>
-                            <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
-                              Hapus
-                            </button>
+                          <div style={{padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column'}}>
+                            <h4 style={{margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: '#1e293b', fontWeight: 'bold', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
+                            <p style={{fontSize: '0.8rem', color: '#64748b', margin: '0 0 1rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                            
+                            <div style={{marginTop: 'auto', display: 'flex', gap: '0.5rem'}}>
+                              <button onClick={() => handleEditBank(item)} style={{flex: 1, background: '#f8fafc', color: '#3b82f6', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600'}}>
+                                Edit
+                              </button>
+                              <button onClick={() => handleDeleteBank(item.id)} style={{flex: 1, background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '6px', padding: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600'}}>
+                                Hapus
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -3431,93 +3440,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     </div>
   );
 
-  const renderProductDataForm = () => {
-    const lightInputStyle = {background: '#ffffff', color: '#1e293b', border: '1px solid #cbd5e1'};
-    const lightLabelStyle = {color: '#334155'};
-    
-    return (
-    <div className="content-wrapper fade-in" style={{background: '#f0f9ff', padding: '2rem', minHeight: '100vh'}}>
-      <div className="content-panel" style={{background: '#ffffff', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 20px rgba(0,0,0,0.08)'}}>
-        <h2 className="desktop-title" style={{color: '#0369a1'}}>📦 Produk Threads</h2>
-        <p className="subtitle" style={{color: '#475569'}}>Simpan data produk Anda di sini agar bisa digunakan otomatis saat membuat utas.</p>
-        <div className="layout-grid">
-          <div className="glass-panel input-section" style={{background: '#f8fafc', border: '1px solid #e2e8f0', boxShadow: 'none'}}>
-            <h3 style={{marginBottom: '1rem', color: '#0369a1'}}>Tambah Produk Baru</h3>
-            <div className="input-group">
-              <label style={lightLabelStyle}>Judul Produk</label>
-              <input type="text" className="api-key-input" style={lightInputStyle} placeholder="Contoh: Sepatu Sneakers Pria..." value={prodTitle} onChange={(e) => setProdTitle(e.target.value)} />
-            </div>
-            <div className="input-group">
-              <label style={lightLabelStyle}>Deskripsi / Benefit Produk</label>
-              <textarea style={{...lightInputStyle, width: '100%', padding: '0.8rem', borderRadius: '8px', boxSizing: 'border-box'}} placeholder="Tuliskan spesifikasi atau keunggulan produk..." value={prodDesc} onChange={(e) => setProdDesc(e.target.value)} rows="3" />
-            </div>
-            <div className="input-group">
-              <label style={lightLabelStyle}>Link Affiliate (Shopee/TikTok)</label>
-              <input type="text" className="api-key-input" style={lightInputStyle} placeholder="https://shope.ee/..." value={prodLink} onChange={(e) => setProdLink(e.target.value)} />
-            </div>
-            <div className="input-group">
-              <label style={lightLabelStyle}>Link Gambar Produk (URL)</label>
-              <input type="text" className="api-key-input" style={lightInputStyle} placeholder="Contoh: https://cf.shopee.co.id/file/..." value={prodImgUrl} onChange={(e) => setProdImgUrl(e.target.value)} />
-              <small style={{display: 'block', marginTop: '0.5rem', color: '#64748b'}}>
-                Klik kanan gambar di Shopee → Copy image address / Salin tautan gambar, lalu paste di sini.
-              </small>
-            </div>
-            <div style={{display: 'flex', gap: '0.5rem', flexDirection: 'column'}}>
-              <button className="btn-primary generate-btn" style={{background: '#0ea5e9', color: 'white'}} onClick={handleSaveProduct} disabled={!prodTitle || !prodDesc || !prodLink || isSaving}>
-                {isSaving ? 'Menyimpan...' : (editingProductId ? '💾 Update Database' : '💾 Simpan ke Database')}
-              </button>
-              {editingProductId && (
-                <button className="btn-secondary" style={{color: '#ef4444', borderColor: '#ef4444', background: 'transparent'}} onClick={() => {
-                  setEditingProductId(null);
-                  setProdTitle(''); setProdDesc(''); setProdLink(''); setProdImgUrl('');
-                }}>
-                  ❌ Batal Edit
-                </button>
-              )}
-            </div>
-          </div>
-          
-          <div className="glass-panel" style={{padding: '1rem', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-            <h3 style={{marginBottom: '1rem', color: '#0369a1'}}>Galeri Produk ({productsData.length})</h3>
-            {isProductsLoading ? (
-              <div style={{textAlign: 'center', padding: '2rem', color: '#0369a1'}}><span className="loading-spinner"></span> Memuat...</div>
-            ) : productsData.length === 0 ? (
-              <EmptyStateRight />
-            ) : (
-              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                {productsData.map(item => {
-                  let parsed = {};
-                  try { parsed = JSON.parse(item.result); } catch(e) {}
-                  return (
-                    <div key={item.id} className="prompt-card fade-in" style={{display: 'flex', gap: '1rem', padding: '1rem', background: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 2px 5px rgba(0,0,0,0.05)'}}>
-                      {parsed.imgUrl && (
-                        <div style={{width: '80px', height: '80px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0'}}>
-                          <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                        </div>
-                      )}
-                      <div style={{flex: 1, overflow: 'hidden'}}>
-                        <h4 style={{margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#0369a1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{item.product_desc}</h4>
-                        <p style={{fontSize: '0.75rem', color: '#475569', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
-                        <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none'}}>🔗 Link Produk</a>
-                      </div>
-                      <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem', alignSelf: 'flex-start'}}>
-                        <button onClick={() => handleEditProduct(item)} style={{background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
-                          Edit
-                        </button>
-                        <button onClick={() => handleDeleteProduct(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
-                          Hapus
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )};
 
   const renderDatabase = () => {
     let filteredHistory = [];
@@ -4024,7 +3946,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'bank_storyboard' && renderBankStoryboardForm()}
 
         {activeTab === 'video_script' && renderVideoScriptForm()}
-        {activeTab === 'product_data' && renderProductDataForm()}
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
         {activeTab === 'history' && renderDatabase()}
