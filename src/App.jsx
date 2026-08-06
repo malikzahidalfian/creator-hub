@@ -1184,9 +1184,6 @@ VOICE OVER: "(Dialog/narasi)"
       <path d="M15 65 L50 82 L85 65 L85 75 L50 92 L15 75 Z" fill="#3730a3" />
     </svg>
   );
-      <path d="M92 38 L94 42 L98 44 L94 46 L92 50 L90 46 L86 44 L90 42 Z" fill="#60a5fa" />
-    </svg>
-  );
 
   const EmptyStateRight = () => (
     <div className="glass-panel empty-state fade-in">
