@@ -1179,25 +1179,11 @@ VOICE OVER: "(Dialog/narasi)"
 
   const LogoSVG = () => (
     <svg viewBox="0 0 100 100" className="logo-svg" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="gradTop" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#a855f7" />
-          <stop offset="100%" stopColor="#06b6d4" />
-        </linearGradient>
-        <linearGradient id="gradMid" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#9333ea" />
-          <stop offset="100%" stopColor="#3b82f6" />
-        </linearGradient>
-        <linearGradient id="gradBot" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#7e22ce" />
-          <stop offset="100%" stopColor="#2563eb" />
-        </linearGradient>
-      </defs>
-      <path d="M50 18 L80 33 L50 48 L20 33 Z" fill="none" stroke="url(#gradTop)" strokeWidth="7" strokeLinejoin="round" />
-      <path d="M22 45 L50 59 L78 45" fill="none" stroke="url(#gradMid)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M22 57 L50 71 L78 57" fill="none" stroke="url(#gradBot)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Sparkles */}
-      <path d="M85 15 L88 22 L95 25 L88 28 L85 35 L82 28 L75 25 L82 22 Z" fill="url(#gradTop)" />
+      <path d="M50 15 L85 32 L50 49 L15 32 Z" fill="#6366f1" />
+      <path d="M15 45 L50 62 L85 45 L85 55 L50 72 L15 55 Z" fill="#4f46e5" />
+      <path d="M15 65 L50 82 L85 65 L85 75 L50 92 L15 75 Z" fill="#3730a3" />
+    </svg>
+  );
       <path d="M92 38 L94 42 L98 44 L94 46 L92 50 L90 46 L86 44 L90 42 Z" fill="#60a5fa" />
     </svg>
   );
@@ -1211,74 +1197,203 @@ VOICE OVER: "(Dialog/narasi)"
   );
 
   const renderDashboard = () => {
-    const recentActivity = history.slice(0, 5);
-    
     return (
       <div className="content-wrapper fade-in">
-        <div className="content-panel">
+        <div className="dashboard-header-top">
+          <div className="header-bell">
+            🔔
+            <span className="header-bell-badge">3</span>
+          </div>
+          <div className="header-admin-profile">
+            <div className="admin-avatar">A</div>
+            <div className="admin-info">
+              <span className="admin-name">Admin</span>
+              <span className="admin-role">Administrator</span>
+            </div>
+            <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>▼</span>
+          </div>
+        </div>
+      
+        <div className="content-panel" style={{padding: 0, border: 'none', background: 'transparent', boxShadow: 'none'}}>
           <div className="header-container" style={{marginBottom: '2rem'}}>
-            <h2 className="desktop-title">🏠 Dashboard Utama</h2>
-            <p className="subtitle">Selamat datang di Creator Hub AI. Pantau statistik dan akses fitur cepat dari sini.</p>
+            <h2 className="desktop-title" style={{display: 'flex', alignItems: 'center', gap: '0.8rem', fontSize: '2rem', marginBottom: '0.5rem'}}>
+              <span style={{background: 'white', padding: '0.5rem', borderRadius: '12px', border: '1px solid var(--glass-border)', fontSize: '1.5rem'}}>🏠</span> 
+              Dashboard Utama
+            </h2>
+            <p className="subtitle" style={{margin: 0}}>Selamat datang di Creator Hub AI. Pantau statistik dan akses fitur cepat dari sini.</p>
           </div>
 
-          <div className="dashboard-stats" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem'}}>
-            <div className="glass-panel" style={{textAlign: 'center', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center'}}>
-              <h3 style={{fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--primary-color)'}}>{history.length}</h3>
-              <p style={{margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Total Riwayat (History)</p>
-            </div>
-            <div className="glass-panel" style={{textAlign: 'center', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center'}}>
-              <h3 style={{fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--primary-color)'}}>{bankStoryboardData.length}</h3>
-              <p style={{margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Bank Storyboard</p>
-            </div>
-            <div className="glass-panel" style={{textAlign: 'center', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center'}}>
-              <h3 style={{fontSize: '2rem', margin: '0 0 0.5rem 0', color: 'var(--primary-color)'}}>{productsData.length}</h3>
-              <p style={{margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Data Produk Tersimpan</p>
-            </div>
-          </div>
-
-          <h3 className="section-title" style={{marginBottom: '1rem'}}>Akses Cepat (Quick Actions)</h3>
-          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '2.5rem'}}>
-            <button className="glass-panel" style={{cursor: 'pointer', textAlign: 'left', padding: '1.5rem', transition: 'all 0.2s'}} onClick={() => setActiveTab('storyboard')} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-              <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem'}}>🎬 Storyboard Umum</h4>
-              <p style={{margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Buat storyboard AI generik.</p>
-            </button>
-            <button className="glass-panel" style={{cursor: 'pointer', textAlign: 'left', padding: '1.5rem', transition: 'all 0.2s'}} onClick={() => setActiveTab('cooking_content')} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-              <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem'}}>🍳 Konten Masak</h4>
-              <p style={{margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Storyboard masakan & ASMR.</p>
-            </button>
-            <button className="glass-panel" style={{cursor: 'pointer', textAlign: 'left', padding: '1.5rem', transition: 'all 0.2s'}} onClick={() => setActiveTab('bang_jenggot')} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-              <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem'}}>🧔 Bang Jenggot</h4>
-              <p style={{margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Video review POV narasi.</p>
-            </button>
-            <button className="glass-panel" style={{cursor: 'pointer', textAlign: 'left', padding: '1.5rem', transition: 'all 0.2s'}} onClick={() => setActiveTab('product_data')} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-              <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem'}}>📦 Tambah Data Produk</h4>
-              <p style={{margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)'}}>Simpan informasi produk Anda.</p>
-            </button>
-          </div>
-
-          <h3 className="section-title" style={{marginBottom: '1rem'}}>Aktivitas Terakhir</h3>
-          <div className="glass-panel" style={{padding: '1.5rem'}}>
-            {isHistoryLoading ? (
-              <p style={{color: 'var(--text-secondary)'}}>Memuat aktivitas...</p>
-            ) : recentActivity.length > 0 ? (
-              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                {recentActivity.map(item => (
-                  <div key={item.id} style={{display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)'}}>
-                    <div>
-                      <h4 style={{margin: '0 0 0.3rem 0', fontSize: '0.95rem'}}>{item.product_desc || 'Tanpa Judul'}</h4>
-                      <span style={{fontSize: '0.75rem', background: 'var(--primary-color)', padding: '0.1rem 0.5rem', borderRadius: '12px', color: 'white'}}>{item.type}</span>
-                    </div>
-                    <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'right'}}>
-                      {new Date(item.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}
-                      <br/>
-                      {new Date(item.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}
-                    </div>
-                  </div>
-                ))}
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2.5rem'}}>
+            <div className="stat-card-new">
+              <div className="stat-card-header">
+                <div className="stat-icon-box" style={{background: '#8b5cf6'}}>🕒</div>
+                <div>
+                  <div className="stat-title">Total Riwayat (History)</div>
+                  <h3 className="stat-value">{history.length}</h3>
+                </div>
               </div>
-            ) : (
-              <p style={{color: 'var(--text-secondary)'}}>Belum ada aktivitas.</p>
-            )}
+              <div className="stat-footer">
+                <span className="stat-badge">↑ 12%</span>
+                <span>dari bulan lalu</span>
+              </div>
+            </div>
+            
+            <div className="stat-card-new">
+              <div className="stat-card-header">
+                <div className="stat-icon-box" style={{background: '#3b82f6'}}>📁</div>
+                <div>
+                  <div className="stat-title">Bank Storyboard</div>
+                  <h3 className="stat-value">{bankStoryboardData.length}</h3>
+                </div>
+              </div>
+              <div className="stat-footer">
+                <span className="stat-badge">↑ 8%</span>
+                <span>dari bulan lalu</span>
+              </div>
+            </div>
+            
+            <div className="stat-card-new">
+              <div className="stat-card-header">
+                <div className="stat-icon-box" style={{background: '#10b981'}}>📦</div>
+                <div>
+                  <div className="stat-title">Data Produk Tersimpan</div>
+                  <h3 className="stat-value">{productsData.length}</h3>
+                </div>
+              </div>
+              <div className="stat-footer">
+                <span className="stat-badge">↑ 5%</span>
+                <span>dari bulan lalu</span>
+              </div>
+            </div>
+          </div>
+
+          <h3 className="section-title" style={{marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem', color: 'var(--text-primary)'}}>
+            <span style={{color: '#64748b'}}>⚡</span> Akses Cepat (Quick Actions)
+          </h3>
+          <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem'}}>Gunakan fitur-fitur utama dengan cepat.</p>
+          
+          <div className="quick-actions-row">
+            <button className="quick-action-btn" onClick={() => setActiveTab('storyboard')}>
+              <div className="quick-action-icon" style={{background: '#f3e8ff', color: '#8b5cf6'}}>🎬</div>
+              <div className="quick-action-text">
+                <div className="quick-action-title" style={{color: '#8b5cf6'}}>Storyboard Umum</div>
+                <div className="quick-action-desc">Buat storyboard AI generik</div>
+              </div>
+              <div className="quick-action-arrow" style={{background: '#f3e8ff', color: '#8b5cf6'}}>➔</div>
+            </button>
+            
+            <button className="quick-action-btn" onClick={() => setActiveTab('cooking_content')}>
+              <div className="quick-action-icon" style={{background: '#dbeafe', color: '#3b82f6'}}>🔍</div>
+              <div className="quick-action-text">
+                <div className="quick-action-title" style={{color: '#3b82f6'}}>Konten Masak</div>
+                <div className="quick-action-desc">Storyboard masakan & ASMR</div>
+              </div>
+              <div className="quick-action-arrow" style={{background: '#dbeafe', color: '#3b82f6'}}>➔</div>
+            </button>
+            
+            <button className="quick-action-btn" onClick={() => setActiveTab('bang_jenggot')}>
+              <div className="quick-action-icon" style={{background: '#ffedd5', color: '#f97316'}}>🎥</div>
+              <div className="quick-action-text">
+                <div className="quick-action-title" style={{color: '#f97316'}}>Bang Jenggot</div>
+                <div className="quick-action-desc">Video review POV narasi</div>
+              </div>
+              <div className="quick-action-arrow" style={{background: '#ffedd5', color: '#f97316'}}>➔</div>
+            </button>
+            
+            <button className="quick-action-btn" onClick={() => setActiveTab('product_data')}>
+              <div className="quick-action-icon" style={{background: '#d1fae5', color: '#10b981'}}>🗃️</div>
+              <div className="quick-action-text">
+                <div className="quick-action-title" style={{color: '#10b981'}}>Tambah Data Produk</div>
+                <div className="quick-action-desc">Simpan informasi produk Anda</div>
+              </div>
+              <div className="quick-action-arrow" style={{background: '#d1fae5', color: '#10b981'}}>➔</div>
+            </button>
+          </div>
+
+          <div className="dashboard-bottom-grid">
+            <div className="chart-panel">
+              <div className="panel-title-row">
+                <h3>📈 Ringkasan Aktivitas</h3>
+                <select className="select-input" style={{width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: '#f8fafc'}}>
+                  <option>30 Hari Terakhir</option>
+                </select>
+              </div>
+              <div style={{display: 'flex', gap: '2rem', marginBottom: '1.5rem'}}>
+                <div>
+                  <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.3rem'}}>Total Aktivitas</div>
+                  <div style={{fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>64 <span className="stat-badge" style={{fontSize: '0.65rem'}}>↑ 15%</span></div>
+                </div>
+                <div>
+                  <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.3rem'}}>Aktivitas Minggu Ini</div>
+                  <div style={{fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>12 <span className="stat-badge" style={{fontSize: '0.65rem'}}>↑ 8%</span></div>
+                </div>
+                <div>
+                  <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.3rem'}}>Rata-rata Harian</div>
+                  <div style={{fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>2.1 <span className="stat-badge" style={{fontSize: '0.65rem'}}>↑ 6%</span></div>
+                </div>
+              </div>
+              
+              {/* Fake SVG Chart */}
+              <div style={{height: '180px', width: '100%', position: 'relative', marginTop: '1rem'}}>
+                <svg width="100%" height="100%" viewBox="0 0 500 150" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="chartGrad" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,130 C30,120 50,80 80,90 C120,100 150,60 180,90 C200,110 220,50 250,70 C280,90 300,120 330,110 C360,100 390,130 420,70 C450,20 480,50 500,40 L500,150 L0,150 Z" fill="url(#chartGrad)" />
+                  <path d="M0,130 C30,120 50,80 80,90 C120,100 150,60 180,90 C200,110 220,50 250,70 C280,90 300,120 330,110 C360,100 390,130 420,70 C450,20 480,50 500,40" fill="none" stroke="#8b5cf6" strokeWidth="2.5" />
+                  
+                  {/* Grid Lines */}
+                  <line x1="0" y1="30" x2="500" y2="30" stroke="#f1f5f9" strokeWidth="1" />
+                  <line x1="0" y1="70" x2="500" y2="70" stroke="#f1f5f9" strokeWidth="1" />
+                  <line x1="0" y1="110" x2="500" y2="110" stroke="#f1f5f9" strokeWidth="1" />
+                  
+                  {/* Labels */}
+                  <text x="0" y="25" fontSize="10" fill="#94a3b8">25</text>
+                  <text x="0" y="65" fontSize="10" fill="#94a3b8">15</text>
+                  <text x="0" y="105" fontSize="10" fill="#94a3b8">5</text>
+                  <text x="0" y="145" fontSize="10" fill="#94a3b8">0</text>
+                  
+                  <text x="40" y="145" fontSize="10" fill="#94a3b8">1 Mei</text>
+                  <text x="140" y="145" fontSize="10" fill="#94a3b8">7 Mei</text>
+                  <text x="240" y="145" fontSize="10" fill="#94a3b8">13 Mei</text>
+                  <text x="340" y="145" fontSize="10" fill="#94a3b8">19 Mei</text>
+                  <text x="440" y="145" fontSize="10" fill="#94a3b8">25 Mei</text>
+                  <text x="480" y="145" fontSize="10" fill="#94a3b8">31 Mei</text>
+                </svg>
+              </div>
+            </div>
+
+            <div className="activity-panel">
+              <div className="panel-title-row">
+                <h3>🕒 Aktivitas Terbaru</h3>
+                <span style={{fontSize: '0.8rem', color: 'var(--primary-color)', cursor: 'pointer', fontWeight: '500'}}>Lihat Semua ➔</span>
+              </div>
+              <div className="activity-list">
+                <div className="activity-item">
+                  <div className="activity-icon" style={{background: '#f3e8ff', color: '#8b5cf6'}}>🎬</div>
+                  <div className="activity-text">Storyboard "Konten Masak Spesial" dibuat</div>
+                  <div className="activity-time">2 menit yang lalu</div>
+                </div>
+                <div className="activity-item">
+                  <div className="activity-icon" style={{background: '#d1fae5', color: '#10b981'}}>📦</div>
+                  <div className="activity-text">Produk "Bumbu Rendang Premium" ditambahkan</div>
+                  <div className="activity-time">15 menit yang lalu</div>
+                </div>
+                <div className="activity-item">
+                  <div className="activity-icon" style={{background: '#dbeafe', color: '#3b82f6'}}>🎨</div>
+                  <div className="activity-text">AI Image "Thumbnail Review" dihasilkan</div>
+                  <div className="activity-time">1 jam yang lalu</div>
+                </div>
+                <div className="activity-item">
+                  <div className="activity-icon" style={{background: '#ffedd5', color: '#f97316'}}>🗣️</div>
+                  <div className="activity-text">Text to Speech "Narasi Review" dibuat</div>
+                  <div className="activity-time">2 jam yang lalu</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1327,14 +1442,7 @@ VOICE OVER: "(Dialog/narasi)"
             <div className="nav-item-content"><span className="icon">🗃️</span> Bank Storyboard</div>
             <span className="nav-arrow">&gt;</span>
           </button>
-          <button className={`nav-item ${activeTab === 'image_gen' ? 'active' : ''}`} onClick={() => {setActiveTab('image_gen'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🎨</span> AI Image</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
-          <button className={`nav-item ${activeTab === 'tts' ? 'active' : ''}`} onClick={() => {setActiveTab('tts'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🗣️</span> Text to Speech</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
+
           <button className={`nav-item ${activeTab === 'product_data' ? 'active' : ''}`} onClick={() => {setActiveTab('product_data'); setIsMobileMenuOpen(false);}}>
             <div className="nav-item-content"><span className="icon">📦</span> Produk Threads</div>
             <span className="nav-arrow">&gt;</span>
@@ -1362,12 +1470,28 @@ VOICE OVER: "(Dialog/narasi)"
           </button>
         </nav>
 
-      <div className="sidebar-bottom">
-        <div className="copyright">
-          © 2025 Creator Hub AI<br/>All rights reserved.
+        <div className="upgrade-box">
+          <h4 style={{display: 'flex', alignItems: 'center', gap: '0.3rem'}}><span style={{color: '#f59e0b'}}>👑</span> Upgrade ke Pro</h4>
+          <p>Akses semua fitur premium dan tingkatkan produktivitasmu.</p>
+          <button className="btn-upgrade">Upgrade Sekarang ➔</button>
         </div>
-      </div>
-    </aside>
+
+        <div className="sidebar-bottom">
+          <div className="header-admin-profile" style={{marginBottom: '1rem', padding: '0.8rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--glass-border)', justifyContent: 'space-between'}}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '0.8rem'}}>
+              <div className="admin-avatar" style={{background: '#e0e7ff', color: 'var(--primary-color)'}}>A</div>
+              <div className="admin-info">
+                <span className="admin-name">Admin</span>
+                <span className="admin-role">Administrator</span>
+              </div>
+            </div>
+            <span style={{fontSize: '0.7rem', color: 'var(--text-secondary)'}}>▼</span>
+          </div>
+          <div className="copyright">
+            © 2025 Creator Hub AI<br/>All rights reserved.
+          </div>
+        </div>
+      </aside>
     </>
   );
 
@@ -3903,8 +4027,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'ugc_style' && renderUgcForm()}
         {activeTab === 'bank_gambar' && renderImageBankForm()}
         {activeTab === 'bank_storyboard' && renderBankStoryboardForm()}
-        {activeTab === 'image_gen' && renderImageGenForm()}
-        {activeTab === 'tts' && renderTtsForm()}
+
         {activeTab === 'video_script' && renderVideoScriptForm()}
         {activeTab === 'product_data' && renderProductDataForm()}
         {activeTab === 'thread' && renderThreadForm()}
