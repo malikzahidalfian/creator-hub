@@ -83,6 +83,7 @@ function App() {
   const [genThreadLengthCount, setGenThreadLengthCount] = useState(5)
   const [genThreadAffiliateProduct, setGenThreadAffiliateProduct] = useState('')
   const [genThreadAffiliateProductName, setGenThreadAffiliateProductName] = useState('')
+  const [genThreadAffiliateProductObj, setGenThreadAffiliateProductObj] = useState(null)
   const [isSelectingGenThreadProduct, setIsSelectingGenThreadProduct] = useState(false)
   const [genThreadLanguageStyle, setGenThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
   const [threadLanguageStyle, setThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
@@ -2296,19 +2297,28 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
         alert("Peringatan: Gagal mengekstrak isi artikel secara otomatis dari URL tersebut. AI hanya akan menebak berdasarkan URL atau instruksi Anda.\nDetail: " + scrapeErr.message);
       }
 
-      let appendSourceInstruction = `\n- WAJIB TAMPILKAN LINK BERITA INI DI AKHIR UTAS (di bagian/tweet paling bawah): ${genThreadSource}`;
-      if (genThreadAffiliateProduct) {
-        appendSourceInstruction += `\n- DI TWEET TERAKHIR JUGA, promosikan produk affiliate berikut secara halus (soft selling), tuliskan deskripsinya dan beri link-nya jika ada: """${genThreadAffiliateProduct}"""`;
-      }
-      
       let lengthInstructions = `Kamu harus membuat 1 utas (thread) BERANTAI.
 - Utas harus dibagi menjadi tepat ${genThreadLengthCount} bagian/tweet berurutan.
 - PENTING: SETIAP bagian/tweet HARUS PENDEK (maksimal 3-4 kalimat per tweet/bagian). JANGAN MENULIS PARAGRAF PANJANG! Buatlah konten yang snackable.
 - SETIAP tweet (kecuali tweet terakhir) WAJIB ditutup dengan HOOK atau kalimat gantung/cliffhanger yang membuat pembaca tidak sabar membaca tweet selanjutnya.
-- Pisahkan setiap tweet/bagian utas dengan "---".${appendSourceInstruction}`;
+- Pisahkan setiap tweet/bagian utas dengan "---".`;
+
+      let appendSourceInstruction = `\n- WAJIB TAMPILKAN LINK BERITA INI DI AKHIR UTAS (di bagian/tweet paling bawah): ${genThreadSource}`;
+
+      if (genThreadAffiliateProduct) {
+        lengthInstructions = `Kamu harus membuat 1 utas (thread) BERANTAI.
+- Utas berita dibagi menjadi tepat ${genThreadLengthCount} bagian/tweet berurutan.
+- PENTING: TAMBAHKAN 1 TWEET EKSTRA SEBAGAI TWEET PENUTUP KHUSUS UNTUK PROMOSI PRODUK. Jadi total ada ${parseInt(genThreadLengthCount)+1} tweet!
+- PENTING: SETIAP bagian/tweet HARUS PENDEK (maksimal 3-4 kalimat per tweet/bagian). JANGAN MENULIS PARAGRAF PANJANG!
+- SETIAP tweet berita (kecuali tweet terakhir) WAJIB ditutup dengan HOOK atau cliffhanger.
+- Di tweet ekstra (paling akhir), promosikan produk ini secara HARD SELLING yang sangat persuasif (FOMO), dan HANYA berikan link pembelanjaan ini saja tanpa menyertakan kode/tag markdown gambar apapun: 
+${genThreadAffiliateProduct}
+- Pisahkan setiap tweet/bagian utas dengan "---".`;
+      }
+      lengthInstructions += appendSourceInstruction;
 
       const sellingRule = genThreadAffiliateProduct
-        ? "Kamu boleh mempromosikan produk secara halus di bagian akhir utas."
+        ? "Kamu DIWAJIBKAN mempromosikan produk (HARD SELLING) secara agresif di bagian akhir utas."
         : "TIDAK ADA UNSUR JUALAN SAMA SEKALI.";
 
       const systemPrompt = `Kamu adalah Kreator Konten Viral tingkat dewa di X (Twitter) dan Threads.
@@ -2357,7 +2367,8 @@ ${lengthInstructions}`;
       const data = await response.json();
       let generatedText = data.choices[0].message.content.trim().replace(/\*\*/g, ""); 
       
-      const blocks = generatedText.split('---').map(b => b.trim()).filter(b => b.length > 0);
+      let blocks = generatedText.split('---').map(b => b.trim()).filter(b => b.length > 0);
+      
       setGeneratedGenThread(blocks);
     } catch (error) {
       alert("Error: " + error.message);
@@ -2924,6 +2935,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 <button className="btn-secondary" style={{textAlign: 'left', borderColor: 'var(--border-color)', color: 'var(--text-secondary)'}} onClick={() => {
                   setGenThreadAffiliateProduct('');
                   setGenThreadAffiliateProductName('');
+                  setGenThreadAffiliateProductObj(null);
                   setIsSelectingGenThreadProduct(false);
                 }}>
                   ❌ Tidak perlu sisipkan produk (Kosongkan)
@@ -2934,8 +2946,12 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                   try { parsed = JSON.parse(item.result); } catch(e) {}
                   return (
                     <button key={item.id} className="btn-secondary" style={{textAlign: 'left', display: 'flex', gap: '1rem', alignItems: 'center'}} onClick={() => {
-                      setGenThreadAffiliateProduct((item.product_desc || '') + (item.result ? '\n' + item.result : ''));
+                      let parsed = {};
+                      try { parsed = JSON.parse(item.result); } catch(e) {}
+                      const productText = `Nama Produk: ${item.product_desc}\nDeskripsi: ${parsed.desc || ''}\nLink Pembelian: ${parsed.link || ''}`;
+                      setGenThreadAffiliateProduct(productText);
                       setGenThreadAffiliateProductName(item.product_desc || 'Produk Tanpa Nama');
+                      setGenThreadAffiliateProductObj(parsed);
                       setIsSelectingGenThreadProduct(false);
                     }}>
                       {parsed.imgUrl && (
@@ -2961,6 +2977,12 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                     </button>
                   </div>
                   <pre className="prompt-content">{tweet}</pre>
+                  {index === generatedGenThread.length - 1 && genThreadAffiliateProductObj?.imgUrl && (
+                    <div style={{marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem'}}>
+                      <p style={{fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem'}}>Gambar Produk (Bisa disisipkan manual saat posting):</p>
+                      <img src={genThreadAffiliateProductObj.imgUrl} alt="Produk Affiliate" style={{maxWidth: '200px', borderRadius: '8px', border: '1px solid var(--border-color)'}} />
+                    </div>
+                  )}
                 </div>
               ))}
               <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
