@@ -1467,11 +1467,7 @@ VOICE OVER: "(Dialog/narasi)"
           </button>
         </nav>
 
-        <div className="upgrade-box">
-          <h4 style={{display: 'flex', alignItems: 'center', gap: '0.3rem'}}><span style={{color: '#f59e0b'}}>👑</span> Upgrade ke Pro</h4>
-          <p>Akses semua fitur premium dan tingkatkan produktivitasmu.</p>
-          <button className="btn-upgrade">Upgrade Sekarang ➔</button>
-        </div>
+
 
         <div className="sidebar-bottom">
           <div className="header-admin-profile" style={{marginBottom: '1rem', padding: '0.8rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--glass-border)', justifyContent: 'space-between'}}>
