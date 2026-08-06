@@ -125,6 +125,7 @@ function App() {
   const [bankCategory, setBankCategory] = useState('');
   const [bankProductName, setBankProductName] = useState('');
   const [bankDesc, setBankDesc] = useState('');
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [bankImgUrl, setBankImgUrl] = useState('');
   const [editingBankId, setEditingBankId] = useState(null);
   const [isBankSaving, setIsBankSaving] = useState(false);
@@ -440,7 +441,7 @@ function App() {
     setBankProductName(parsed.name || '');
     setBankDesc(parsed.desc || '');
     setBankImgUrl(parsed.imgUrl || '');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsAddProductModalOpen(true);
   };
 
   const handleSaveBank = () => {
@@ -452,6 +453,7 @@ function App() {
     });
     saveToSupabase(bankPayload, 'Bank Storyboard', bankCategory, editingBankId);
     setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory('');
+    setIsAddProductModalOpen(false);
   };
 
   const handleDeleteBank = async (id) => {
@@ -1461,25 +1463,13 @@ VOICE OVER: "(Dialog/narasi)"
             <div className="nav-item-content"><span className="icon">🔑</span> API Key</div>
             <span className="nav-arrow">&gt;</span>
           </button>
-          <button className={`nav-item ${activeTab === 'tiktok_scraper' ? 'active' : ''}`} onClick={() => {setActiveTab('tiktok_scraper'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🎵</span> Tiktok Scraper</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
+
         </nav>
 
 
 
         <div className="sidebar-bottom">
-          <div className="header-admin-profile" style={{marginBottom: '1rem', padding: '0.8rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--glass-border)', justifyContent: 'space-between'}}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '0.8rem'}}>
-              <div className="admin-avatar" style={{background: '#e0e7ff', color: 'var(--primary-color)'}}>A</div>
-              <div className="admin-info">
-                <span className="admin-name">Admin</span>
-                <span className="admin-role">Administrator</span>
-              </div>
-            </div>
-            <span style={{fontSize: '0.7rem', color: 'var(--text-secondary)'}}>▼</span>
-          </div>
+
           <div className="copyright">
             © 2025 Creator Hub AI<br/>All rights reserved.
           </div>
@@ -3218,208 +3208,52 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 <p>Memuat galeri...</p>
               </div>
             ) : imageBankData.length > 0 ? (
-              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem'}}>
-                {imageBankData.map(item => (
-                  <div key={item.id} style={{background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid rgba(255,255,255,0.1)'}}>
-                    <img src={item.result} alt={item.product_desc} style={{width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.5rem'}} />
-                    <span style={{fontSize: '0.8rem', textAlign: 'center', marginBottom: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'}}>{item.product_desc}</span>
-                    <button className="btn-secondary" onClick={() => handleCopyImage(item.result)} style={{padding: '0.3rem 0.6rem', fontSize: '0.75rem', width: '100%'}}>📋 Copy</button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyStateRight />
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderBankStoryboardForm = () => (
-    <div className="content-wrapper fade-in">
-      <div className="content-panel">
-        <h2 className="desktop-title">🗃️ Bank Storyboard</h2>
-        <p className="subtitle">Simpan aset visual (Panci, Wajan, Produk) untuk mempermudah pembuatan Storyboard.</p>
-        <div className="layout-grid">
-          <div className="glass-panel input-section">
-            <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>Tambah Aset Baru</h3>
-            <div className="input-group">
-              <label>Nama Produk</label>
-              <input type="text" className="api-key-input" style={{color: '#1a1a2e'}} placeholder="Contoh: Wajan Granit Anti Lengket 24cm" value={bankProductName} onChange={(e) => setBankProductName(e.target.value)} />
-            </div>
-            <div className="input-group">
-              <label>Deskripsi Produk</label>
-              <textarea placeholder="Jelaskan keunggulan / spesifikasi produk..." value={bankDesc} onChange={(e) => setBankDesc(e.target.value)} rows="6" />
-              <button 
-                className="btn-primary" 
-                style={{marginTop: '0.5rem', background: 'var(--active-gradient)', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem'}}
-                onClick={handleGenerateBankUSP}
-                disabled={!bankProductName || !bankDesc || isGeneratingSelling || !apiKey}
-              >
-                {isGeneratingSelling ? 'Menyusun USP...' : '✨ Generate Selling Point'}
-              </button>
-              {!apiKey && <small style={{display: 'block', color: '#ef4444', marginTop: '0.3rem'}}>API Key diperlukan untuk fitur ini.</small>}
-            </div>
-            <div className="input-group">
-              <label>Link Gambar Produk (Bisa lebih dari 1, pisahkan dengan Enter atau Koma)</label>
-              <textarea className="api-key-input" placeholder={`https://cf.shopee.co.id/file/...\nhttps://cf.shopee.co.id/file/...`} value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} rows="3" />
-            </div>
-            <div className="input-group">
-              <label>Kategori Produk</label>
-              <div style={{position: 'relative'}}>
-                <input 
-                  type="text" 
-                  className="api-key-input" 
-                  list="bank-category-list"
-                  placeholder="Ketik baru atau pilih yang sudah ada..." 
-                  value={bankCategory} 
-                  onChange={(e) => setBankCategory(e.target.value)} 
-                />
-                <datalist id="bank-category-list">
-                  {[...new Set(bankStoryboardData.map(item => item.product_desc))].map((cat, idx) => (
-                    <option key={idx} value={cat} />
-                  ))}
-                </datalist>
-              </div>
-              <small style={{display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)'}}>Ketik kategori baru atau pilih dari daftar yang sudah ada.</small>
-            </div>
-            <div style={{display: 'flex', gap: '0.5rem', flexDirection: 'column'}}>
-              <button className="btn-primary generate-btn" onClick={handleSaveBank} disabled={!bankCategory || !bankProductName || isSaving}>
-                {isSaving ? 'Menyimpan...' : (editingBankId ? '💾 Update di Bank' : '💾 Simpan ke Bank')}
-              </button>
-              {editingBankId && (
-                <button className="btn-secondary" onClick={() => {
-                  setEditingBankId(null);
-                  setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory('');
-                }}>
-                  ❌ Batal Edit
-                </button>
-              )}
-            </div>
           </div>
           
-          <div className="glass-panel" style={{padding: '1.5rem', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-            <h3 style={{marginBottom: '1rem'}}>Aset Tersimpan ({bankStoryboardData.length})</h3>
-            
-            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingBottom: '1rem', marginBottom: '1rem', borderBottom: '1px solid var(--glass-border)'}}>
-              {uniqueBankCategories.map((cat, idx) => (
+          <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem'}}>
+            <button 
+              className={`pill-btn ${bankFilterCat === 'All' ? 'active' : ''}`}
+              onClick={() => setBankFilterCat('All')}
+            >
+              Semua
+            </button>
+            {[...new Set(bankStoryboardData.map(item => item.product_desc))].map((cat, idx) => {
+              const count = bankStoryboardData.filter(i => i.product_desc === cat).length;
+              return (
                 <button 
-                  key={idx} 
-                  onClick={() => setActiveBankCategory(cat)}
-                  style={{
-                    padding: '0.5rem 1rem', 
-                    borderRadius: '20px', 
-                    border: activeBankCategory === cat ? '2px solid var(--primary-color)' : '1px solid var(--glass-border)', 
-                    background: activeBankCategory === cat ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)',
-                    color: activeBankCategory === cat ? 'white' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    fontSize: '0.8rem',
-                    fontWeight: activeBankCategory === cat ? '600' : '400',
-                    transition: 'all 0.2s ease'
-                  }}
+                  key={idx}
+                  className={`pill-btn ${bankFilterCat === cat ? 'active' : ''}`}
+                  onClick={() => setBankFilterCat(cat)}
                 >
-                  {cat} {cat !== 'Semua' && <span style={{opacity: 0.7, marginLeft: '4px'}}>({(groupedBankData[cat] || []).length})</span>}
+                  {cat} ({count})
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            {isBankStoryboardLoading ? (
-              <div style={{textAlign: 'center', padding: '2rem'}}><span className="loading-spinner"></span> Memuat...</div>
-            ) : filteredBankData.length === 0 ? (
-              <EmptyStateRight />
-            ) : activeBankCategory === 'Semua' ? (
-              <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
-                {Object.keys(groupedBankData).map(categoryName => (
-                  <div key={categoryName} style={{
-                    background: 'rgba(255,255,255,0.03)', 
-                    borderRadius: '12px', 
-                    border: '1px solid var(--glass-border)', 
-                    overflow: 'hidden'
+          {isBankStoryboardLoading ? (
+            <div style={{textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)'}}>
+              <div className="spinner" style={{margin: '0 auto 1rem auto'}}></div>
+              Memuat data...
+            </div>
+          ) : filteredBankData.length === 0 ? (
+            <div style={{textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)'}}>
+              Belum ada aset tersimpan.
+            </div>
+          ) : (
+            <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+              {Object.keys(groupedBankData).map(categoryName => (
+                <div key={categoryName} className="category-folder fade-in" style={{
+                  background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden'
+                }}>
+                  <div style={{
+                    padding: '0.8rem 1.2rem', 
+                    background: '#f1f5f9', 
+                    borderBottom: '1px solid #e2e8f0',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center'
                   }}>
-                    <div style={{
-                      padding: '0.8rem 1.2rem', 
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1))', 
-                      borderBottom: '1px solid var(--glass-border)',
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center'
-                    }}>
-                      <h4 style={{margin: 0, fontSize: '0.9rem', color: 'var(--primary-color)', textTransform: 'uppercase', letterSpacing: '1px'}}>
-                        📁 {categoryName}
-                      </h4>
-                      <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.1)', padding: '0.2rem 0.6rem', borderRadius: '10px'}}>
-                        {groupedBankData[categoryName].length} aset
-                      </span>
-                    </div>
-                    <div style={{padding: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem'}}>
-                      {groupedBankData[categoryName].map(item => {
-                        let parsed = {};
-                        try { parsed = JSON.parse(item.result); } catch(e) {}
-                        return (
-                          <div key={item.id} className="fade-in" style={{
-                            display: 'flex', gap: '0.8rem', padding: '0.8rem', 
-                            background: 'rgba(255,255,255,0.03)', borderRadius: '8px', 
-                            border: '1px solid rgba(255,255,255,0.06)',
-                            alignItems: 'center',
-                            transition: 'background 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                          >
-                            {parsed.imgUrl && (
-                              <div style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)'}}>
-                                <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                              </div>
-                            )}
-                            <div style={{flex: 1, overflow: 'hidden'}}>
-                              <h4 style={{margin: '0 0 0.3rem 0', fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
-                              <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
-                              {parsed.link && <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', fontWeight: '600'}}>🔗 Link Produk</a>}
-                            </div>
-                            <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem', flexShrink: 0}}>
-                              <button onClick={() => handleEditBank(item)} style={{background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
-                                Edit
-                              </button>
-                              <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
-                                Hapus
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{display: 'flex', flexDirection: 'column', gap: '0.8rem'}}>
-                {filteredBankData.map(item => {
-                  let parsed = {};
-                  try { parsed = JSON.parse(item.result); } catch(e) {}
-                  return (
-                    <div key={item.id} className="prompt-card fade-in" style={{display: 'flex', gap: '1rem', padding: '1rem', alignItems: 'center'}}>
-                      {parsed.imgUrl && (
-                        <div style={{width: '70px', height: '70px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)'}}>
-                          <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                        </div>
-                      )}
-                      <div style={{flex: 1, overflow: 'hidden'}}>
-                        <h4 style={{margin: '0 0 0.3rem 0', fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
-                        <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
-                        {parsed.link && <a href={parsed.link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', fontWeight: '600'}}>🔗 Link Produk</a>}
-                      </div>
-                      <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem', alignSelf: 'flex-start'}}>
-                        <button onClick={() => handleEditBank(item)} style={{background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
-                          Edit
-                        </button>
-                        <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
-                          Hapus
-                        </button>
-                      </div>
-                    </div>
-                  );
                 })}
               </div>
             )}
@@ -4026,7 +3860,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'thread' && renderThreadForm()}
         {activeTab === 'gen_thread' && renderGenThreadForm()}
         {activeTab === 'history' && renderDatabase()}
-        {activeTab === 'tiktok_scraper' && renderTiktokScraperForm()}
+
         {activeTab === 'settings' && renderSettings()}
       </main>
     </div>
