@@ -3381,7 +3381,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                   </div>
                   <div style={{
                     display: activeBankCategory === 'Semua' ? 'flex' : 'grid', 
-                    gridTemplateColumns: activeBankCategory !== 'Semua' ? 'repeat(auto-fill, minmax(200px, 1fr))' : 'none',
+                    gridTemplateColumns: activeBankCategory !== 'Semua' ? 'repeat(auto-fill, minmax(400px, 1fr))' : 'none',
                     gap: '1rem',
                     overflowX: activeBankCategory === 'Semua' ? 'auto' : 'visible',
                     paddingBottom: activeBankCategory === 'Semua' ? '1rem' : '0',
@@ -3392,38 +3392,42 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                       try { parsed = JSON.parse(item.result); } catch(e) {}
                       return (
                         <div key={item.id} className="fade-in product-card" style={{
-                          display: 'flex', flexDirection: 'column', 
-                          width: activeBankCategory === 'Semua' ? '200px' : 'auto',
-                          minWidth: activeBankCategory === 'Semua' ? '200px' : 'auto',
-                          background: '#fff', borderRadius: '12px', 
+                          display: 'flex', flexDirection: 'row', 
+                          width: activeBankCategory === 'Semua' ? '420px' : 'auto',
+                          minWidth: activeBankCategory === 'Semua' ? '420px' : 'auto',
+                          background: '#fff', borderRadius: '16px', 
                           border: '1px solid #e2e8f0',
                           overflow: 'hidden',
                           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                           position: 'relative',
-                          boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                          boxShadow: '0 4px 10px rgba(0,0,0,0.03)'
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.08)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.03)'; }}
                         >
                           {parsed.imgUrl ? (
-                            <div style={{width: '100%', height: '180px', background: '#f1f5f9'}}>
+                            <div style={{width: '180px', minWidth: '180px', background: '#f1f5f9'}}>
                               <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                             </div>
                           ) : (
-                            <div style={{width: '100%', height: '180px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8'}}>
+                            <div style={{width: '180px', minWidth: '180px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8'}}>
                               <span style={{fontSize: '3rem'}}>📦</span>
                             </div>
                           )}
-                          <div style={{padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column'}}>
-                            <h4 style={{margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: '#1e293b', fontWeight: 'bold', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
-                            <p style={{fontSize: '0.8rem', color: '#64748b', margin: '0 0 1rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                          <div style={{padding: '1.2rem', flex: 1, display: 'flex', flexDirection: 'column'}}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                              <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#1e293b', fontWeight: '800', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.3', paddingRight: '0.5rem'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
+                              <button style={{background: '#f1f5f9', border: 'none', borderRadius: '4px', width: '28px', height: '28px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontWeight: 'bold'}}>...</button>
+                            </div>
+                            <span style={{display: 'inline-block', background: '#e0e7ff', color: '#4f46e5', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600', marginBottom: '0.8rem', width: 'fit-content'}}>{item.product_desc || 'Kategori'}</span>
+                            <p style={{fontSize: '0.85rem', color: '#64748b', margin: '0 0 1rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
                             
                             <div style={{marginTop: 'auto', display: 'flex', gap: '0.5rem'}}>
-                              <button onClick={() => handleEditBank(item)} style={{flex: 1, background: '#f8fafc', color: '#3b82f6', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600'}}>
-                                Edit
+                              <button onClick={() => handleEditBank(item)} style={{flex: 1, background: '#f8fafc', color: '#3b82f6', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'}}>
+                                ✏️ Edit
                               </button>
-                              <button onClick={() => handleDeleteBank(item.id)} style={{flex: 1, background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '6px', padding: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600'}}>
-                                Hapus
+                              <button onClick={() => handleDeleteBank(item.id)} style={{flex: 1, background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'}}>
+                                🗑️ Hapus
                               </button>
                             </div>
                           </div>
