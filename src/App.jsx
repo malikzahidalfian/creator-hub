@@ -130,6 +130,7 @@ function App() {
   const [editingBankId, setEditingBankId] = useState(null);
   const [isBankSaving, setIsBankSaving] = useState(false);
   const [activeBankCategory, setActiveBankCategory] = useState('Semua');
+  const [bankSearchQuery, setBankSearchQuery] = useState('');
 
   // --- BANK USP STATE ---
   const [isGeneratingSelling, setIsGeneratingSelling] = useState(false)
@@ -501,9 +502,22 @@ function App() {
 
   // --- BANK STORYBOARD COMPUTED DATA ---
   const uniqueBankCategories = ['Semua', ...new Set(bankStoryboardData.map(item => item.product_desc))];
-  const filteredBankData = activeBankCategory === 'Semua' ? bankStoryboardData : bankStoryboardData.filter(item => item.product_desc === activeBankCategory);
+  
+  const searchedBankData = (bankSearchQuery || '').trim() === '' 
+    ? bankStoryboardData 
+    : bankStoryboardData.filter(item => {
+        const name = (item.result || '').toLowerCase();
+        const desc = (item.product_desc || '').toLowerCase();
+        const query = (bankSearchQuery || '').toLowerCase();
+        return name.includes(query) || desc.includes(query);
+      });
+
+  const filteredBankData = activeBankCategory === 'Semua' 
+    ? searchedBankData 
+    : searchedBankData.filter(item => item.product_desc === activeBankCategory);
+    
   const groupedBankData = {};
-  bankStoryboardData.forEach(item => {
+  filteredBankData.forEach(item => {
     const cat = item.product_desc || 'Lainnya';
     if (!groupedBankData[cat]) groupedBankData[cat] = [];
     groupedBankData[cat].push(item);
@@ -3323,8 +3337,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           
           <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem'}}>
             <button 
-              className={`pill-btn ${bankFilterCat === 'All' ? 'active' : ''}`}
-              onClick={() => setBankFilterCat('All')}
+              className={`pill-btn ${activeBankCategory === 'Semua' ? 'active' : ''}`}
+              onClick={() => setActiveBankCategory('Semua')}
             >
               Semua
             </button>
@@ -3333,8 +3347,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               return (
                 <button 
                   key={idx}
-                  className={`pill-btn ${bankFilterCat === cat ? 'active' : ''}`}
-                  onClick={() => setBankFilterCat(cat)}
+                  className={`pill-btn ${activeBankCategory === cat ? 'active' : ''}`}
+                  onClick={() => setActiveBankCategory(cat)}
                 >
                   {cat} ({count})
                 </button>
