@@ -3254,10 +3254,53 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                     justifyContent: 'space-between', 
                     alignItems: 'center'
                   }}>
-                })}
-              </div>
-            )}
-          </div>
+                    <h4 style={{margin: 0, fontSize: '0.9rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '1px'}}>
+                      📁 {categoryName}
+                    </h4>
+                    <span style={{fontSize: '0.75rem', color: '#64748b', background: '#e2e8f0', padding: '0.2rem 0.6rem', borderRadius: '10px'}}>
+                      {groupedBankData[categoryName].length} aset
+                    </span>
+                  </div>
+                  <div style={{padding: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem'}}>
+                    {groupedBankData[categoryName].map(item => {
+                      let parsed = {};
+                      try { parsed = JSON.parse(item.result); } catch(e) {}
+                      return (
+                        <div key={item.id} className="fade-in" style={{
+                          display: 'flex', gap: '0.8rem', padding: '0.8rem', 
+                          background: '#fff', borderRadius: '8px', 
+                          border: '1px solid #f1f5f9',
+                          alignItems: 'center',
+                          transition: 'background 0.2s ease, box-shadow 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                        >
+                          {parsed.imgUrl && (
+                            <div style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0'}}>
+                              <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                            </div>
+                          )}
+                          <div style={{flex: 1, overflow: 'hidden'}}>
+                            <h4 style={{margin: '0 0 0.3rem 0', fontSize: '0.9rem', color: '#1e293b', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
+                            <p style={{fontSize: '0.85rem', color: '#64748b', margin: '0 0 0.5rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
+                          </div>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '0.4rem', flexShrink: 0}}>
+                            <button onClick={() => handleEditBank(item)} style={{background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
+                              Edit
+                            </button>
+                            <button onClick={() => handleDeleteBank(item.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.75rem'}}>
+                              Hapus
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
