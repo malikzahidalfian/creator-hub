@@ -3208,6 +3208,117 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 <p>Memuat galeri...</p>
               </div>
             ) : imageBankData.length > 0 ? (
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem'}}>
+                {imageBankData.map(item => (
+                  <div key={item.id} style={{background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid rgba(255,255,255,0.1)'}}>
+                    <img src={item.result} alt={item.product_desc} style={{width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.5rem'}} />
+                    <span style={{fontSize: '0.8rem', textAlign: 'center', marginBottom: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%'}}>{item.product_desc}</span>
+                    <button className="btn-secondary" onClick={() => handleCopyImage(item.result)} style={{padding: '0.3rem 0.6rem', fontSize: '0.75rem', width: '100%'}}>📋 Copy</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyStateRight />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderBankStoryboardForm = () => (
+    <div className="content-wrapper fade-in">
+      <div className="content-panel" style={{position: 'relative'}}>
+        
+        {/* Modal Pop-up */}
+        {isAddProductModalOpen && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
+          }}>
+            <div className="glass-panel input-section fade-in" style={{
+              width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto',
+              background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+            }}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                <h3 style={{color: 'var(--primary-color)', margin: 0}}>{editingBankId ? 'Edit Produk' : 'Tambah Aset Baru'}</h3>
+                <button onClick={() => {
+                  setIsAddProductModalOpen(false);
+                  setEditingBankId(null);
+                  setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory('');
+                }} style={{background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b'}}>✖</button>
+              </div>
+
+              <div className="input-group">
+                <label>Nama Produk</label>
+                <input type="text" className="api-key-input" style={{color: '#1a1a2e'}} placeholder="Contoh: Wajan Granit Anti Lengket 24cm" value={bankProductName} onChange={(e) => setBankProductName(e.target.value)} />
+              </div>
+              <div className="input-group">
+                <label>Deskripsi Produk</label>
+                <textarea placeholder="Jelaskan keunggulan / spesifikasi produk..." value={bankDesc} onChange={(e) => setBankDesc(e.target.value)} rows="4" />
+                <button 
+                  className="btn-primary" 
+                  style={{marginTop: '0.5rem', background: 'var(--active-gradient)', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem'}}
+                  onClick={handleGenerateBankUSP}
+                  disabled={!bankProductName || !bankDesc || isGeneratingSelling || !apiKey}
+                >
+                  {isGeneratingSelling ? 'Menyusun USP...' : '✨ Generate Selling Point'}
+                </button>
+                {!apiKey && <small style={{display: 'block', color: '#ef4444', marginTop: '0.3rem'}}>API Key diperlukan untuk fitur ini.</small>}
+              </div>
+              <div className="input-group">
+                <label>Link Gambar Produk (Opsional)</label>
+                <textarea className="api-key-input" placeholder={`https://cf.shopee.co.id/file/...`} value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} rows="2" />
+              </div>
+              <div className="input-group">
+                <label>Kategori Produk</label>
+                <div style={{position: 'relative'}}>
+                  <input 
+                    type="text" 
+                    className="api-key-input" 
+                    list="bank-category-list"
+                    placeholder="Ketik baru atau pilih yang sudah ada..." 
+                    value={bankCategory} 
+                    onChange={(e) => setBankCategory(e.target.value)} 
+                  />
+                  <datalist id="bank-category-list">
+                    {[...new Set(bankStoryboardData.map(item => item.product_desc))].map((cat, idx) => (
+                      <option key={idx} value={cat} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+              <button className="btn-primary generate-btn" onClick={handleSaveBank} disabled={!bankCategory || !bankProductName || isSaving} style={{width: '100%', marginTop: '1rem'}}>
+                {isSaving ? 'Menyimpan...' : (editingBankId ? '💾 Simpan Perubahan' : '💾 Simpan ke Bank')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem'}}>
+          <div>
+            <h2 className="desktop-title">🗃️ Bank Storyboard</h2>
+            <p className="subtitle">Simpan aset visual (Panci, Wajan, Produk) untuk mempermudah pembuatan Storyboard.</p>
+          </div>
+          <button className="btn-primary" onClick={() => setIsAddProductModalOpen(true)} style={{padding: '0.6rem 1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+            <span style={{fontSize: '1.2rem'}}>+</span> Tambah Produk
+          </button>
+        </div>
+
+        <div className="glass-panel" style={{padding: '1.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', boxShadow: 'none'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
+            <h3 style={{margin: 0, color: '#1e293b'}}>Aset Tersimpan ({filteredBankData.length})</h3>
+            <div style={{display: 'flex', gap: '0.5rem'}}>
+              <input 
+                type="text" 
+                placeholder="Cari aset..." 
+                className="api-key-input"
+                style={{padding: '0.4rem 0.8rem', width: '200px', margin: 0}}
+                value={bankSearchQuery}
+                onChange={(e) => setBankSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
           
           <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem'}}>
