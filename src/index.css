@@ -999,3 +999,30 @@ html, body {
 .product-card:hover {
   z-index: 10;
 }
+
+.products-grid-view {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.products-row-view {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scroll-behavior: smooth;
+}
+
+.products-row-view .product-card {
+  flex: 0 0 calc(33.333% - 0.67rem);
+}
+
+@media (max-width: 768px) {
+  .products-grid-view {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .products-row-view .product-card {
+    flex: 0 0 calc(50% - 0.5rem);
+  }
+}

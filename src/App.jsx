@@ -3379,22 +3379,13 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                       </button>
                     )}
                   </div>
-                  <div style={{
-                    display: activeBankCategory === 'Semua' ? 'flex' : 'grid', 
-                    gridTemplateColumns: activeBankCategory !== 'Semua' ? 'repeat(auto-fill, minmax(400px, 1fr))' : 'none',
-                    gap: '1rem',
-                    overflowX: activeBankCategory === 'Semua' ? 'auto' : 'visible',
-                    paddingBottom: activeBankCategory === 'Semua' ? '1rem' : '0',
-                    scrollBehavior: 'smooth'
-                  }} className="horizontal-scroll-container">
+                  <div className={`horizontal-scroll-container ${activeBankCategory === 'Semua' ? 'products-row-view' : 'products-grid-view'}`}>
                     {groupedBankData[categoryName].map(item => {
                       let parsed = {};
                       try { parsed = JSON.parse(item.result); } catch(e) {}
                       return (
                         <div key={item.id} className="fade-in product-card" style={{
-                          display: 'flex', flexDirection: 'row', 
-                          width: activeBankCategory === 'Semua' ? '420px' : 'auto',
-                          minWidth: activeBankCategory === 'Semua' ? '420px' : 'auto',
+                          display: 'flex', flexDirection: 'column', 
                           background: '#fff', borderRadius: '16px', 
                           border: '1px solid #e2e8f0',
                           overflow: 'hidden',
@@ -3406,11 +3397,11 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.03)'; }}
                         >
                           {parsed.imgUrl ? (
-                            <div style={{width: '180px', minWidth: '180px', background: '#f1f5f9'}}>
+                            <div style={{width: '100%', height: '180px', background: '#f1f5f9'}}>
                               <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                             </div>
                           ) : (
-                            <div style={{width: '180px', minWidth: '180px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8'}}>
+                            <div style={{width: '100%', height: '180px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8'}}>
                               <span style={{fontSize: '3rem'}}>📦</span>
                             </div>
                           )}
