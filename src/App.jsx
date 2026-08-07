@@ -131,6 +131,8 @@ function App() {
   const [isBankSaving, setIsBankSaving] = useState(false);
   const [activeBankCategory, setActiveBankCategory] = useState('Semua');
   const [bankSearchQuery, setBankSearchQuery] = useState('');
+  const [bankProductLink, setBankProductLink] = useState('');
+  const [selectedProductDetail, setSelectedProductDetail] = useState(null);
 
   // --- BANK USP STATE ---
   const [isGeneratingSelling, setIsGeneratingSelling] = useState(false)
@@ -442,6 +444,7 @@ function App() {
     setBankProductName(parsed.name || '');
     setBankDesc(parsed.desc || '');
     setBankImgUrl(parsed.imgUrl || '');
+    setBankProductLink(parsed.link || '');
     setIsAddProductModalOpen(true);
   };
 
@@ -450,10 +453,11 @@ function App() {
     const bankPayload = JSON.stringify({
       name: bankProductName,
       desc: bankDesc,
-      imgUrl: bankImgUrl
+      imgUrl: bankImgUrl,
+      link: bankProductLink
     });
     saveToSupabase(bankPayload, 'Bank Storyboard', bankCategory, editingBankId);
-    setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory('');
+    setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory(''); setBankProductLink('');
     setIsAddProductModalOpen(false);
   };
 
@@ -3225,6 +3229,40 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     <div className="content-wrapper fade-in">
       <div className="content-panel" style={{position: 'relative'}}>
         
+        {/* Modal Detail Produk */}
+        {selectedProductDetail && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+            background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
+          }} onClick={() => setSelectedProductDetail(null)}>
+            <div className="glass-panel fade-in" style={{
+              width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto',
+              background: '#fff', borderRadius: '16px', padding: '0',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+            }} onClick={(e) => e.stopPropagation()}>
+              <div style={{width: '100%', height: '300px', background: '#f1f5f9', position: 'relative'}}>
+                {selectedProductDetail.parsed.imgUrl ? (
+                  <img src={selectedProductDetail.parsed.imgUrl} alt={selectedProductDetail.item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                ) : (
+                  <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '4rem'}}>📦</div>
+                )}
+                <button onClick={() => setSelectedProductDetail(null)} style={{position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>✖</button>
+              </div>
+              <div style={{padding: '2rem'}}>
+                <span style={{display: 'inline-block', background: '#e0e7ff', color: '#4f46e5', padding: '0.3rem 0.8rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem'}}>{selectedProductDetail.item.product_desc || 'Kategori'}</span>
+                <h2 style={{margin: '0 0 1rem 0', color: '#1e293b', fontSize: '1.5rem', fontWeight: '800', lineHeight: '1.3'}}>{selectedProductDetail.parsed.name || 'Produk Tanpa Nama'}</h2>
+                <p style={{fontSize: '1rem', color: '#475569', lineHeight: '1.6', marginBottom: '1.5rem', whiteSpace: 'pre-wrap'}}>{selectedProductDetail.parsed.desc}</p>
+                {selectedProductDetail.parsed.link && (
+                  <a href={selectedProductDetail.parsed.link} target="_blank" rel="noreferrer" style={{display: 'inline-block', background: '#ee4d2d', color: 'white', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem'}}>
+                    🛒 Beli di Shopee
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal Pop-up */}
         {isAddProductModalOpen && (
           <div style={{
@@ -3241,7 +3279,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 <button onClick={() => {
                   setIsAddProductModalOpen(false);
                   setEditingBankId(null);
-                  setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory('');
+                  setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory(''); setBankProductLink('');
                 }} style={{background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b'}}>✖</button>
               </div>
 
@@ -3265,6 +3303,10 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               <div className="input-group">
                 <label>Link Gambar Produk (Opsional)</label>
                 <textarea className="api-key-input" placeholder={`https://cf.shopee.co.id/file/...`} value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} rows="2" />
+              </div>
+              <div className="input-group">
+                <label>Link Shopee / Tautan Produk (Opsional)</label>
+                <input type="text" className="api-key-input" placeholder={`https://shope.ee/...`} value={bankProductLink} onChange={(e) => setBankProductLink(e.target.value)} />
               </div>
               <div className="input-group">
                 <label>Kategori Produk</label>
@@ -3395,6 +3437,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.08)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.03)'; }}
+                        onClick={() => setSelectedProductDetail({item, parsed})}
                         >
                           {parsed.imgUrl ? (
                             <div style={{width: '100%', height: '180px', background: '#f1f5f9'}}>
@@ -3408,16 +3451,15 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                           <div style={{padding: '1.2rem', flex: 1, display: 'flex', flexDirection: 'column'}}>
                             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
                               <h4 style={{margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#1e293b', fontWeight: '800', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.3', paddingRight: '0.5rem'}}>{parsed.name || 'Produk Tanpa Nama'}</h4>
-                              <button style={{background: '#f1f5f9', border: 'none', borderRadius: '4px', width: '28px', height: '28px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontWeight: 'bold'}}>...</button>
                             </div>
                             <span style={{display: 'inline-block', background: '#e0e7ff', color: '#4f46e5', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600', marginBottom: '0.8rem', width: 'fit-content'}}>{item.product_desc || 'Kategori'}</span>
                             <p style={{fontSize: '0.85rem', color: '#64748b', margin: '0 0 1rem 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</p>
                             
                             <div style={{marginTop: 'auto', display: 'flex', gap: '0.5rem'}}>
-                              <button onClick={() => handleEditBank(item)} style={{flex: 1, background: '#f8fafc', color: '#3b82f6', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'}}>
+                              <button onClick={(e) => { e.stopPropagation(); handleEditBank(item); }} style={{flex: 1, background: '#f8fafc', color: '#3b82f6', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'}}>
                                 ✏️ Edit
                               </button>
-                              <button onClick={() => handleDeleteBank(item.id)} style={{flex: 1, background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'}}>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteBank(item.id); }} style={{flex: 1, background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', padding: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'}}>
                                 🗑️ Hapus
                               </button>
                             </div>
