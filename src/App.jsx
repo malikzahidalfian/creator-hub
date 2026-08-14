@@ -879,7 +879,7 @@ ${formatInstructionStr}`;
     
     try {
       let userContent = [];
-      userContent.push({ type: "text", text: `Deskripsi Produk: ${bjDesc}\nTipe Konten: ${bjType}\nJumlah Bagian Video: ${bjPromptCount}\nJumlah Scene per Bagian: ${bjSceneCount}\nInstruksi Khusus: ${bjInstruction || 'Terserah AI'}` });
+      userContent.push({ type: "text", text: `Deskripsi Produk: ${bjDesc}\nStory Angle: ${bjType}\nTotal Durasi Video: ${bjVideoDuration} Detik\nInstruksi Khusus: ${bjInstruction || 'Terserah AI'}` });
 
       if (bjFile) {
         userContent.push({ type: "image_url", image_url: { url: await fileToBase64(bjFile) } });
@@ -890,8 +890,59 @@ ${formatInstructionStr}`;
         }
       }
 
-      let systemPrompt = "";
-      
+      let systemPrompt = `Anda adalah seorang AI Video Director spesialis Storyboard Video Vertikal 9:16.
+Model/aktor utamanya adalah seorang PRIA BERJENGGOT. (Abaikan wajah pada gambar referensi, fokus HANYA pada produknya).
+
+# DYNAMIC PROMPT & SCENE SYSTEM
+
+## ATURAN PALING PENTING
+**SETIAP 1 PROMPT = TEPAT 10 DETIK VIDEO.**
+Setiap prompt akan digunakan untuk menghasilkan 1 video berdurasi 10 detik di Gemini Video.
+Jangan membuat satu prompt dengan durasi 5 detik, 15 detik, atau lainnya. Durasi setiap prompt HARUS SELALU TEPAT 10 DETIK.
+
+# TOTAL DURASI VIDEO
+Rumus: Jumlah Prompt = Total Durasi ÷ 10 Detik
+Contoh: 30 Detik -> 3 Prompt.
+(Gunakan Total Durasi Video yang diminta oleh pengguna).
+
+# JUMLAH SCENE DINAMIS
+Meskipun setiap prompt selalu berdurasi 10 detik, **jumlah scene di dalam setiap prompt TIDAK BOLEH dibuat baku.**
+Satu prompt dapat memiliki 1, 2, 3, atau 4 scene, tergantung kebutuhan cerita.
+
+# PEMBAGIAN DURASI SCENE DINAMIS
+Durasi setiap scene di dalam prompt boleh berbeda (misal 3 detik + 7 detik, atau 3 + 3 + 4 detik).
+Jumlah seluruh durasi scene dalam satu prompt HARUS tepat 10 detik.
+Gunakan scene pendek (2-4s) untuk hook/transition/reaction, scene sedang (4-6s) untuk detail/demo, dan panjang (6-8s) untuk dialog/plot.
+
+# ADAPTIVE STORYTELLING
+ANALISIS CERITA -> TENTUKAN JUMLAH SCENE -> BAGI TOTAL DURASI MENJADI 10 DETIK per prompt.
+Hapus scene yang tidak menambahkan informasi baru (SCENE ECONOMY RULE).
+
+# CONTINUITY ANTAR PROMPT
+Semua prompt harus terasa seperti satu video yang berkelanjutan. Gunakan continuity point (match movement, match position) di akhir setiap prompt agar menyambung ke prompt berikutnya.
+
+# FORMAT OUTPUT PROMPT (PENTING!)
+Pisahkan setiap Prompt HANYA dengan simbol "---".
+Output HARUS BAHASA INDONESIA.
+NARRATIVE STYLE dipilih secara otomatis agar cocok dengan Story Angle.
+
+Contoh Format per Prompt:
+
+BAGIAN [Nomor] — 10 DETIK
+
+Scene 1 — 0-X Detik
+Durasi: X detik
+VISUAL: [Deskripsi visual detail dan kontinuitas]
+VOICE OVER: "[Dialog bahasa Indonesia]"
+
+Scene 2 — X-10 Detik
+Durasi: Y detik
+VISUAL: [Deskripsi visual]
+VOICE OVER: "[Dialog]"
+
+Pastikan prompt terakhir menyelesaikan cerita (Closing + Hero Product Shot + CTA: "Klik keranjang sekarang!").`;
+
+      /*
       if (bjType.includes('Unboxing')) {
         systemPrompt = `Anda adalah seorang Sutradara Iklan dan Content Creator spesialis Unboxing Produk Estetik untuk video vertikal (9:16). Pengguna akan memberikan deskripsi dan gambar produk (opsional), beserta instruksi khusus.
 PENTING TENTANG GAMBAR: JIKA PADA GAMBAR REFERENSI TERDAPAT MANUSIA, WAJAH, ATAU TANGAN, ABAIKAN SEPENUHNYA! FOKUS HANYA PADA BENTUK PRODUKNYA SAJA. JANGAN MENGIDENTIFIKASI ORANG/WAJAH.
@@ -1276,33 +1327,6 @@ VOICE OVER: "(Dialog/narasi)"
           <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem'}}>Gunakan fitur-fitur utama dengan cepat.</p>
           
           <div className="quick-actions-row">
-            <button className="quick-action-btn" onClick={() => setActiveTab('storyboard')}>
-              <div className="quick-action-icon" style={{background: '#f3e8ff', color: '#8b5cf6'}}>🎬</div>
-              <div className="quick-action-text">
-                <div className="quick-action-title" style={{color: '#8b5cf6'}}>Storyboard Umum</div>
-                <div className="quick-action-desc">Buat storyboard AI generik</div>
-              </div>
-              <div className="quick-action-arrow" style={{background: '#f3e8ff', color: '#8b5cf6'}}>➔</div>
-            </button>
-            
-            <button className="quick-action-btn" onClick={() => setActiveTab('cooking_content')}>
-              <div className="quick-action-icon" style={{background: '#dbeafe', color: '#3b82f6'}}>🔍</div>
-              <div className="quick-action-text">
-                <div className="quick-action-title" style={{color: '#3b82f6'}}>Konten Masak</div>
-                <div className="quick-action-desc">Storyboard masakan & ASMR</div>
-              </div>
-              <div className="quick-action-arrow" style={{background: '#dbeafe', color: '#3b82f6'}}>➔</div>
-            </button>
-            
-            <button className="quick-action-btn" onClick={() => setActiveTab('bang_jenggot')}>
-              <div className="quick-action-icon" style={{background: '#ffedd5', color: '#f97316'}}>🎥</div>
-              <div className="quick-action-text">
-                <div className="quick-action-title" style={{color: '#f97316'}}>Bang Jenggot</div>
-                <div className="quick-action-desc">Video review POV narasi</div>
-              </div>
-              <div className="quick-action-arrow" style={{background: '#ffedd5', color: '#f97316'}}>➔</div>
-            </button>
-            
             <button className="quick-action-btn" onClick={() => setActiveTab('bank_storyboard')}>
               <div className="quick-action-icon" style={{background: '#d1fae5', color: '#10b981'}}>🗃️</div>
               <div className="quick-action-text">
@@ -1417,26 +1441,14 @@ VOICE OVER: "(Dialog/narasi)"
             <div className="nav-item-content"><span className="icon">🏠</span> Dashboard</div>
           </button>
           <div className="accordion-menu">
-            <button className={`nav-item ${(activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot' || activeTab === 'ugc_style' || activeTab === 'bank_gambar') ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
+            <button className={`nav-item ${activeTab === 'bang_jenggot' ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
               <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
               <span className="nav-arrow" style={{transform: isStoryboardAccordionOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s'}}>&gt;</span>
             </button>
             {isStoryboardAccordionOpen && (
               <div className="accordion-content fade-in" style={{paddingLeft: '2rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.2rem', marginBottom: '0.5rem'}}>
-                <button className={`nav-item ${activeTab === 'storyboard' ? 'active' : ''}`} onClick={() => {setActiveTab('storyboard'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
-                  <div className="nav-item-content">Umum</div>
-                </button>
-                <button className={`nav-item ${activeTab === 'cooking_content' ? 'active' : ''}`} onClick={() => {setActiveTab('cooking_content'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
-                  <div className="nav-item-content">Konten Masak</div>
-                </button>
                 <button className={`nav-item ${activeTab === 'bang_jenggot' ? 'active' : ''}`} onClick={() => {setActiveTab('bang_jenggot'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
-                  <div className="nav-item-content">Bang Jenggot</div>
-                </button>
-                <button className={`nav-item ${activeTab === 'ugc_style' ? 'active' : ''}`} onClick={() => {setActiveTab('ugc_style'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
-                  <div className="nav-item-content">UGC Style (Voice Over)</div>
-                </button>
-                <button className={`nav-item ${activeTab === 'bank_gambar' ? 'active' : ''}`} onClick={() => {setActiveTab('bank_gambar'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
-                  <div className="nav-item-content">Bank Gambar</div>
+                  <div className="nav-item-content">Bang Jenggot AI</div>
                 </button>
               </div>
             )}
@@ -2131,25 +2143,27 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
             </div>
             
             <div className="input-group">
-              <label>Tipe Konten Review</label>
+              <label>Story Angle</label>
               <select value={bjType} onChange={(e) => setBjType(e.target.value)} className="select-input">
-                <option value="Review Jujur (Ceplas-ceplos & Obyektif)">Review Jujur (Ceplas-ceplos & Obyektif)</option>
+                <option value="Direct Review (Ceplas-ceplos & Obyektif)">Direct Review (Ceplas-ceplos & Obyektif)</option>
                 <option value="Unboxing Estetik & Pemakaian Pertama">Unboxing Estetik & Pemakaian Pertama</option>
                 <option value="Sketsa Komedi POV (Lucu & Relate)">Sketsa Komedi POV (Lucu & Relate)</option>
                 <option value="Tutorial Edukasi Penggunaan">Tutorial Edukasi Penggunaan</option>
-                <option value="Konten UGC (User Generated Content)">Konten UGC (User Generated Content)</option>
                 <option value="Storytelling (Bercerita & Emosional)">Storytelling (Bercerita & Emosional)</option>
               </select>
             </div>
 
             <div className="settings-row">
               <div className="input-group" style={{flex: 1}}>
-                <label>Berapa Bagian Video?</label>
-                <input type="number" min="1" max="5" value={bjPromptCount} onChange={(e) => setBjPromptCount(e.target.value)} className="select-input" />
-              </div>
-              <div className="input-group" style={{flex: 1}}>
-                <label>Scene per Bagian?</label>
-                <input type="number" min="2" max="6" value={bjSceneCount} onChange={(e) => setBjSceneCount(e.target.value)} className="select-input" />
+                <label>Total Durasi Video (Detik)</label>
+                <select value={bjVideoDuration} onChange={(e) => setBjVideoDuration(e.target.value)} className="select-input">
+                  <option value="10">10 Detik (1 Prompt)</option>
+                  <option value="20">20 Detik (2 Prompt)</option>
+                  <option value="30">30 Detik (3 Prompt)</option>
+                  <option value="40">40 Detik (4 Prompt)</option>
+                  <option value="50">50 Detik (5 Prompt)</option>
+                  <option value="60">60 Detik (6 Prompt)</option>
+                </select>
               </div>
             </div>
 
@@ -3975,11 +3989,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           <h2>Creator Hub AI</h2>
         </div>
         {activeTab === 'dashboard' && renderDashboard()}
-        {activeTab === 'storyboard' && renderStoryboardForm()}
-        {activeTab === 'cooking_content' && renderCookingContentForm()}
         {activeTab === 'bang_jenggot' && renderBangJenggotForm()}
-        {activeTab === 'ugc_style' && renderUgcForm()}
-        {activeTab === 'bank_gambar' && renderImageBankForm()}
         {activeTab === 'bank_storyboard' && renderBankStoryboardForm()}
 
         {activeTab === 'video_script' && renderVideoScriptForm()}
