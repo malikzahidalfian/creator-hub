@@ -1217,6 +1217,7 @@ VOICE OVER: "(Dialog/narasi)"
 
 ... (hingga ${bjSceneCount} Scene)`;
       }
+      */
 
       const response = await fetch("/api/generate", {
         method: "POST",
