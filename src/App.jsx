@@ -915,6 +915,13 @@ ${formatInstructionStr}`;
 Karakter utamanya adalah seorang PRIA BERJENGGOT. 
 PENTING TENTANG GAMBAR REFERENSI: Jangan mengidentifikasi identitas asli orang di dalam gambar, perlakukan mereka sebagai aktor generik/anonim. Gambar HANYA digunakan untuk memahami bentuk produk atau referensi pakaian/pose.
 
+# CINEMATIC VISUAL PROMPT REQUIREMENT (SANGAT PENTING!)
+Bagian "VISUAL" HARUS ditulis SANGAT DETAIL seperti prompt Midjourney/Sora/Runway/Kling!
+- Selalu deskripsikan pose model, gestur tubuh, pakaian, dan aksi spesifik secara lengkap.
+- Selalu sebutkan tipe bidikan & pergerakan kamera (misal: medium full shot, close up, smooth tracking, slow push-in, pan, tilt).
+- Selalu sebutkan gaya pencahayaan dan estetika sinematik (misal: cahaya outdoor lembut, realistic shadows, cinematic depth of field, photorealistic, 4k, natural fabric movement).
+- Minimal 3-5 kalimat padat dan mendetail untuk SETIAP blok visual. DILARANG KERAS membuat visual yang singkat, kaku, dan sederhana!
+
 # DYNAMIC PROMPT & SCENE SYSTEM
 
 ## ATURAN PALING PENTING
@@ -954,12 +961,12 @@ BAGIAN [Nomor] — 10 DETIK
 
 Scene 1 — 0-X Detik
 Durasi: X detik
-VISUAL: [Deskripsi visual detail dan kontinuitas]
+VISUAL: [Tulis prompt visual SUPER DETAIL di sini (pergerakan kamera, angle, pencahayaan, latar belakang, gestur karakter, gaya sinematik). Minimal 3 kalimat.]
 VOICE OVER: "[Dialog bahasa Indonesia]"
 
 Scene 2 — X-10 Detik
 Durasi: Y detik
-VISUAL: [Deskripsi visual]
+VISUAL: [Tulis prompt visual SUPER DETAIL di sini (pergerakan kamera, angle, dll). Minimal 3 kalimat.]
 VOICE OVER: "[Dialog]"
 
 Pastikan prompt terakhir menyelesaikan cerita (Closing + Hero Product Shot + CTA: "Klik keranjang sekarang!").`;
@@ -3391,11 +3398,11 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
           }} onClick={() => setSelectedProductDetail(null)}>
             <div className="glass-panel fade-in" style={{
-              width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto',
+              width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto',
               background: '#fff', borderRadius: '16px', padding: '0',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column'
             }} onClick={(e) => e.stopPropagation()}>
-              <div style={{width: '100%', height: '300px', background: '#f1f5f9', position: 'relative'}}>
+              <div style={{width: '100%', height: '250px', background: '#f1f5f9', position: 'relative', flexShrink: 0}}>
                 {selectedProductDetail.parsed.imgUrl ? (
                   <img src={selectedProductDetail.parsed.imgUrl} alt={selectedProductDetail.item.product_desc} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                 ) : (
@@ -3403,10 +3410,17 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 )}
                 <button onClick={() => setSelectedProductDetail(null)} style={{position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>✖</button>
               </div>
-              <div style={{padding: '2rem'}}>
+              <div style={{padding: '2rem', flex: 1}}>
                 <span style={{display: 'inline-block', background: '#e0e7ff', color: '#4f46e5', padding: '0.3rem 0.8rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem'}}>{selectedProductDetail.item.product_desc || 'Kategori'}</span>
                 <h2 style={{margin: '0 0 1rem 0', color: '#1e293b', fontSize: '1.5rem', fontWeight: '800', lineHeight: '1.3'}}>{selectedProductDetail.parsed.name || 'Produk Tanpa Nama'}</h2>
-                <p style={{fontSize: '1rem', color: '#475569', lineHeight: '1.6', marginBottom: '1.5rem', whiteSpace: 'pre-wrap'}}>{selectedProductDetail.parsed.desc}</p>
+                
+                <div style={{background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem', maxHeight: '300px', overflowY: 'auto'}}>
+                  <h4 style={{marginTop: 0, marginBottom: '0.5rem', color: '#334155'}}>Data & Selling Point:</h4>
+                  <pre style={{fontSize: '0.9rem', color: '#475569', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordWrap: 'break-word', fontFamily: 'inherit', margin: 0}}>
+                    {selectedProductDetail.parsed.desc}
+                  </pre>
+                </div>
+
                 {selectedProductDetail.parsed.link && (
                   <a href={selectedProductDetail.parsed.link} target="_blank" rel="noreferrer" style={{display: 'inline-block', background: '#ee4d2d', color: 'white', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem'}}>
                     🛒 Beli di Shopee
@@ -3442,15 +3456,21 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 <input type="text" className="api-key-input" style={{color: '#1a1a2e'}} placeholder="Contoh: Wajan Granit Anti Lengket 24cm" value={bankProductName} onChange={(e) => setBankProductName(e.target.value)} />
               </div>
               <div className="input-group">
-                <label>Deskripsi Produk</label>
-                <textarea placeholder="Jelaskan keunggulan / spesifikasi produk..." value={bankDesc} onChange={(e) => setBankDesc(e.target.value)} rows="4" />
+                <label>Data & Selling Point Produk Lengkap (Bisa Copy-Paste dari ChatGPT)</label>
+                <textarea 
+                  placeholder="Paste hasil Selling Point dari ChatGPT di sini, atau jelaskan produk secara manual..." 
+                  value={bankDesc} 
+                  onChange={(e) => setBankDesc(e.target.value)} 
+                  rows="15" 
+                  style={{fontFamily: 'monospace', fontSize: '0.9rem'}}
+                />
                 <button 
                   className="btn-primary" 
                   style={{marginTop: '0.5rem', background: 'var(--active-gradient)', border: 'none', padding: '0.5rem 1rem', fontSize: '0.85rem'}}
                   onClick={handleGenerateBankUSP}
                   disabled={!bankProductName || !bankDesc || isGeneratingSelling || !apiKey}
                 >
-                  {isGeneratingSelling ? 'Menyusun USP...' : '✨ Generate Selling Point'}
+                  {isGeneratingSelling ? 'Menyusun USP...' : '✨ Generate Selling Point (Otomatis)'}
                 </button>
                 {!apiKey && <small style={{display: 'block', color: '#ef4444', marginTop: '0.3rem'}}>API Key diperlukan untuk fitur ini.</small>}
               </div>
