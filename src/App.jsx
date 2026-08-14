@@ -64,6 +64,7 @@ function App() {
   const [bjType, setBjType] = useState('Review Jujur (Ceplas-ceplos & Obyektif)')
   const [bjPromptCount, setBjPromptCount] = useState('2')
   const [bjSceneCount, setBjSceneCount] = useState('4')
+  const [bjVideoDuration, setBjVideoDuration] = useState('30')
   const [isGeneratingBj, setIsGeneratingBj] = useState(false)
   const [generatedBj, setGeneratedBj] = useState(null)
 
