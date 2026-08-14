@@ -912,7 +912,8 @@ ${formatInstructionStr}`;
       });
 
       let systemPrompt = `Anda adalah seorang AI Video Director spesialis Storyboard Video Vertikal 9:16.
-Model/aktor utamanya adalah seorang PRIA BERJENGGOT. (Abaikan wajah pada gambar referensi, fokus HANYA pada produknya).
+Karakter utamanya adalah seorang PRIA BERJENGGOT. 
+PENTING TENTANG GAMBAR REFERENSI: Jangan mengidentifikasi identitas asli orang di dalam gambar, perlakukan mereka sebagai aktor generik/anonim. Gambar HANYA digunakan untuk memahami bentuk produk atau referensi pakaian/pose.
 
 # DYNAMIC PROMPT & SCENE SYSTEM
 
