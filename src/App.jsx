@@ -59,12 +59,16 @@ function App() {
   // --- BANG JENGGOT STATES ---
   const [bjImage, setBjImage] = useState(null)
   const [bjFile, setBjFile] = useState(null)
+  const [bjModelImage, setBjModelImage] = useState(null)
+  const [bjModelFile, setBjModelFile] = useState(null)
   const [bjDesc, setBjDesc] = useState('')
   const [bjInstruction, setBjInstruction] = useState('')
-  const [bjType, setBjType] = useState('Review Jujur (Ceplas-ceplos & Obyektif)')
+  const [bjAngles, setBjAngles] = useState(['Direct Review (Ceplas-ceplos & Obyektif)'])
   const [bjPromptCount, setBjPromptCount] = useState('2')
   const [bjSceneCount, setBjSceneCount] = useState('4')
   const [bjVideoDuration, setBjVideoDuration] = useState('30')
+  const [isBjProductModalOpen, setIsBjProductModalOpen] = useState(false)
+  const [selectedBjFolder, setSelectedBjFolder] = useState(null)
   const [isGeneratingBj, setIsGeneratingBj] = useState(false)
   const [generatedBj, setGeneratedBj] = useState(null)
 
@@ -128,6 +132,7 @@ function App() {
   const [bankDesc, setBankDesc] = useState('');
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [bankImgUrl, setBankImgUrl] = useState('');
+  const [bankModelImgUrl, setBankModelImgUrl] = useState('');
   const [editingBankId, setEditingBankId] = useState(null);
   const [isBankSaving, setIsBankSaving] = useState(false);
   const [activeBankCategory, setActiveBankCategory] = useState('Semua');
@@ -439,12 +444,13 @@ function App() {
 
   const handleEditBank = (item) => {
     setEditingBankId(item.id);
-    setBankCategory(item.product_desc || '');
+    setBankCategory(item.product_desc);
     let parsed = {};
     try { parsed = JSON.parse(item.result); } catch(e) {}
     setBankProductName(parsed.name || '');
     setBankDesc(parsed.desc || '');
     setBankImgUrl(parsed.imgUrl || '');
+    setBankModelImgUrl(parsed.modelImgUrl || '');
     setBankProductLink(parsed.link || '');
     setIsAddProductModalOpen(true);
   };
@@ -455,10 +461,11 @@ function App() {
       name: bankProductName,
       desc: bankDesc,
       imgUrl: bankImgUrl,
+      modelImgUrl: bankModelImgUrl,
       link: bankProductLink
     });
     saveToSupabase(bankPayload, 'Bank Storyboard', bankCategory, editingBankId);
-    setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory(''); setBankProductLink('');
+    setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankModelImgUrl(''); setBankCategory(''); setBankProductLink('');
     setIsAddProductModalOpen(false);
   };
 
@@ -879,17 +886,30 @@ ${formatInstructionStr}`;
     setGeneratedBj(null)
     
     try {
-      let userContent = [];
-      userContent.push({ type: "text", text: `Deskripsi Produk: ${bjDesc}\nStory Angle: ${bjType}\nTotal Durasi Video: ${bjVideoDuration} Detik\nInstruksi Khusus: ${bjInstruction || 'Terserah AI'}` });
-
-      if (bjFile) {
-        userContent.push({ type: "image_url", image_url: { url: await fileToBase64(bjFile) } });
-      } else if (bjImage && typeof bjImage === 'string') {
-        const urls = bjImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
-        for (const u of urls) {
-          userContent.push({ type: "image_url", image_url: { url: u } });
-        }
+      if (bjAngles.length === 0) {
+        alert("Pilih minimal 1 Story Angle.");
+        setIsGeneratingBj(false);
+        return;
       }
+
+      const availableAngles = [
+        "Direct Review (Ceplas-ceplos & Obyektif)",
+        "Unboxing Estetik & Pemakaian Pertama",
+        "Sketsa Komedi POV (Lucu & Relate)",
+        "Tutorial Edukasi Penggunaan",
+        "Storytelling (Bercerita & Emosional)"
+      ];
+
+      // Resolve "Random" options
+      const finalAnglesToGenerate = [];
+      bjAngles.forEach(angle => {
+        if (angle === 'Random') {
+          const randomAngle = availableAngles[Math.floor(Math.random() * availableAngles.length)];
+          finalAnglesToGenerate.push(randomAngle);
+        } else {
+          finalAnglesToGenerate.push(angle);
+        }
+      });
 
       let systemPrompt = `Anda adalah seorang AI Video Director spesialis Storyboard Video Vertikal 9:16.
 Model/aktor utamanya adalah seorang PRIA BERJENGGOT. (Abaikan wajah pada gambar referensi, fokus HANYA pada produknya).
@@ -1219,30 +1239,54 @@ VOICE OVER: "(Dialog/narasi)"
       }
       */
 
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-          "X-Provider": "1inference"
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userContent }
-          ],
-          temperature: 0.8
-        })
-      });
+      const results = await Promise.all(finalAnglesToGenerate.map(async (angle) => {
+        let userContent = [];
+        userContent.push({ type: "text", text: `Deskripsi Produk: ${bjDesc}\nStory Angle: ${angle}\nTotal Durasi Video: ${bjVideoDuration} Detik\nInstruksi Khusus: ${bjInstruction || 'Terserah AI'}` });
 
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        if (bjFile) {
+          userContent.push({ type: "image_url", image_url: { url: await fileToBase64(bjFile) } });
+        } else if (bjImage && typeof bjImage === 'string') {
+          const urls = bjImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+          for (const u of urls) {
+            userContent.push({ type: "image_url", image_url: { url: u } });
+          }
+        }
 
-      const data = await response.json();
-      let generatedText = data.choices[0].message.content.trim().replace(/\*\*/g, ""); 
-      
-      const blocks = generatedText.split('---').map(b => b.trim()).filter(b => b.length > 0);
-      setGeneratedBj(blocks);
+        if (bjModelFile) {
+          userContent.push({ type: "image_url", image_url: { url: await fileToBase64(bjModelFile) } });
+        } else if (bjModelImage && typeof bjModelImage === 'string') {
+          const urls = bjModelImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
+          for (const u of urls) {
+            userContent.push({ type: "image_url", image_url: { url: u } });
+          }
+        }
+
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+            "X-Provider": "1inference"
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userContent }
+            ],
+            temperature: 0.8
+          })
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+        const data = await response.json();
+        let generatedText = data.choices[0].message.content.trim().replace(/\*\*/g, ""); 
+        const blocks = generatedText.split('---').map(b => b.trim()).filter(b => b.length > 0);
+        return { angle, blocks };
+      }));
+
+      setGeneratedBj(results);
     } catch (error) {
       alert("Error: " + error.message);
     } finally {
@@ -2069,37 +2113,15 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
             <h3 className="section-title">Pengaturan Konten</h3>
             
             <div className="input-group">
-              <label><span className="icon">📦</span> PILIH DARI BANK STORYBOARD (AUTO-FILL)</label>
-              <select className="select-input" onChange={(e) => {
-                const selectedId = e.target.value;
-                if (!selectedId) {
-                  setBjDesc(''); setBjImage(null); setBjFile(null);
-                } else {
-                  const item = bankStoryboardData.find(d => d.id == selectedId);
-                  if (item) {
-                    let parsed = {};
-                    try { parsed = JSON.parse(item.result); } catch(e) {}
-                    setBjDesc(`${item.product_desc} - ${parsed.desc || ''}`);
-                    if (parsed.imgUrl) {
-                      setBjImage(parsed.imgUrl);
-                      setBjFile(null); 
-                    }
-                  }
-                }
-              }}>
-                <option value="">-- Kosongkan (Isi Manual) --</option>
-                {Object.keys(groupedBankData).map(cat => (
-                  <optgroup key={cat} label={`📁 ${cat}`}>
-                    {groupedBankData[cat].map(item => {
-                      let parsed = {};
-                      try { parsed = JSON.parse(item.result); } catch(e) {}
-                      return (
-                        <option key={item.id} value={item.id}>{parsed.name || (parsed.desc ? parsed.desc.substring(0, 40) + '...' : 'Tanpa Nama')}</option>
-                      )
-                    })}
-                  </optgroup>
-                ))}
-              </select>
+              <label><span className="icon">📦</span> DATA PRODUK</label>
+              <button 
+                className="btn-secondary" 
+                onClick={() => { setIsBjProductModalOpen(true); setSelectedBjFolder(null); }}
+                style={{ width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span>Pilih dari Bank Produk (Auto-fill)</span>
+                <span>📂</span>
+              </button>
             </div>
             
             <div className="input-group">
@@ -2134,6 +2156,37 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
             </div>
 
             <div className="input-group">
+              <label>Gambar Model / Karakter (Opsional)</label>
+              <div className="image-upload-wrapper">
+              {bjModelImage ? (
+                <div className="image-preview" style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                  {bjModelImage.startsWith('http') ? (
+                    bjModelImage.split(/[\n,]+/).map((u, i) => u.trim() && u.startsWith('http') && <img key={i} src={u.trim()} alt="Preview" style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} />)
+                  ) : (
+                    <img src={bjModelImage} alt="Preview" style={{width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px'}} />
+                  )}
+                  <button className="btn-secondary" style={{alignSelf: 'center'}} onClick={() => { setBjModelImage(null); setBjModelFile(null); }}>Hapus / Ganti Gambar Model</button>
+                </div>
+              ) : (
+                <label className="upload-placeholder">
+                  <input type="file" accept="image/*" onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      setBjModelFile(file);
+                      const reader = new FileReader();
+                      reader.onload = (e) => setBjModelImage(e.target.result);
+                      reader.readAsDataURL(file);
+                    }
+                  }} hidden />
+                  <span className="upload-icon">🧔</span>
+                  <span>Klik untuk upload gambar model</span>
+                  <small>Referensi wajah untuk AI</small>
+                </label>
+              )}
+              </div>
+            </div>
+
+            <div className="input-group">
               <label>Deskripsi Produk (Wajib)</label>
               <textarea 
                 className="text-input" 
@@ -2145,14 +2198,33 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
             </div>
             
             <div className="input-group">
-              <label>Story Angle</label>
-              <select value={bjType} onChange={(e) => setBjType(e.target.value)} className="select-input">
-                <option value="Direct Review (Ceplas-ceplos & Obyektif)">Direct Review (Ceplas-ceplos & Obyektif)</option>
-                <option value="Unboxing Estetik & Pemakaian Pertama">Unboxing Estetik & Pemakaian Pertama</option>
-                <option value="Sketsa Komedi POV (Lucu & Relate)">Sketsa Komedi POV (Lucu & Relate)</option>
-                <option value="Tutorial Edukasi Penggunaan">Tutorial Edukasi Penggunaan</option>
-                <option value="Storytelling (Bercerita & Emosional)">Storytelling (Bercerita & Emosional)</option>
-              </select>
+              <label>Story Angle (Pilih satu atau lebih)</label>
+              <div className="checkbox-group" style={{display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--glass-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--glass-border)'}}>
+                {[
+                  "Direct Review (Ceplas-ceplos & Obyektif)",
+                  "Unboxing Estetik & Pemakaian Pertama",
+                  "Sketsa Komedi POV (Lucu & Relate)",
+                  "Tutorial Edukasi Penggunaan",
+                  "Storytelling (Bercerita & Emosional)",
+                  "Random"
+                ].map(angle => (
+                  <label key={angle} style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem'}}>
+                    <input 
+                      type="checkbox" 
+                      checked={bjAngles.includes(angle)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setBjAngles([...bjAngles, angle]);
+                        } else {
+                          setBjAngles(bjAngles.filter(a => a !== angle));
+                        }
+                      }}
+                      style={{width: '1.2rem', height: '1.2rem', cursor: 'pointer'}}
+                    />
+                    {angle}
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div className="settings-row">
@@ -2188,20 +2260,27 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
           <div className="glass-panel output-section">
           {generatedBj ? (
             <div className="results-container">
-              {generatedBj.map((promptText, index) => (
-                <div key={index} className="prompt-card fade-in">
-                  <div className="prompt-header">
-                    <h3>Bagian {index + 1}</h3>
-                    <button className="btn-copy" onClick={() => handleCopy(promptText, index)}>
-                      {copiedIndex === index ? '✅ Copied!' : '📋 Copy'}
-                    </button>
-                  </div>
-                  <pre className="prompt-content" style={{whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word'}}>{promptText}</pre>
+              {generatedBj.map((resultGroup, gIndex) => (
+                <div key={gIndex} className="angle-group" style={{marginBottom: '2rem'}}>
+                  <h3 style={{padding: '0.5rem 1rem', background: 'var(--glass-border)', borderRadius: '8px', marginBottom: '1rem'}}>
+                    🎭 Story Angle: {resultGroup.angle}
+                  </h3>
+                  {resultGroup.blocks.map((promptText, index) => (
+                    <div key={index} className="prompt-card fade-in">
+                      <div className="prompt-header">
+                        <h3>Bagian {index + 1}</h3>
+                        <button className="btn-copy" onClick={() => handleCopy(promptText, `${gIndex}-${index}`)}>
+                          {copiedIndex === `${gIndex}-${index}` ? '✅ Copied!' : '📋 Copy'}
+                        </button>
+                      </div>
+                      <pre className="prompt-content" style={{whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word'}}>{promptText}</pre>
+                    </div>
+                  ))}
                 </div>
               ))}
               
               <div className="action-buttons-bottom" style={{marginTop: '1rem', display: 'flex', gap: '1rem'}}>
-                <button className="btn-secondary" onClick={() => saveToSupabase(generatedBj, 'Bang Jenggot', bjDesc)} disabled={isSaving} style={{flex: 1}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(JSON.stringify(generatedBj), 'Bang Jenggot', bjDesc)} disabled={isSaving} style={{flex: 1}}>
                   {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
                 </button>
               </div>
@@ -2210,6 +2289,64 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
           </div>
         </div>
       </div>
+
+      {isBjProductModalOpen && (
+        <div className="modal-overlay fade-in" onClick={() => setIsBjProductModalOpen(false)} style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+          <div className="modal-content glass-panel" onClick={(e) => e.stopPropagation()} style={{width: '90%', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto', padding: '2rem'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem'}}>
+              <h2>{selectedBjFolder ? `📂 ${selectedBjFolder}` : '📦 Pilih Kategori Produk'}</h2>
+              <button onClick={() => setIsBjProductModalOpen(false)} style={{background: 'transparent', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer'}}>×</button>
+            </div>
+
+            {!selectedBjFolder ? (
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem'}}>
+                {Object.keys(groupedBankData).map(cat => (
+                  <div key={cat} onClick={() => setSelectedBjFolder(cat)} className="folder-card" style={{padding: '1.5rem 1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', cursor: 'pointer', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)', transition: 'transform 0.2s, background 0.2s'}}>
+                    <div style={{fontSize: '3rem', marginBottom: '0.5rem'}}>📁</div>
+                    <div style={{fontWeight: 'bold', fontSize: '0.9rem'}}>{cat}</div>
+                    <div style={{fontSize: '0.8rem', color: '#aaa', marginTop: '0.3rem'}}>{groupedBankData[cat].length} Produk</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>
+                <button onClick={() => setSelectedBjFolder(null)} className="btn-secondary" style={{marginBottom: '1rem'}}>⬅️ Kembali ke Kategori</button>
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem'}}>
+                  {groupedBankData[selectedBjFolder].map(item => {
+                    let parsed = {};
+                    try { parsed = JSON.parse(item.result); } catch(e) {}
+                    const img = parsed.imgUrl ? (parsed.imgUrl.startsWith('http') ? parsed.imgUrl.split(/[\n,]+/)[0].trim() : parsed.imgUrl) : null;
+                    const name = parsed.name || (parsed.desc ? parsed.desc.substring(0, 40) + '...' : 'Tanpa Nama');
+                    return (
+                      <div key={item.id} onClick={() => {
+                        setBjDesc(`${item.product_desc} - ${parsed.desc || ''}`);
+                        if (parsed.imgUrl) {
+                          setBjImage(parsed.imgUrl);
+                          setBjFile(null); 
+                        }
+                        if (parsed.modelImgUrl) {
+                          setBjModelImage(parsed.modelImgUrl);
+                          setBjModelFile(null);
+                        }
+                        setIsBjProductModalOpen(false);
+                      }} className="product-card fade-in" style={{background: 'rgba(255,255,255,0.05)', borderRadius: '12px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', transition: 'transform 0.2s'}}>
+                        {img ? (
+                          <img src={img} style={{width: '100%', height: '150px', objectFit: 'cover'}} alt={name} />
+                        ) : (
+                          <div style={{width: '100%', height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.1)', fontSize: '3rem'}}>📦</div>
+                        )}
+                        <div style={{padding: '1rem'}}>
+                          <div style={{fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.5rem'}}>{name}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -3319,6 +3456,10 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               <div className="input-group">
                 <label>Link Gambar Produk (Opsional)</label>
                 <textarea className="api-key-input" placeholder={`https://cf.shopee.co.id/file/...`} value={bankImgUrl} onChange={(e) => setBankImgUrl(e.target.value)} rows="2" />
+              </div>
+              <div className="input-group">
+                <label>Link Gambar Model (Opsional)</label>
+                <textarea className="api-key-input" placeholder={`https://...`} value={bankModelImgUrl} onChange={(e) => setBankModelImgUrl(e.target.value)} rows="2" />
               </div>
               <div className="input-group">
                 <label>Link Shopee / Tautan Produk (Opsional)</label>
