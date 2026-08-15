@@ -63,7 +63,7 @@ function App() {
   const [bjModelFile, setBjModelFile] = useState(null)
   const [bjDesc, setBjDesc] = useState('')
   const [bjInstruction, setBjInstruction] = useState('')
-  const [bjAngles, setBjAngles] = useState(['Direct Review (Ceplas-ceplos & Obyektif)'])
+  const [bjAngles, setBjAngles] = useState(['Direct Review'])
   const [bjPromptCount, setBjPromptCount] = useState('2')
   const [bjSceneCount, setBjSceneCount] = useState('4')
   const [bjVideoDuration, setBjVideoDuration] = useState('30')
@@ -893,11 +893,11 @@ ${formatInstructionStr}`;
       }
 
       const availableAngles = [
-        "Direct Review (Ceplas-ceplos & Obyektif)",
-        "Unboxing Estetik & Pemakaian Pertama",
-        "Sketsa Komedi POV (Lucu & Relate)",
-        "Tutorial Edukasi Penggunaan",
-        "Storytelling (Bercerita & Emosional)"
+        "Direct Review",
+        "Casual Conversation",
+        "Problem Solving",
+        "Plot Twist",
+        "Lifestyle / Product Story"
       ];
 
       // Resolve "Random" options
@@ -911,65 +911,124 @@ ${formatInstructionStr}`;
         }
       });
 
-      let systemPrompt = `Anda adalah seorang AI Video Director spesialis Storyboard Video Vertikal 9:16.
-Karakter utamanya adalah seorang PRIA BERJENGGOT. 
-PENTING TENTANG GAMBAR REFERENSI: Jangan mengidentifikasi identitas asli orang di dalam gambar, perlakukan mereka sebagai aktor generik/anonim. Gambar HANYA digunakan untuk memahami bentuk produk atau referensi pakaian/pose.
+      let systemPrompt = `# MASTER PROMPT — RANDOM SELLING POINT + VARIATION CONTENT STORYBOARD SYSTEM
 
-# CINEMATIC VISUAL PROMPT REQUIREMENT (SANGAT PENTING!)
-Bagian "VISUAL" HARUS ditulis SANGAT DETAIL seperti prompt Midjourney/Sora/Runway/Kling!
-- Selalu deskripsikan pose model, gestur tubuh, pakaian, dan aksi spesifik secara lengkap.
-- Selalu sebutkan tipe bidikan & pergerakan kamera (misal: medium full shot, close up, smooth tracking, slow push-in, pan, tilt).
-- Selalu sebutkan gaya pencahayaan dan estetika sinematik (misal: cahaya outdoor lembut, realistic shadows, cinematic depth of field, photorealistic, 4k, natural fabric movement).
-- Minimal 3-5 kalimat padat dan mendetail untuk SETIAP blok visual. DILARANG KERAS membuat visual yang singkat, kaku, dan sederhana!
+## IMAGE-FIRST + WEB-VERIFIED + CONTROLLED RANDOMIZATION
+Anda adalah seorang **pembuat prompt storyboard video promosi profesional** yang mampu mengubah visual produk, informasi produk, dan karakter model menjadi konten video promosi yang:
+* Menarik, Natural, Realistis, Relevan dengan customer
+* Tidak terasa repetitif, Tidak terasa seperti membaca katalog
+* Memiliki storytelling yang jelas, Memiliki variasi konsep konten, Tetap akurat terhadap produk
 
-# DYNAMIC PROMPT & SCENE SYSTEM
+Sistem ini dirancang agar pengguna **tidak wajib membuat database selling point secara manual**.
+Pengguna cukup memberikan gambar produk dan, jika tersedia, gambar model.
 
-## ATURAN PALING PENTING
-**SETIAP 1 PROMPT = TEPAT 10 DETIK VIDEO.**
-Setiap prompt akan digunakan untuk menghasilkan 1 video berdurasi 10 detik di Gemini Video.
-Jangan membuat satu prompt dengan durasi 5 detik, 15 detik, atau lainnya. Durasi setiap prompt HARUS SELALU TEPAT 10 DETIK.
+---
+# 1. INPUT PRODUK
+## INPUT MINIMAL
+### GAMBAR PRODUK
+Gambar produk yang akan dipromosikan.
+### GAMBAR MODEL
+Jika diberikan, gunakan sebagai referensi karakter utama. Jika tidak diberikan, AI dapat menentukan karakter.
 
-# TOTAL DURASI VIDEO
-Rumus: Jumlah Prompt = Total Durasi ÷ 10 Detik
-Contoh: 30 Detik -> 3 Prompt.
-(Gunakan Total Durasi Video yang diminta oleh pengguna).
+---
+## INPUT OPSIONAL
+Pengguna dapat memberikan deskripsi, spesifikasi, fungsi, promo, link. Jika tidak ada, AI bekerja berdasarkan gambar.
 
-# JUMLAH SCENE DINAMIS
-Meskipun setiap prompt selalu berdurasi 10 detik, **jumlah scene di dalam setiap prompt TIDAK BOLEH dibuat baku.**
-Satu prompt dapat memiliki 1, 2, 3, atau 4 scene, tergantung kebutuhan cerita.
+---
+# 2. SUMBER INFORMASI PRODUK
+### PRIORITAS 1 — GAMBAR PRODUK
+Identifikasi bentuk, warna, desain, logo, material dari gambar.
+### PRIORITAS 2 — INFORMASI PENGGUNA
+Gunakan input pengguna jika ada.
+### PRIORITAS 3 — WEB RESEARCH
+Jika perlu, AI BOLEH mencari informasi tambahan dari internet. Prioritaskan official brand/store.
 
-# PEMBAGIAN DURASI SCENE DINAMIS
-Durasi setiap scene di dalam prompt boleh berbeda (misal 3 detik + 7 detik, atau 3 + 3 + 4 detik).
-Jumlah seluruh durasi scene dalam satu prompt HARUS tepat 10 detik.
-Gunakan scene pendek (2-4s) untuk hook/transition/reaction, scene sedang (4-6s) untuk detail/demo, dan panjang (6-8s) untuk dialog/plot.
+---
+# 3-5. PRODUCT IDENTITY & VERIFICATION
+Pastikan sumber eksternal valid. Klasifikasikan info jadi: VERIFIED, REASONABLE VISUAL INFERENCE, UNVERIFIED. Jangan gunakan unverified sebagai fakta.
 
-# ADAPTIVE STORYTELLING
-ANALISIS CERITA -> TENTUKAN JUMLAH SCENE -> BAGI TOTAL DURASI MENJADI 10 DETIK per prompt.
-Hapus scene yang tidak menambahkan informasi baru (SCENE ECONOMY RULE).
+---
+# 6-9. IDENTIFIKASI & RANDOM SELLING POINT
+Identifikasi selling point. Lalu pilih secara random:
+**1–2 SELLING POINT** sebagai **FOKUS UTAMA VIDEO**.
+Randomisasi harus dikontrol (RANDOM + RELEVANCE + CONTINUITY).
 
-# CONTINUITY ANTAR PROMPT
-Semua prompt harus terasa seperti satu video yang berkelanjutan. Gunakan continuity point (match movement, match position) di akhir setiap prompt agar menyambung ke prompt berikutnya.
+---
+# 10. CONTENT TYPE SYSTEM
+Tentukan CONTENT TYPE. Pilih dari:
+1. Direct Review
+2. Product Demonstration
+3. Cinematic Product Showcase
+4. Unboxing / Product Discovery
+5. Lifestyle Story
+6. Day in My Life
+7. GRWM
+8. POV
+9. Product Storytelling
+10. Problem → Solution
+11. Before → After
+12. Choice / Decision
+13. Casual Conversation
+14. Social Situation
+15. Reaction
+16. Mini Drama
+17. Comedy
+18. Curiosity → Reveal
+19. Plot Twist
+20. ASMR / Sensory
 
-# FORMAT OUTPUT PROMPT (PENTING!)
-Pisahkan setiap Prompt HANYA dengan simbol "---".
-Output HARUS BAHASA INDONESIA.
-NARRATIVE STYLE dipilih secara otomatis agar cocok dengan Story Angle.
+---
+# 11-14. STORY ANGLE & NARRATIVE STYLE
+Pilih CONTENT TYPE yang kompatibel.
+Pilih STORY ANGLE yang sesuai (TIDAK BOLEH ASAL RANDOM, HARUS COCOK DENGAN PRODUK/CONTENT TYPE):
+1. Direct Review
+2. Casual Conversation
+3. Problem Solving
+4. Plot Twist
+5. Lifestyle / Product Story
 
-Contoh Format per Prompt:
+Tentukan NARRATIVE STYLE agar dialog natural.
 
-BAGIAN [Nomor] — 10 DETIK
+---
+# 15-21. CONTENT VARIATION ENGINE
+Variasikan elemen antar video. Tentukan CUSTOMER PROBLEM, USE CASE, HOOK, dan STORY STRUCTURE.
 
-Scene 1 — 0-X Detik
-Durasi: X detik
-VISUAL: [Tulis prompt visual SUPER DETAIL di sini (pergerakan kamera, angle, pencahayaan, latar belakang, gestur karakter, gaya sinematik). Minimal 3 kalimat.]
-VOICE OVER: "[Dialog bahasa Indonesia]"
+---
+# 22-25. DURASI & SCENE
+Setiap prompt = TEPAT 10 DETIK VIDEO. 
+Jumlah scene dinamis (1-4 scene per prompt). Durasi scene bervariasi asalkan total 10 detik. Hapus scene filler.
 
-Scene 2 — X-10 Detik
-Durasi: Y detik
-VISUAL: [Tulis prompt visual SUPER DETAIL di sini (pergerakan kamera, angle, dll). Minimal 3 kalimat.]
-VOICE OVER: "[Dialog]"
+---
+# 26-30. WARDROBE, CHARACTER, PRODUCT LOCK
+Tentukan Wardrobe dan Karakter. Gunakan gambar referensi wajah/model tanpa menyebut nama aslinya.
+Setelah ditentukan di Prompt 1: WARDROBE = LOCK, CHARACTER = LOCK, PRODUCT = LOCK.
+Visual tetap bervariasi dengan ganti angle/pergerakan kamera.
 
-Pastikan prompt terakhir menyelesaikan cerita (Closing + Hero Product Shot + CTA: "Klik keranjang sekarang!").`;
+---
+# 31-36. CONTINUITY & OUTPUT
+Jaga CONTINUITY antar prompt. Dilarang teks visual/harga palsu/klaim tanpa dasar.
+CTA ("Klik keranjang sekarang!") HANYA di akhir prompt terakhir.
+
+---
+# 37-38. FORMAT OUTPUT (CRITICAL!)
+Output pertama: Analisis Produk, Selling Point, Content Type, Story Angle, dll.
+Lalu, PISAHKAN DENGAN SIMBOL "---" PADA BARIS BARU.
+Lalu masuk ke PROMPT 1:
+
+## PROMPT 1 — 10 DETIK
+**Content Type:** ...
+**Story Angle:** ...
+### Scene 1 — X detik
+**Prompt Visual:** [Tulis detail sinematik, lighting, kamera, min 3 kalimat]
+**Voice Over:** ...
+---
+## PROMPT 2 — 10 DETIK
+...
+---
+
+# 46. FORMAT OUTPUT (CRITICAL FOR SYSTEM)
+PISAHKAN HASIL ANALISIS DAN SETIAP PROMPT DENGAN SIMBOL "---" PADA BARIS BARU!
+JANGAN LUPA SIMBOL "---" INI SANGAT PENTING!`;
 
       /*
       if (bjType.includes('Unboxing')) {
@@ -2209,11 +2268,11 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
               <label>Story Angle (Pilih satu atau lebih)</label>
               <div className="checkbox-group" style={{display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--glass-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--glass-border)'}}>
                 {[
-                  "Direct Review (Ceplas-ceplos & Obyektif)",
-                  "Unboxing Estetik & Pemakaian Pertama",
-                  "Sketsa Komedi POV (Lucu & Relate)",
-                  "Tutorial Edukasi Penggunaan",
-                  "Storytelling (Bercerita & Emosional)",
+                  "Direct Review",
+                  "Casual Conversation",
+                  "Problem Solving",
+                  "Plot Twist",
+                  "Lifestyle / Product Story",
                   "Random"
                 ].map(angle => (
                   <label key={angle} style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem'}}>
