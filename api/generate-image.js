@@ -1,59 +1,17 @@
+import { requirePost, requireApiKey } from '../server/session.js';
+import { proxyJson } from '../server/upstream.js';
+
+export const maxDuration = 60;
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const provider = req.headers['x-provider'] || 'openrouter';
-  const authHeader = req.headers.authorization;
-  const { prompt, model } = req.body;
-
-  try {
-    let apiUrl = '';
-    let payload = {};
-
-    if (provider === 'openrouter') {
-      apiUrl = 'https://openrouter.ai/api/v1/images';
-      payload = {
-        prompt: prompt,
-        model: model || 'openai/gpt-image-2' // fallback model
-      };
-    } else {
-      // Fallback for other providers like openai or 1inference
-      apiUrl = provider === 'openai' 
-        ? 'https://api.openai.com/v1/images/generations' 
-        : 'https://api.1inference.com/v1/images/generations';
-      payload = {
-        model: model,
-        prompt: prompt,
-        n: 1,
-        size: "1024x1024",
-        response_format: "url"
-      };
-    }
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': authHeader
-    };
-
-    if (provider === 'openrouter') {
-      headers['HTTP-Referer'] = 'https://creator-hub.vercel.app';
-      headers['X-Title'] = 'Creator Hub AI';
-    }
-
-    const fetchRes = await fetch(apiUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload)
-    });
-    
-    let data;
-    const textRes = await fetchRes.text();
-    try {
-      data = JSON.parse(textRes);
-    } catch (e) {
-      data = { error: "Non-JSON response from API: " + textRes.substring(0, 100) };
-    }
-    return res.status(fetchRes.status).json(data);
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+  if (!requirePost(req, res) || !requireApiKey(req, res)) return;
+  const provider = req.headers['x-provider'] || '1inference';
+  const { prompt, model } = req.body || {};
+  if (typeof prompt !== 'string' || !prompt.trim()) return res.status(400).json({ error: 'Prompt wajib diisi.' });
+  if (!['1inference', 'openai', 'openrouter'].includes(provider)) return res.status(400).json({ error: 'Provider gambar tidak didukung.' });
+  const openrouter = provider === 'openrouter';
+  const url = openrouter ? 'https://openrouter.ai/api/v1/chat/completions' : `https://api.${provider === 'openai' ? 'openai' : '1inference'}.com/v1/images/generations`;
+  const payload = openrouter
+    ? { model: model || 'google/gemini-2.5-flash-image', messages: [{ role: 'user', content: prompt }], modalities: ['image', 'text'] }
+    : { model: model || 'gpt-image-1', prompt, n: 1, size: '1024x1024' };
+  return proxyJson(res, url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: req.headers.authorization }, body: JSON.stringify(payload) });
 }

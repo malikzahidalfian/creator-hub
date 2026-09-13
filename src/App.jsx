@@ -1,18 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import Dashboard from './components/Dashboard'
+import Sidebar, { pageTitle } from './components/Sidebar'
+import Icon from './components/Icon'
+import Modal from './components/Modal'
+import { appFetch as fetch, readStorage, writeStorage, readGeminiKeys, parseRecord, safeLink, historyParts, loadAllRecords } from './lib/client'
+import { useReleaseObjectUrl } from './lib/media'
+import { uploadGeminiFile } from './lib/gemini'
 
-function App() {
+function App({ onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('storyboard_api_key') || '')
+  const [apiKey, setApiKey] = useState(() => readStorage('storyboard_api_key').trim())
+  const [notice, setNotice] = useState('')
+  const [loadErrors, setLoadErrors] = useState({})
+  const mainRef = useRef(null)
+  const copyTimer = useRef(null)
+  const savePending = useRef(false)
+  const loadVersions = useRef({})
+  const alert = message => setNotice(String(message))
   
   // --- GEMINI API KEYS STATES ---
-  const [geminiKeys, setGeminiKeys] = useState(() => {
-    try {
-      const saved = localStorage.getItem('gemini_api_keys');
-      return saved ? JSON.parse(saved) : Array(10).fill('');
-    } catch {
-      return Array(10).fill('');
-    }
-  });
+  const [geminiKeys, setGeminiKeys] = useState(readGeminiKeys);
   const [activeGeminiKeyIndex, setActiveGeminiKeyIndex] = useState(0);
 
   const [copiedIndex, setCopiedIndex] = useState(null)
@@ -20,11 +28,6 @@ function App() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-
-  // --- AUTHENTICATION STATES ---
-  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('storyboard_auth') === 'true')
-  const [loginPassword, setLoginPassword] = useState('')
-  const [loginError, setLoginError] = useState(false)
 
   // --- STORYBOARD STATES ---
   const [productImage, setProductImage] = useState(null)
@@ -84,7 +87,7 @@ function App() {
   const [genThreadTopic, setGenThreadTopic] = useState('')
   const [genThreadSource, setGenThreadSource] = useState('')
   const [genThreadInstruction, setGenThreadInstruction] = useState('')
-  const [genThreadTone, setGenThreadTone] = useState('Misteri / Menegangkan')
+  const [genThreadTone, setGenThreadTone] = useState('Misterius/Penasaran')
   const [genThreadLengthCount, setGenThreadLengthCount] = useState(5)
   const [genThreadAffiliateProduct, setGenThreadAffiliateProduct] = useState('')
   const [genThreadAffiliateProductName, setGenThreadAffiliateProductName] = useState('')
@@ -92,7 +95,7 @@ function App() {
   const [isSelectingGenThreadProduct, setIsSelectingGenThreadProduct] = useState(false)
   const [genThreadLanguageStyle, setGenThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
   const [threadLanguageStyle, setThreadLanguageStyle] = useState('Santai (Gue-Elu, Gaul)')
-  const [threadAngle, setThreadAngle] = useState('Storytelling (Bercerita pengalaman pribadi)')
+  const [threadAngle, setThreadAngle] = useState('Storytelling (Bercerita pengalaman pribadi/masalah)')
   const [isGeneratingGenThread, setIsGeneratingGenThread] = useState(false)
   const [generatedGenThread, setGeneratedGenThread] = useState(null)
   const [genThreadCategory, setGenThreadCategory] = useState('Otomotif')
@@ -173,8 +176,7 @@ function App() {
   const toneList = ['Sangat Emosional/Baper', 'Misterius/Penasaran', 'Inspiratif & Motivasi', 'Kontroversial (Bikin Debat)', 'Santai & Lucu'];
   const categoriesList = ['Otomotif', 'Fashion', 'Politik', 'Agama Islam', 'Fakta-fakta', 'Kesehatan', 'Teknologi', 'Hiburan', 'Bisnis', 'Olahraga', 'Custom...'];
 
-  const supabaseUrl = 'https://xkixokhnofujcnehuvgz.supabase.co';
-  const supabaseKey = 'sb_publishable_zryQEkMVI1nD3R3Cgf0zdw_LTD0nwtY';
+  // Database access is authenticated and proxied by /api/database.
 
   // --- DATABASE (HISTORY) STATES ---
   const [activeDatabaseCategory, setActiveDatabaseCategory] = useState('Storyboard');
@@ -202,6 +204,13 @@ function App() {
   const [isImageBankLoading, setIsImageBankLoading] = useState(false);
   const [uploadImgFile, setUploadImgFile] = useState(null);
   const [uploadImgName, setUploadImgName] = useState('');
+  const [uploadImgPreview, setUploadImgPreview] = useState(null);
+  useEffect(() => {
+    if (!uploadImgFile) { setUploadImgPreview(null); return; }
+    const url = URL.createObjectURL(uploadImgFile);
+    setUploadImgPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [uploadImgFile]);
   const [isUploadingImg, setIsUploadingImg] = useState(false);
 
   // --- TTS STATES ---
@@ -212,44 +221,40 @@ function App() {
   const [ttsInstruction, setTtsInstruction] = useState('');
   const [isGeneratingTts, setIsGeneratingTts] = useState(false);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState(null);
+  useReleaseObjectUrl(productImage);
+  useReleaseObjectUrl(cookImage);
+  useReleaseObjectUrl(ugcImage);
+  useReleaseObjectUrl(videoScriptPreview);
+  useReleaseObjectUrl(generatedAudioUrl);
 
-  const fetchHistory = async () => {
-    setIsHistoryLoading(true);
+  const loadRecords = async (type, setter, setLoading) => {
+    const key = type || 'Konten';
+    const version = (loadVersions.current[key] || 0) + 1;
+    loadVersions.current[key] = version;
+    setLoading(true);
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?select=*&order=created_at.desc`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setHistory(data);
-      }
+      const data = await loadAllRecords(type);
+      if (loadVersions.current[key] !== version) return;
+      setter(data.filter(item => item && typeof item === 'object').map(item => ({ ...item, result: ['Data Produk', 'Bank Storyboard'].includes(item.type) ? JSON.stringify(parseRecord(item.result)) : typeof item.result === 'string' ? item.result : '' })));
+      setLoadErrors(prev => { const next = { ...prev }; delete next[key]; return next; });
     } catch (e) {
-      console.error(e);
-    } finally {
-      setIsHistoryLoading(false);
-    }
+      if (loadVersions.current[key] === version) setLoadErrors(prev => ({ ...prev, [key]: e.message }));
+    } finally { if (loadVersions.current[key] === version) setLoading(false); }
   };
+  const fetchHistory = () => loadRecords('', setHistory, setIsHistoryLoading);
 
   const updateHistoryResultInSupabase = async (id, newResult) => {
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?id=eq.${id}`, {
+      const response = await fetch(`/api/database?id=eq.${encodeURIComponent(id)}`, {
         method: 'PATCH',
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ result: newResult })
       });
       if (response.ok) {
         // Update local state
-        const updatedItem = { ...selectedHistoryItem, result: newResult };
-        setSelectedHistoryItem(updatedItem);
-        setHistory(prev => prev.map(item => item.id === id ? updatedItem : item));
+        setSelectedHistoryItem(prev => prev?.id === id ? { ...prev, result: newResult } : prev);
+        setHistory(prev => prev.map(item => item.id === id ? { ...item, result: newResult } : item));
+        return true;
       } else {
         alert('Gagal menyimpan gambar ke database.');
       }
@@ -263,11 +268,12 @@ function App() {
     const url = imageInputs[partIndex];
     if (!url) return;
     
+    if (!safeLink(url)) return alert('Masukkan URL gambar http/https yang valid.');
     const newParts = [...currentParts];
     newParts[partIndex] = newParts[partIndex].trim() + `\n\n[IMG]${url}[/IMG]`;
     const newResult = newParts.join('\n\n---\n\n');
     
-    await updateHistoryResultInSupabase(selectedHistoryItem.id, newResult);
+    if (!await updateHistoryResultInSupabase(selectedHistoryItem.id, newResult)) return;
     
     // Clear input
     setImageInputs(prev => {
@@ -285,67 +291,33 @@ function App() {
     await updateHistoryResultInSupabase(selectedHistoryItem.id, newResult);
   };
 
-  const fetchProducts = async () => {
-    setIsProductsLoading(true);
-    try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?type=eq.Data%20Produk&select=id,product_desc,result,created_at&order=created_at.desc`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        // data contains id, product_desc (title), result (JSON string of {desc, link, imgUrl})
-        setProductsData(data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsProductsLoading(false);
-    }
+  const fetchProducts = () => loadRecords('Data Produk', setProductsData, setIsProductsLoading);
+  const fetchBankStoryboard = () => loadRecords('Bank Storyboard', setBankStoryboardData, setIsBankStoryboardLoading);
+  const fetchImageBank = () => loadRecords('Bank Gambar', setImageBankData, setIsImageBankLoading);
+  const affiliateProducts = [...bankStoryboardData, ...productsData];
+  const navigate = tab => {
+    setActiveTab(tab); setIsMobileMenuOpen(false); setSelectedHistoryItem(null); setImageInputs({});
+    mainRef.current?.scrollTo({ top: 0 });
   };
-
-  const fetchBankStoryboard = async () => {
-    setIsBankStoryboardLoading(true);
-    try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?type=eq.Bank%20Storyboard&select=id,product_desc,result,created_at&order=created_at.desc`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        // data contains id, product_desc (category), result (JSON string of {desc, imgUrl})
-        setBankStoryboardData(data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsBankStoryboardLoading(false);
-    }
+  const openHistory = item => {
+    navigate('history');
+    setActiveDatabaseCategory(item.type === 'Utas Affiliate' ? 'Threads Affiliate' : item.type === 'Utas Bebas' ? 'Threads Umum' : 'Storyboard');
+    setSelectedHistoryItem(item);
   };
-
-  const fetchImageBank = async () => {
-    setIsImageBankLoading(true);
-    try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?type=eq.Bank%20Gambar&select=id,product_desc,result,created_at&order=created_at.desc`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setImageBankData(data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsImageBankLoading(false);
-    }
+  const openNewProduct = () => {
+    navigate('bank_storyboard');
+    setEditingBankId(null); setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankModelImgUrl(''); setBankCategory(''); setBankProductLink('');
+    setIsAddProductModalOpen(true);
   };
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(''), 8000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  useEffect(() => {
+    document.title = `${pageTitle(activeTab)} · Creator Hub AI`;
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'dashboard' || activeTab === 'history') {
@@ -354,7 +326,7 @@ function App() {
     if (activeTab === 'dashboard' || activeTab === 'product_data' || activeTab === 'thread') {
       fetchProducts();
     }
-    if (activeTab === 'dashboard' || activeTab === 'bank_storyboard' || activeTab === 'storyboard' || activeTab === 'cooking_content' || activeTab === 'bang_jenggot') {
+    if (['dashboard', 'bank_storyboard', 'storyboard', 'cooking_content', 'bang_jenggot', 'thread', 'gen_thread', 'ugc'].includes(activeTab)) {
       fetchBankStoryboard();
     }
     if (activeTab === 'dashboard' || activeTab === 'bank_gambar') {
@@ -363,18 +335,15 @@ function App() {
   }, [activeTab]);
 
   const saveToSupabase = async (blocks, type, desc, updateId = null) => {
+    if (savePending.current) return false;
+    savePending.current = true;
     setIsSaving(true);
     const resultText = Array.isArray(blocks) ? blocks.join('\n\n---\n\n') : blocks;
     try {
-      const url = updateId ? `${supabaseUrl}/rest/v1/prompts?id=eq.${updateId}` : `${supabaseUrl}/rest/v1/prompts`;
+      const url = updateId ? `/api/database?id=eq.${encodeURIComponent(updateId)}` : '/api/database';
       const response = await fetch(url, {
         method: updateId ? 'PATCH' : 'POST',
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: type,
           product_desc: desc,
@@ -391,13 +360,16 @@ function App() {
           fetchBankStoryboard(); // Refresh bank data
           setEditingBankId(null);
         }
+        return true;
       } else {
         const err = await response.json();
         alert("Gagal: " + (err.message || JSON.stringify(err)));
       }
     } catch(e) {
-      alert("Error jaringan: " + e.message);
+      alert("Gagal menyimpan: " + e.message);
+      return false;
     } finally {
+      savePending.current = false;
       setIsSaving(false);
     }
   };
@@ -410,30 +382,26 @@ function App() {
     setProdDesc(parsed.desc || '');
     setProdLink(parsed.link || '');
     setProdImgUrl(parsed.imgUrl || '');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSaveProduct = () => {
-    if (!prodTitle || !prodDesc || !prodLink) return alert("Judul, Deskripsi, dan Link wajib diisi!");
+  const handleSaveProduct = async () => {
+    if (savePending.current) return;
+    if (!prodTitle.trim() || !prodDesc.trim() || !prodLink.trim()) return alert("Judul, Deskripsi, dan Link wajib diisi!");
     const productPayload = JSON.stringify({
       desc: prodDesc,
       link: prodLink,
       imgUrl: prodImgUrl
     });
-    saveToSupabase(productPayload, 'Data Produk', prodTitle, editingProductId);
-    setProdTitle(''); setProdDesc(''); setProdLink(''); setProdImgUrl('');
+    if (await saveToSupabase(productPayload, 'Data Produk', prodTitle.trim(), editingProductId)) {
+      setProdTitle(''); setProdDesc(''); setProdLink(''); setProdImgUrl('');
+    }
   };
 
   const handleDeleteProduct = async (id) => {
     if(!window.confirm("Hapus data produk ini?")) return;
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?id=eq.${id}`, {
-        method: 'DELETE',
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
+      const response = await fetch(`/api/database?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (response.ok) {
         fetchProducts();
       }
@@ -455,31 +423,30 @@ function App() {
     setIsAddProductModalOpen(true);
   };
 
-  const handleSaveBank = () => {
-    if (!bankCategory || !bankProductName) return alert("Kategori dan Nama Produk wajib diisi!");
+  const handleSaveBank = async () => {
+    if (savePending.current) return;
+    if (!bankCategory.trim() || !bankProductName.trim()) return alert("Kategori dan Nama Produk wajib diisi!");
+    if (bankProductLink.trim() && !safeLink(bankProductLink.trim())) return alert('Link produk harus berupa URL http/https yang valid.');
     const bankPayload = JSON.stringify({
-      name: bankProductName,
+      name: bankProductName.trim(),
       desc: bankDesc,
       imgUrl: bankImgUrl,
       modelImgUrl: bankModelImgUrl,
       link: bankProductLink
     });
-    saveToSupabase(bankPayload, 'Bank Storyboard', bankCategory, editingBankId);
-    setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankModelImgUrl(''); setBankCategory(''); setBankProductLink('');
-    setIsAddProductModalOpen(false);
+    if (await saveToSupabase(bankPayload, 'Bank Storyboard', bankCategory.trim(), editingBankId)) {
+      setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankModelImgUrl(''); setBankCategory(''); setBankProductLink('');
+      setIsAddProductModalOpen(false);
+      setActiveBankCategory('Semua');
+    }
   };
 
   const handleDeleteBank = async (id) => {
     if(!window.confirm("Hapus data dari Bank Storyboard?")) return;
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/prompts?id=eq.${id}`, {
-        method: 'DELETE',
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
-      });
+      const response = await fetch(`/api/database?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (response.ok) {
+        setActiveBankCategory('Semua');
         fetchBankStoryboard();
       }
     } catch(e) {
@@ -528,14 +495,16 @@ function App() {
     ? searchedBankData 
     : searchedBankData.filter(item => item.product_desc === activeBankCategory);
     
-  const groupedBankData = {};
-  filteredBankData.forEach(item => {
+  const groupedBankData = Object.create(null);
+  (activeTab === 'bank_storyboard' ? filteredBankData : bankStoryboardData).forEach(item => {
     const cat = item.product_desc || 'Lainnya';
     if (!groupedBankData[cat]) groupedBankData[cat] = [];
     groupedBankData[cat].push(item);
   });
 
   const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    if (!file?.type?.startsWith('image/')) return reject(new Error('Pilih file gambar yang valid.'));
+    if (file.size > 20 * 1024 * 1024) return reject(new Error('Ukuran gambar maksimal 20 MB.'));
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
@@ -565,15 +534,20 @@ function App() {
         ctx.drawImage(img, 0, 0, width, height);
         resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
-      img.onerror = (e) => reject(e);
+      img.onerror = () => reject(new Error('File gambar tidak dapat dibaca. Gunakan PNG, JPG, atau WEBP.'));
     };
     reader.onerror = error => reject(error);
   });
 
-  const handleCopy = (text, index) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
+  const handleCopy = async (text, index) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopiedIndex(null), 2000);
+    } catch {
+      alert('Teks gagal disalin. Izinkan akses clipboard atau salin secara manual.');
+    }
   }
 
   // --- STEP 1: GENERATE SELLING POINTS ---
@@ -1305,245 +1279,12 @@ VOICE OVER: "(Dialog/narasi)"
     }
   }
 
-  const LogoSVG = () => (
-    <svg viewBox="0 0 100 100" className="logo-svg" xmlns="http://www.w3.org/2000/svg">
-      <path d="M50 15 L85 32 L50 49 L15 32 Z" fill="#6366f1" />
-      <path d="M15 45 L50 62 L85 45 L85 55 L50 72 L15 55 Z" fill="#4f46e5" />
-      <path d="M15 65 L50 82 L85 65 L85 75 L50 92 L15 75 Z" fill="#3730a3" />
-    </svg>
-  );
-
   const EmptyStateRight = () => (
     <div className="glass-panel empty-state fade-in">
-      <div className="empty-icon">✨</div>
-      <h3>Hasil Prompt Akan Muncul di Sini</h3>
-      <p>Klik 'Generate' di sebelah kiri untuk mulai membuat prompt video dari produk Anda.</p>
+      <div className="empty-icon"><Icon name="spark" size={29} /></div>
+      <h3>Ruang untuk karya berikutnya</h3>
+      <p>Lengkapi brief Anda, lalu klik Generate. Hasil konten akan tampil di sini, siap ditinjau dan digunakan.</p>
     </div>
-  );
-
-  const renderDashboard = () => {
-    return (
-      <div className="content-wrapper fade-in">
-        <div className="dashboard-header-top">
-          <div className="header-bell">
-            🔔
-            <span className="header-bell-badge">3</span>
-          </div>
-          <div className="header-admin-profile">
-            <div className="admin-avatar">A</div>
-            <div className="admin-info">
-              <span className="admin-name">Admin</span>
-              <span className="admin-role">Administrator</span>
-            </div>
-            <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>▼</span>
-          </div>
-        </div>
-      
-        <div className="content-panel" style={{padding: 0, border: 'none', background: 'transparent', boxShadow: 'none'}}>
-          <div className="header-container" style={{marginBottom: '2rem'}}>
-            <h2 className="desktop-title" style={{display: 'flex', alignItems: 'center', gap: '0.8rem', fontSize: '2rem', marginBottom: '0.5rem'}}>
-              <span style={{background: 'white', padding: '0.5rem', borderRadius: '12px', border: '1px solid var(--glass-border)', fontSize: '1.5rem'}}>🏠</span> 
-              Dashboard Utama
-            </h2>
-            <p className="subtitle" style={{margin: 0}}>Selamat datang di Creator Hub AI. Pantau statistik dan akses fitur cepat dari sini.</p>
-          </div>
-
-          <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2.5rem'}}>
-            <div className="stat-card-new">
-              <div className="stat-card-header">
-                <div className="stat-icon-box" style={{background: '#8b5cf6'}}>🕒</div>
-                <div>
-                  <div className="stat-title">Total Riwayat (History)</div>
-                  <h3 className="stat-value">{history.length}</h3>
-                </div>
-              </div>
-              <div className="stat-footer">
-                <span className="stat-badge">↑ 12%</span>
-                <span>dari bulan lalu</span>
-              </div>
-            </div>
-            
-            <div className="stat-card-new">
-              <div className="stat-card-header">
-                <div className="stat-icon-box" style={{background: '#3b82f6'}}>📁</div>
-                <div>
-                  <div className="stat-title">Data Produk</div>
-                  <h3 className="stat-value">{bankStoryboardData.length}</h3>
-                </div>
-              </div>
-              <div className="stat-footer">
-                <span className="stat-badge">↑ 8%</span>
-                <span>dari bulan lalu</span>
-              </div>
-            </div>
-          </div>
-
-          <h3 className="section-title" style={{marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem', color: 'var(--text-primary)'}}>
-            <span style={{color: '#64748b'}}>⚡</span> Akses Cepat (Quick Actions)
-          </h3>
-          <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem'}}>Gunakan fitur-fitur utama dengan cepat.</p>
-          
-          <div className="quick-actions-row">
-            <button className="quick-action-btn" onClick={() => setActiveTab('bank_storyboard')}>
-              <div className="quick-action-icon" style={{background: '#d1fae5', color: '#10b981'}}>🗃️</div>
-              <div className="quick-action-text">
-                <div className="quick-action-title" style={{color: '#10b981'}}>Tambah Data Produk</div>
-                <div className="quick-action-desc">Simpan foto dan deskripsi produk Anda</div>
-              </div>
-              <div className="quick-action-arrow" style={{background: '#d1fae5', color: '#10b981'}}>➔</div>
-            </button>
-          </div>
-
-          <div className="dashboard-bottom-grid">
-            <div className="chart-panel">
-              <div className="panel-title-row">
-                <h3>📈 Ringkasan Aktivitas</h3>
-                <select className="select-input" style={{width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.8rem', background: '#f8fafc'}}>
-                  <option>30 Hari Terakhir</option>
-                </select>
-              </div>
-              <div style={{display: 'flex', gap: '2rem', marginBottom: '1.5rem'}}>
-                <div>
-                  <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.3rem'}}>Total Aktivitas</div>
-                  <div style={{fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>64 <span className="stat-badge" style={{fontSize: '0.65rem'}}>↑ 15%</span></div>
-                </div>
-                <div>
-                  <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.3rem'}}>Aktivitas Minggu Ini</div>
-                  <div style={{fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>12 <span className="stat-badge" style={{fontSize: '0.65rem'}}>↑ 8%</span></div>
-                </div>
-                <div>
-                  <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.3rem'}}>Rata-rata Harian</div>
-                  <div style={{fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>2.1 <span className="stat-badge" style={{fontSize: '0.65rem'}}>↑ 6%</span></div>
-                </div>
-              </div>
-              
-              {/* Fake SVG Chart */}
-              <div style={{height: '180px', width: '100%', position: 'relative', marginTop: '1rem'}}>
-                <svg width="100%" height="100%" viewBox="0 0 500 150" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="chartGrad" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
-                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
-                  <path d="M0,130 C30,120 50,80 80,90 C120,100 150,60 180,90 C200,110 220,50 250,70 C280,90 300,120 330,110 C360,100 390,130 420,70 C450,20 480,50 500,40 L500,150 L0,150 Z" fill="url(#chartGrad)" />
-                  <path d="M0,130 C30,120 50,80 80,90 C120,100 150,60 180,90 C200,110 220,50 250,70 C280,90 300,120 330,110 C360,100 390,130 420,70 C450,20 480,50 500,40" fill="none" stroke="#8b5cf6" strokeWidth="2.5" />
-                  
-                  {/* Grid Lines */}
-                  <line x1="0" y1="30" x2="500" y2="30" stroke="#f1f5f9" strokeWidth="1" />
-                  <line x1="0" y1="70" x2="500" y2="70" stroke="#f1f5f9" strokeWidth="1" />
-                  <line x1="0" y1="110" x2="500" y2="110" stroke="#f1f5f9" strokeWidth="1" />
-                  
-                  {/* Labels */}
-                  <text x="0" y="25" fontSize="10" fill="#94a3b8">25</text>
-                  <text x="0" y="65" fontSize="10" fill="#94a3b8">15</text>
-                  <text x="0" y="105" fontSize="10" fill="#94a3b8">5</text>
-                  <text x="0" y="145" fontSize="10" fill="#94a3b8">0</text>
-                  
-                  <text x="40" y="145" fontSize="10" fill="#94a3b8">1 Mei</text>
-                  <text x="140" y="145" fontSize="10" fill="#94a3b8">7 Mei</text>
-                  <text x="240" y="145" fontSize="10" fill="#94a3b8">13 Mei</text>
-                  <text x="340" y="145" fontSize="10" fill="#94a3b8">19 Mei</text>
-                  <text x="440" y="145" fontSize="10" fill="#94a3b8">25 Mei</text>
-                  <text x="480" y="145" fontSize="10" fill="#94a3b8">31 Mei</text>
-                </svg>
-              </div>
-            </div>
-
-            <div className="activity-panel">
-              <div className="panel-title-row">
-                <h3>🕒 Aktivitas Terbaru</h3>
-                <span style={{fontSize: '0.8rem', color: 'var(--primary-color)', cursor: 'pointer', fontWeight: '500'}}>Lihat Semua ➔</span>
-              </div>
-              <div className="activity-list">
-                <div className="activity-item">
-                  <div className="activity-icon" style={{background: '#f3e8ff', color: '#8b5cf6'}}>🎬</div>
-                  <div className="activity-text">Storyboard "Konten Masak Spesial" dibuat</div>
-                  <div className="activity-time">2 menit yang lalu</div>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon" style={{background: '#d1fae5', color: '#10b981'}}>📦</div>
-                  <div className="activity-text">Produk "Bumbu Rendang Premium" ditambahkan</div>
-                  <div className="activity-time">15 menit yang lalu</div>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon" style={{background: '#dbeafe', color: '#3b82f6'}}>🎨</div>
-                  <div className="activity-text">AI Image "Thumbnail Review" dihasilkan</div>
-                  <div className="activity-time">1 jam yang lalu</div>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon" style={{background: '#ffedd5', color: '#f97316'}}>🗣️</div>
-                  <div className="activity-text">Text to Speech "Narasi Review" dibuat</div>
-                  <div className="activity-time">2 jam yang lalu</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderSidebar = () => (
-    <>
-      {isMobileMenuOpen && <div className="mobile-overlay fade-in" onClick={() => setIsMobileMenuOpen(false)}></div>}
-      <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
-        <div className="sidebar-logo">
-          <LogoSVG />
-          <h2>Creator Hub AI</h2>
-          <button className="hamburger-btn close-btn" onClick={() => setIsMobileMenuOpen(false)}>✕</button>
-        </div>
-        <nav className="sidebar-nav">
-          <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => {setActiveTab('dashboard'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🏠</span> Dashboard</div>
-          </button>
-          <div className="accordion-menu">
-            <button className={`nav-item ${activeTab === 'bang_jenggot' ? 'active' : ''}`} onClick={() => setIsStoryboardAccordionOpen(!isStoryboardAccordionOpen)}>
-              <div className="nav-item-content"><span className="icon">🎬</span> Storyboard</div>
-              <span className="nav-arrow" style={{transform: isStoryboardAccordionOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s'}}>&gt;</span>
-            </button>
-            {isStoryboardAccordionOpen && (
-              <div className="accordion-content fade-in" style={{paddingLeft: '2rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.2rem', marginBottom: '0.5rem'}}>
-                <button className={`nav-item ${activeTab === 'bang_jenggot' ? 'active' : ''}`} onClick={() => {setActiveTab('bang_jenggot'); setIsMobileMenuOpen(false);}} style={{padding: '0.6rem 1rem', fontSize: '0.85rem'}}>
-                  <div className="nav-item-content">Bang Jenggot AI</div>
-                </button>
-              </div>
-            )}
-          </div>
-          <button className={`nav-item ${activeTab === 'bank_storyboard' ? 'active' : ''}`} onClick={() => {setActiveTab('bank_storyboard'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🗃️</span> Data Produk</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
-          <button className={`nav-item ${activeTab === 'thread' ? 'active' : ''}`} onClick={() => {setActiveTab('thread'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🛒</span> Threads Affiliate</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
-          <button className={`nav-item ${activeTab === 'gen_thread' ? 'active' : ''}`} onClick={() => {setActiveTab('gen_thread'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">📰</span> Threads Umum</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
-
-          <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => {setActiveTab('history'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🗄️</span> Database</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
-          <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => {setActiveTab('settings'); setIsMobileMenuOpen(false);}}>
-            <div className="nav-item-content"><span className="icon">🔑</span> API Key</div>
-            <span className="nav-arrow">&gt;</span>
-          </button>
-
-        </nav>
-
-
-
-        <div className="sidebar-bottom">
-
-          <div className="copyright">
-            © 2025 Creator Hub AI<br/>All rights reserved.
-          </div>
-        </div>
-      </aside>
-    </>
   );
 
   const renderStoryboardForm = () => (
@@ -1574,10 +1315,8 @@ VOICE OVER: "(Dialog/narasi)"
                     let parsed = {};
                     try { parsed = JSON.parse(item.result); } catch(err){}
                     setProductDesc(parsed.desc || '');
-                    if (parsed.imgUrl) {
-                      setProductImage(parsed.imgUrl);
-                      setProductFile(null); 
-                    }
+                    setProductImage(parsed.imgUrl || null); setProductFile(null);
+                    setStorySellingPoint('');
                   }
                 }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
                   <option value="">-- Kosongkan (Isi Manual) --</option>
@@ -1628,7 +1367,7 @@ VOICE OVER: "(Dialog/narasi)"
                 />
               </div>
 
-              <button className="btn-primary generate-btn" onClick={handleGenerateStorySelling} disabled={!productFile || !productDesc || isGeneratingStorySelling || !apiKey} style={{marginBottom: '1rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
+              <button className="btn-primary generate-btn" onClick={handleGenerateStorySelling} disabled={(!productFile && !productImage) || !productDesc || isGeneratingStorySelling || !apiKey} style={{marginBottom: '1rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
                 {isGeneratingStorySelling ? 'Menganalisis...' : '🔍 Temukan Poin Selling'}
               </button>
               
@@ -1749,11 +1488,8 @@ VOICE OVER: "(Dialog/narasi)"
                 if (item) {
                   let parsed = {};
                   try { parsed = JSON.parse(item.result); } catch(err){}
-                  setCookDesc(`${item.product_desc} - ${parsed.desc || ''}`);
-                  if (parsed.imgUrl) {
-                    setCookImage(parsed.imgUrl);
-                    setCookFile(null); 
-                  }
+                  setCookDesc(`${parsed.name || item.product_desc} - ${parsed.desc || ''}`);
+                  setCookImage(parsed.imgUrl || null); setCookFile(null);
                 }
               }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
                 <option value="">-- Kosongkan (Isi Manual) --</option>
@@ -1984,7 +1720,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
               <select onChange={(e) => {
                 const selectedId = e.target.value;
                 if (!selectedId) {
-                  setUgcProductDesc(''); 
+                  setUgcProductDesc(''); setUgcImage(null); setUgcFile(null);
                   return;
                 }
                 const item = bankStoryboardData.find(p => p.id == selectedId);
@@ -1992,10 +1728,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
                   let parsed = {};
                   try { parsed = JSON.parse(item.result); } catch(err){}
                   setUgcProductDesc(parsed.desc || parsed.name || '');
-                  if (parsed.imgUrl) {
-                    setUgcImage(parsed.imgUrl);
-                    setUgcFile(null);
-                  }
+                  setUgcImage(parsed.imgUrl || null); setUgcFile(null);
                 }
               }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
                 <option value="">-- Kosongkan (Isi Manual) --</option>
@@ -2098,7 +1831,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
             ) : generatedUgc ? (
               <div className="result-container fade-in" style={{flex: 1}}>
                 <div style={{display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem'}}>
-                  <button className="btn-secondary" onClick={() => copyToClipboard(generatedUgc, 'ugc-full')} style={{fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>
+                  <button className="btn-secondary" onClick={() => handleCopy(generatedUgc, 'ugc-full')} style={{fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>
                     {copiedIndex === 'ugc-full' ? 'Tersalin! ✅' : '📋 Copy Semua'}
                   </button>
                 </div>
@@ -2291,7 +2024,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
               ))}
               
               <div className="action-buttons-bottom" style={{marginTop: '1rem', display: 'flex', gap: '1rem'}}>
-                <button className="btn-secondary" onClick={() => saveToSupabase(JSON.stringify(generatedBj), 'Bang Jenggot', bjDesc)} disabled={isSaving} style={{flex: 1}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(generatedBj.flatMap(group => group.blocks.map(block => `Story Angle: ${group.angle}\n\n${block}`)), 'Bang Jenggot', bjDesc)} disabled={isSaving} style={{flex: 1}}>
                   {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
                 </button>
               </div>
@@ -2302,11 +2035,11 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
       </div>
 
       {isBjProductModalOpen && (
-        <div className="modal-overlay fade-in" onClick={() => setIsBjProductModalOpen(false)} style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+        <Modal label="Pilih produk storyboard" onClose={() => setIsBjProductModalOpen(false)}>
           <div className="modal-content glass-panel" onClick={(e) => e.stopPropagation()} style={{width: '90%', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto', padding: '2rem'}}>
             <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem'}}>
               <h2>{selectedBjFolder ? `📂 ${selectedBjFolder}` : '📦 Pilih Kategori Produk'}</h2>
-              <button onClick={() => setIsBjProductModalOpen(false)} style={{background: 'transparent', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer'}}>×</button>
+              <button aria-label="Tutup pilihan produk" onClick={() => setIsBjProductModalOpen(false)} style={{background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '1.5rem', cursor: 'pointer'}}>×</button>
             </div>
 
             {!selectedBjFolder ? (
@@ -2323,22 +2056,16 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
               <div>
                 <button onClick={() => setSelectedBjFolder(null)} className="btn-secondary" style={{marginBottom: '1rem'}}>⬅️ Kembali ke Kategori</button>
                 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem'}}>
-                  {groupedBankData[selectedBjFolder].map(item => {
+                  {(groupedBankData[selectedBjFolder] || []).map(item => {
                     let parsed = {};
                     try { parsed = JSON.parse(item.result); } catch(e) {}
                     const img = parsed.imgUrl ? (parsed.imgUrl.startsWith('http') ? parsed.imgUrl.split(/[\n,]+/)[0].trim() : parsed.imgUrl) : null;
                     const name = parsed.name || (parsed.desc ? parsed.desc.substring(0, 40) + '...' : 'Tanpa Nama');
                     return (
                       <div key={item.id} onClick={() => {
-                        setBjDesc(`${item.product_desc} - ${parsed.desc || ''}`);
-                        if (parsed.imgUrl) {
-                          setBjImage(parsed.imgUrl);
-                          setBjFile(null); 
-                        }
-                        if (parsed.modelImgUrl) {
-                          setBjModelImage(parsed.modelImgUrl);
-                          setBjModelFile(null);
-                        }
+                        setBjDesc(`${parsed.name || item.product_desc} - ${parsed.desc || ''}`);
+                        setBjImage(parsed.imgUrl || null); setBjFile(null);
+                        setBjModelImage(parsed.modelImgUrl || null); setBjModelFile(null);
                         setIsBjProductModalOpen(false);
                       }} className="product-card fade-in" style={{background: 'rgba(255,255,255,0.05)', borderRadius: '12px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', transition: 'transform 0.2s'}}>
                         {img ? (
@@ -2356,7 +2083,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
               </div>
             )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
@@ -2548,6 +2275,8 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
       return;
     }
     
+    if (!Number.isInteger(Number(genThreadLengthCount)) || Number(genThreadLengthCount) < 2 || Number(genThreadLengthCount) > 20) return alert('Jumlah cuitan harus 2–20.');
+    if (!safeLink(genThreadSource)) return alert('Gunakan URL artikel http/https yang valid.');
     setIsGeneratingGenThread(true);
     setGeneratedGenThread(null);
     
@@ -2564,8 +2293,9 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
         const scrapeData = await scrapeRes.json();
         articleContent = scrapeData.content || "";
       } catch (scrapeErr) {
-        alert("Peringatan: Gagal mengekstrak isi artikel secara otomatis dari URL tersebut. AI hanya akan menebak berdasarkan URL atau instruksi Anda.\nDetail: " + scrapeErr.message);
+        throw new Error('Artikel tidak dapat dibaca. Coba link sumber lain; konten tidak dibuat agar tidak mengarang isi berita. ' + scrapeErr.message);
       }
+      if (!articleContent.trim()) throw new Error('Artikel kosong. Gunakan sumber lain.');
 
       let lengthInstructions = `Kamu harus membuat 1 utas (thread) BERANTAI.
 - Utas harus dibagi menjadi tepat ${genThreadLengthCount} bagian/tweet berurutan.
@@ -2608,8 +2338,6 @@ ${lengthInstructions}`;
       let userPrompt = `Link Sumber Berita: ${genThreadSource}\n`;
       if (articleContent) {
         userPrompt += `\nIsi Artikel (Gunakan ini sebagai bahan utama utasanmu):\n"""\n${articleContent}\n"""\n`;
-      } else {
-        userPrompt += `\n(Gunakan pengetahuanmu tentang link tersebut atau tebak dari URL-nya)\n`;
       }
       
       if (genThreadInstruction) {
@@ -2661,16 +2389,15 @@ ${lengthInstructions}`;
       if (imgModel === 'flux-free' || imgModel === 'turbo-free') {
         const modelParam = imgModel === 'flux-free' ? 'flux' : 'turbo';
         const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imgPrompt)}?model=${modelParam}&seed=${Math.floor(Math.random() * 10000)}&nologo=true`;
-        const img = new Image();
-        img.src = url;
-        img.onload = () => {
-          setGeneratedImageUrl(url);
-          setIsGeneratingImg(false);
-        };
-        img.onerror = () => {
-          setIsGeneratingImg(false);
-          alert("Gagal memuat gambar dari server gratis.");
-        }
+        await new Promise((resolve, reject) => {
+          const img = new Image();
+          const timer = setTimeout(() => { img.onload = null; img.onerror = null; img.src = ''; reject(new Error('Server gambar tidak merespons. Coba model lain.')); }, 45_000);
+          img.onload = () => { clearTimeout(timer); resolve(); };
+          img.onerror = () => { clearTimeout(timer); reject(new Error('Server gambar gratis tidak tersedia. Coba model lain.')); };
+          img.src = url;
+        });
+        setGeneratedImageUrl(url);
+        setIsGeneratingImg(false);
       } else {
         // Gunakan 1inference API
         const response = await fetch("/api/generate-image", {
@@ -2692,8 +2419,10 @@ ${lengthInstructions}`;
         }
         const data = await response.json();
         
-        if (data && data.data && data.data.length > 0 && data.data[0].url) {
-          setGeneratedImageUrl(data.data[0].url);
+        const image = data?.data?.[0];
+        const imageUrl = image?.url || (image?.b64_json ? `data:image/png;base64,${image.b64_json}` : data?.choices?.[0]?.message?.images?.[0]?.image_url?.url);
+        if (imageUrl) {
+          setGeneratedImageUrl(imageUrl);
         } else {
           throw new Error("Gagal mendapatkan URL gambar dari API: " + JSON.stringify(data));
         }
@@ -2717,43 +2446,10 @@ ${lengthInstructions}`;
     return null;
   };
 
-  const uploadFileToGemini = async (file, key) => {
-    setUploadProgress('Mengunggah file ke Google...');
-    const uploadResponse = await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files?key=${key}`, {
-      method: 'POST',
-      headers: {
-        'X-Goog-Upload-Protocol': 'raw',
-        'X-Goog-Upload-File-Name': file.name,
-        'Content-Type': file.type
-      },
-      body: file
-    });
-    
-    if (!uploadResponse.ok) {
-      const errText = await uploadResponse.text();
-      throw new Error(`Gagal mengunggah: ${uploadResponse.status} - ${errText}`);
-    }
-    
-    const uploadResult = await uploadResponse.json();
-    const fileData = uploadResult.file;
-    
-    if (file.type.startsWith('video/')) {
-      setUploadProgress('Menunggu Google memproses video (bisa memakan waktu)...');
-      let state = 'PROCESSING';
-      while (state === 'PROCESSING') {
-        await new Promise(r => setTimeout(r, 3000));
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileData.name}?key=${key}`);
-        const data = await res.json();
-        state = data.state;
-        if (state === 'FAILED') throw new Error("Google gagal memproses video.");
-      }
-    }
-    
-    return fileData;
-  };
+  const uploadFileToGemini = (file, key) => uploadGeminiFile(file, key, setUploadProgress);
 
   const executeGeminiGeneration = async (keyInfo, fileData, retries = 0, modelIndex = 0) => {
-    const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-8b', 'gemini-pro'];
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro'];
     if (modelIndex >= modelsToTry.length) {
       throw new Error(`Semua model AI gagal diakses. Pastikan API Key Anda memiliki akses.`);
     }
@@ -2787,19 +2483,21 @@ Aturan Penulisan Skrip:
       generationConfig: { temperature: 0.8 }
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${keyInfo.key}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", 'x-goog-api-key': keyInfo.key },
       body: JSON.stringify(requestBody)
     });
 
     if (response.status === 429 && retries < 9) {
       // Rotate key
       const nextKey = getWorkingGeminiKey((keyInfo.index + 1) % 10);
-      if (nextKey) {
+      if (nextKey && nextKey.key !== keyInfo.key) {
         setActiveGeminiKeyIndex(nextKey.index);
-        setUploadProgress(`Key ${keyInfo.index + 1} limit! Otomatis mencoba Key ${nextKey.index + 1}...`);
-        return await executeGeminiGeneration(nextKey, fileData, retries + 1, modelIndex);
+        setUploadProgress(`Key ${keyInfo.index + 1} limit. Mencoba Key ${nextKey.index + 1}...`);
+        // Files belong to the uploading project; do not reuse a URI across keys.
+        const nextFile = fileData && videoScriptFile ? await uploadFileToGemini(videoScriptFile, nextKey.key) : null;
+        return await executeGeminiGeneration(nextKey, nextFile, retries + 1, modelIndex);
       }
     }
 
@@ -2817,8 +2515,9 @@ Aturan Penulisan Skrip:
     const data = await response.json();
     if (!data.candidates || data.candidates.length === 0) throw new Error("Gemini menolak memproses prompt.");
     
-    let text = data.candidates[0].content.parts[0].text;
-    const blocks = text.split('---').map(b => b.trim()).filter(b => b.length > 10);
+    const text = data.candidates[0]?.content?.parts?.filter(part => !part.thought).map(part => part.text || '').join('\n') || '';
+    if (!text.trim()) throw new Error('Gemini tidak mengembalikan teks. Coba instruksi atau model lain.');
+    const blocks = text.split('---').map(b => b.trim()).filter(Boolean);
     return blocks;
   };
 
@@ -3058,18 +2757,18 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                   setThreadTitle(''); setThreadDesc(''); setThreadLink('');
                   return;
                 }
-                const prod = productsData.find(p => p.id == selectedId);
+                const prod = affiliateProducts.find(p => String(p.id) === selectedId);
                 if (prod) {
                   let parsed = {};
                   try { parsed = JSON.parse(prod.result); } catch(err){}
-                  setThreadTitle(prod.product_desc);
+                  setThreadTitle(parsed.name || prod.product_desc || '');
                   setThreadDesc(parsed.desc || '');
                   setThreadLink(parsed.link || '');
                 }
               }} className="select-input" style={{borderColor: 'var(--primary-color)', background: 'rgba(255,255,255,0.8)'}}>
                 <option value="">-- Ketik manual atau Pilih produk di sini --</option>
-                {productsData.map(p => (
-                  <option key={p.id} value={p.id}>{p.product_desc}</option>
+                {affiliateProducts.map(p => (
+                  <option key={p.id} value={p.id}>{parseRecord(p.result).name || p.product_desc}</option>
                 ))}
               </select>
             </div>
@@ -3218,9 +2917,9 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                     <button key={item.id} className="btn-secondary" style={{textAlign: 'left', display: 'flex', gap: '1rem', alignItems: 'center'}} onClick={() => {
                       let parsed = {};
                       try { parsed = JSON.parse(item.result); } catch(e) {}
-                      const productText = `Nama Produk: ${item.product_desc}\nDeskripsi: ${parsed.desc || ''}\nLink Pembelian: ${parsed.link || ''}`;
+                      const productText = `Nama Produk: ${parsed.name || item.product_desc}\nDeskripsi: ${parsed.desc || ''}\nLink Pembelian: ${safeLink(parsed.link) || ''}`;
                       setGenThreadAffiliateProduct(productText);
-                      setGenThreadAffiliateProductName(item.product_desc || 'Produk Tanpa Nama');
+                      setGenThreadAffiliateProductName(parsed.name || item.product_desc || 'Produk Tanpa Nama');
                       setGenThreadAffiliateProductObj(parsed);
                       setIsSelectingGenThreadProduct(false);
                     }}>
@@ -3228,7 +2927,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                         <img src={parsed.imgUrl} alt={item.product_desc} style={{width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px'}} />
                       )}
                       <div style={{flex: 1, overflow: 'hidden'}}>
-                        <div style={{fontWeight: 'bold', color: 'var(--primary-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{item.product_desc || 'Produk Tanpa Nama'}</div>
+                        <div style={{fontWeight: 'bold', color: 'var(--primary-color)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{parsed.name || item.product_desc || 'Produk Tanpa Nama'}</div>
                         <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>{parsed.desc}</div>
                       </div>
                     </button>
@@ -3256,7 +2955,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 </div>
               ))}
               <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
-                <button className="btn-secondary" onClick={() => saveToSupabase(generatedGenThread, 'Utas Bebas', genThreadTopic)} disabled={isSaving} style={{flex: 1}}>
+                <button className="btn-secondary" onClick={() => saveToSupabase(generatedGenThread, 'Utas Bebas', genThreadTopic || genThreadSource)} disabled={isSaving} style={{flex: 1}}>
                   {isSaving ? 'Menyimpan...' : '💾 Simpan ke Database'}
                 </button>
               </div>
@@ -3269,19 +2968,14 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
   );
 
   const handleUploadImageBank = async () => {
-    if (!uploadImgFile || !uploadImgName || !apiKey) return;
+    if (!uploadImgFile || !uploadImgName.trim() || isUploadingImg) return;
     setIsUploadingImg(true);
     try {
       const base64Data = await fileToBase64(uploadImgFile);
       
-      const response = await fetch(`${supabaseUrl}/rest/v1/prompts`, {
+      const response = await fetch('/api/database', {
         method: 'POST',
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'Bank Gambar',
           product_desc: uploadImgName,
@@ -3306,11 +3000,16 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
 
   const handleCopyImage = async (base64) => {
     try {
-      const fetchResponse = await fetch(base64);
-      const blob = await fetchResponse.blob();
-      await navigator.clipboard.write([
-        new ClipboardItem({ [blob.type]: blob })
-      ]);
+      // Browsers generally only support image/png on the clipboard, not JPEG.
+      const image = new Image();
+      image.src = base64;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+      canvas.getContext('2d').drawImage(image, 0, 0);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Gambar tidak dapat dikonversi.');
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
       alert("Gambar berhasil disalin ke clipboard!");
     } catch (err) {
       alert("Gagal menyalin gambar. Browser Anda mungkin tidak mendukung fitur ini.");
@@ -3344,7 +3043,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               <div className="image-upload-wrapper">
                 {uploadImgFile ? (
                   <div className="image-preview" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem'}}>
-                    <img src={URL.createObjectURL(uploadImgFile)} alt="Preview" style={{width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px'}} />
+                    <img src={uploadImgPreview || undefined} alt="Preview" style={{width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px'}} />
                     <button className="btn-secondary" onClick={() => setUploadImgFile(null)}>Batal / Ganti</button>
                   </div>
                 ) : (
@@ -3358,7 +3057,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               </div>
             </div>
 
-            <button className="btn-primary generate-btn" onClick={handleUploadImageBank} disabled={!uploadImgFile || !uploadImgName || isUploadingImg || !apiKey}>
+            <button className="btn-primary generate-btn" onClick={handleUploadImageBank} disabled={!uploadImgFile || !uploadImgName.trim() || isUploadingImg}>
               {isUploadingImg ? 'Mengunggah...' : '📤 Upload ke Bank Gambar'}
             </button>
           </div>
@@ -3395,11 +3094,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         
         {/* Modal Detail Produk */}
         {selectedProductDetail && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
-            background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
-            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
-          }} onClick={() => setSelectedProductDetail(null)}>
+          <Modal label="Detail produk" onClose={() => setSelectedProductDetail(null)}>
             <div className="glass-panel fade-in" style={{
               width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto',
               background: '#fff', borderRadius: '16px', padding: '0',
@@ -3425,42 +3120,38 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 </div>
 
                 {selectedProductDetail.parsed.link && (
-                  <a href={selectedProductDetail.parsed.link} target="_blank" rel="noreferrer" style={{display: 'inline-block', background: '#ee4d2d', color: 'white', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem'}}>
+                  <a href={safeLink(selectedProductDetail.parsed.link)} target="_blank" rel="noreferrer" style={{display: 'inline-block', background: '#ee4d2d', color: 'white', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem'}}>
                     🛒 Beli di Shopee
                   </a>
                 )}
               </div>
             </div>
-          </div>
+          </Modal>
         )}
 
         {/* Modal Pop-up */}
         {isAddProductModalOpen && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
-            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
-          }}>
-            <div className="glass-panel input-section fade-in" style={{
+          <Modal label={editingBankId ? 'Edit produk' : 'Tambah produk'} onClose={() => setIsAddProductModalOpen(false)} busy={isSaving || isGeneratingSelling}>
+            <fieldset disabled={isSaving} className="glass-panel input-section fade-in" style={{
               width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto',
               background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
             }}>
               <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
                 <h3 style={{color: 'var(--primary-color)', margin: 0}}>{editingBankId ? 'Edit Produk' : 'Tambah Aset Baru'}</h3>
-                <button onClick={() => {
+                <button aria-label="Tutup form produk" disabled={isSaving} onClick={() => {
                   setIsAddProductModalOpen(false);
                   setEditingBankId(null);
-                  setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankCategory(''); setBankProductLink('');
+                  setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankModelImgUrl(''); setBankCategory(''); setBankProductLink('');
                 }} style={{background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b'}}>✖</button>
               </div>
 
               <div className="input-group">
-                <label>Nama Produk</label>
-                <input type="text" className="api-key-input" style={{color: '#1a1a2e'}} placeholder="Contoh: Wajan Granit Anti Lengket 24cm" value={bankProductName} onChange={(e) => setBankProductName(e.target.value)} />
+                <label htmlFor="bank-product-name">Nama Produk</label>
+                <input id="bank-product-name" type="text" className="api-key-input" style={{color: '#1a1a2e'}} placeholder="Contoh: Wajan Granit Anti Lengket 24cm" value={bankProductName} onChange={(e) => setBankProductName(e.target.value)} />
               </div>
               <div className="input-group">
-                <label>Data & Selling Point Produk Lengkap (Bisa Copy-Paste dari ChatGPT)</label>
-                <textarea 
+                <label htmlFor="bank-description">Data & Selling Point Produk Lengkap (Bisa Copy-Paste dari ChatGPT)</label>
+                <textarea id="bank-description"
                   placeholder="Paste hasil Selling Point dari ChatGPT di sini, atau jelaskan produk secara manual..." 
                   value={bankDesc} 
                   onChange={(e) => setBankDesc(e.target.value)} 
@@ -3490,11 +3181,12 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 <input type="text" className="api-key-input" placeholder={`https://shope.ee/...`} value={bankProductLink} onChange={(e) => setBankProductLink(e.target.value)} />
               </div>
               <div className="input-group">
-                <label>Kategori Produk</label>
+                <label htmlFor="bank-category">Kategori Produk</label>
                 <div style={{position: 'relative'}}>
                   <input 
                     type="text" 
                     className="api-key-input" 
+                    id="bank-category"
                     list="bank-category-list"
                     placeholder="Ketik baru atau pilih yang sudah ada..." 
                     value={bankCategory} 
@@ -3510,8 +3202,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               <button className="btn-primary generate-btn" onClick={handleSaveBank} disabled={!bankCategory || !bankProductName || isSaving} style={{width: '100%', marginTop: '1rem'}}>
                 {isSaving ? 'Menyimpan...' : (editingBankId ? '💾 Simpan Perubahan' : '💾 Simpan ke Bank')}
               </button>
-            </div>
-          </div>
+            </fieldset>
+          </Modal>
         )}
 
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem'}}>
@@ -3519,7 +3211,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             <h2 className="desktop-title">🗃️ Data Produk</h2>
             <p className="subtitle">Simpan data dan foto produk Anda di sini untuk mempermudah pembuatan konten.</p>
           </div>
-          <button className="btn-primary" onClick={() => setIsAddProductModalOpen(true)} style={{padding: '0.6rem 1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+          <button className="btn-primary" onClick={openNewProduct} style={{padding: '0.6rem 1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
             <span style={{fontSize: '1.2rem'}}>+</span> Tambah Produk
           </button>
         </div>
@@ -3662,7 +3354,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
   const renderDatabase = () => {
     let filteredHistory = [];
     if (activeDatabaseCategory === 'Storyboard') {
-      filteredHistory = history.filter(item => item.type === 'Storyboard' || item.type === 'Konten Masak' || item.type === 'Bang Jenggot');
+      filteredHistory = history.filter(item => ['Storyboard', 'Konten Masak', 'Bang Jenggot', 'UGC', 'UGC Style', 'UGC Style (Voice Over)', 'Video Script AI'].includes(item.type));
     } else if (activeDatabaseCategory === 'Threads Affiliate') {
       filteredHistory = history.filter(item => item.type === 'Utas Affiliate');
     } else if (activeDatabaseCategory === 'Threads Umum') {
@@ -3670,7 +3362,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     }
 
     if (selectedHistoryItem) {
-      const parts = selectedHistoryItem.result.split('\n\n---\n\n').filter(p => p.trim());
+      const parts = historyParts(selectedHistoryItem.result);
       return (
         <div className="content-wrapper fade-in">
           <div className="content-panel">
@@ -3708,7 +3400,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                           <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
                             <img src={imageUrl} alt={`Visualisasi Bagian ${index + 1}`} style={{width: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '12px', background: 'rgba(0,0,0,0.2)'}} />
                             <div style={{display: 'flex', gap: '0.5rem'}}>
-                              <a href={imageUrl} target="_blank" rel="noreferrer" className="btn-secondary" style={{textDecoration: 'none', display: 'flex', alignItems: 'center', fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>
+                              <a href={safeLink(imageUrl)} target="_blank" rel="noreferrer" className="btn-secondary" style={{textDecoration: 'none', display: 'flex', alignItems: 'center', fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>
                                 🔍 Buka Resolusi Penuh
                               </a>
                               <button className="btn-secondary" onClick={() => handleRemoveImageFromPart(index, parts)} style={{color: '#ef4444', borderColor: '#ef4444', fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>
@@ -3776,9 +3468,9 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           ) : (
             <div style={{display: 'flex', flexDirection: 'column', gap: '0.8rem'}}>
               {filteredHistory.map(item => (
-                <div key={item.id} className="glass-panel hover-card" style={{padding: '1.2rem', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--glass-border)'}} onClick={() => setSelectedHistoryItem(item)}>
+                <div key={item.id} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedHistoryItem(item); } }} className="glass-panel hover-card" style={{padding: '1.2rem', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--glass-border)'}} onClick={() => setSelectedHistoryItem(item)}>
                   <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center'}}>
-                    <span style={{background: 'var(--primary-color)', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold'}}>{item.type}</span>
+                    <span style={{background: 'var(--primary-color)', color: 'white', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold'}}>{item.type}</span>
                     <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>{new Date(item.created_at).toLocaleString('id-ID')}</span>
                   </div>
                   <h4 style={{fontSize: '1rem', color: 'var(--text-primary)', margin: 0}}>
@@ -3797,15 +3489,15 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
   };
 
   const handleKeyChange = (e) => {
-    setApiKey(e.target.value);
-    localStorage.setItem('storyboard_api_key', e.target.value);
+    setApiKey(e.target.value.trim());
+    if (!writeStorage('storyboard_api_key', e.target.value.trim())) alert('Browser memblokir penyimpanan. API Key hanya tersedia selama halaman ini terbuka.');
   };
 
   const handleGeminiKeyChange = (index, value) => {
     const newKeys = [...geminiKeys];
     newKeys[index] = value;
     setGeminiKeys(newKeys);
-    localStorage.setItem('gemini_api_keys', JSON.stringify(newKeys));
+    if (!writeStorage('gemini_api_keys', JSON.stringify(newKeys))) alert('Browser memblokir penyimpanan kunci API.');
   };
 
   const handleTiktokScrape = async () => {
@@ -3899,82 +3591,30 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
   );
 
   const renderSettings = () => (
-    <div className="content-wrapper fade-in">
-      <div className="content-panel">
-        <h2 className="desktop-title">Pengaturan API</h2>
-        <p className="subtitle">Kelola semua kunci API (API Key) Anda di sini.</p>
-        
-        <div className="layout-grid">
-          <div className="glass-panel" style={{textAlign: 'left', gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto'}}>
-            <h3 style={{marginBottom: '1rem', color: 'var(--primary-color)'}}>1inference API (Utama)</h3>
-            <div className="input-group">
-              <label>1inference API Key</label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={handleKeyChange}
-                placeholder="Masukkan API Key 1inference Anda..."
-                className="api-key-input"
-              />
-              <small className="help-text" style={{marginTop: '0.5rem', display: 'block', color: 'var(--text-secondary)'}}>
-                Digunakan untuk fitur Storyboard, Gambar, dan Thread Umum.
-              </small>
-            </div>
-          </div>
+    <div className="content-wrapper fade-in"><div className="content-panel">
+      <h2 className="desktop-title">Pengaturan API</h2>
+      <p className="subtitle">Hubungkan layanan AI pilihan Anda dengan workspace. Kunci tersimpan otomatis di browser ini.</p>
+      <div className="settings-grid">
+        <div className="glass-panel"><div className="settings-card-heading"><span className="icon-tile indigo"><Icon name="spark" /></span><div><h3>1inference</h3><p>Asisten utama untuk proses kreatif Anda</p></div></div>
+          <div className="input-group"><label htmlFor="primary-api-key">1inference API Key</label><input id="primary-api-key" type="password" value={apiKey} onChange={handleKeyChange} placeholder="Masukkan API Key 1inference Anda..." autoComplete="off" spellCheck={false} /><small className="help-text">Digunakan untuk storyboard, threads, gambar, dan text to speech.</small></div>
+          <p className="settings-note">Kunci yang terisi belum tentu aktif. Validitas dan saldo akan diperiksa oleh provider saat Anda membuat konten.</p>
+        </div>
+        <div className="glass-panel"><div className="settings-card-heading"><span className="icon-tile teal"><Icon name="shield" /></span><div><h3>Privasi kunci Anda</h3><p>Gunakan hanya pada perangkat pribadi</p></div></div><p className="help-text">API Key disimpan di localStorage browser, bukan di database. Pengguna perangkat ini dan ekstensi browser yang memiliki izin dapat mengaksesnya. Hapus kunci sebelum memakai perangkat bersama.</p><button className="btn-secondary" style={{marginTop: 20}} onClick={() => { setApiKey(''); setGeminiKeys(Array(10).fill('')); writeStorage('storyboard_api_key', ''); writeStorage('gemini_api_keys', '[]'); alert('Kunci API di browser ini telah dihapus.'); }}>Hapus semua kunci tersimpan</button></div>
+        <div className="glass-panel"><div className="settings-card-heading"><span className="icon-tile violet"><Icon name="film" /></span><div><h3>Google Gemini</h3><p>Analisis gambar dan video untuk Script Video AI</p></div></div>
+          <div className="input-group"><label htmlFor="gemini-key-0">Gemini API Key utama</label><input id="gemini-key-0" type="password" value={geminiKeys[0]} onChange={e => handleGeminiKeyChange(0, e.target.value)} autoComplete="off" placeholder="Masukkan Gemini API Key..." spellCheck={false} /></div>
+          <details className="settings-details" style={{marginTop: 20}}><summary>Kunci cadangan (opsional)</summary><div className="gemini-key-list">{geminiKeys.slice(1).map((key, i) => <div className="input-group" key={i}><label htmlFor={`gemini-key-${i + 1}`}>Kunci cadangan {i + 1}</label><input id={`gemini-key-${i + 1}`} type="password" value={key} onChange={e => handleGeminiKeyChange(i + 1, e.target.value)} autoComplete="off" spellCheck={false} /></div>)}</div></details>
+          <p className="settings-note">File referensi dikirim langsung ke Google. Ketersediaan model dan batas penggunaan mengikuti akun provider Anda.</p>
         </div>
       </div>
-    </div>
+    </div></div>
   );
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (loginPassword === 'malik2026') {
-      setIsAuthenticated(true);
-      localStorage.setItem('storyboard_auth', 'true');
-      setLoginError(false);
-    } else {
-      setLoginError(true);
-    }
-  };
-
-  const renderLogin = () => (
-    <div className="app-layout" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e293b, #0f172a)'}}>
-      <div className="glass-panel fade-in" style={{maxWidth: '400px', width: '90%', padding: '2.5rem', textAlign: 'center'}}>
-        <div style={{marginBottom: '2rem'}}>
-          <LogoSVG />
-          <h2 style={{color: 'white', marginTop: '1rem', fontSize: '1.5rem'}}>Creator Hub AI</h2>
-          <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem'}}>Silakan masukkan password untuk masuk</p>
-        </div>
-        
-        <form onSubmit={handleLogin} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-          <div className="input-group" style={{textAlign: 'left'}}>
-            <input
-              type="password"
-              value={loginPassword}
-              onChange={(e) => { setLoginPassword(e.target.value); setLoginError(false); }}
-              placeholder="Password..."
-              className="api-key-input"
-              style={{borderColor: loginError ? '#ef4444' : 'rgba(255,255,255,0.1)'}}
-              autoFocus
-            />
-            {loginError && <small style={{color: '#ef4444', marginTop: '0.5rem', display: 'block'}}>Password salah!</small>}
-          </div>
-          
-          <button type="submit" className="btn-primary" style={{width: '100%', padding: '0.8rem'}}>
-            Login
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-
-  if (!isAuthenticated) return renderLogin();
   const handleGenerateTts = async () => {
     if (!ttsInputText || !apiKey) return;
     setIsGeneratingTts(true);
     setGeneratedAudioUrl(null);
     try {
-      const finalInputText = ttsInstruction ? `[Instruksi: ${ttsInstruction}] ${ttsInputText}` : ttsInputText;
+      const finalInputText = ttsInputText;
       const response = await fetch('/api/tts', {
         method: 'POST',
         headers: {
@@ -4086,17 +3726,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               <input type="range" min="0.25" max="4.0" step="0.25" value={ttsSpeed} onChange={(e) => setTtsSpeed(e.target.value)} style={{width: '100%', accentColor: 'var(--primary-color)'}} />
             </div>
 
-            <div className="input-group">
-              <label>Instruksi Nada / Gaya Bicara (Opsional)</label>
-              <input 
-                type="text" 
-                placeholder="Contoh: Baca dengan nada sedih dan pelan" 
-                value={ttsInstruction} 
-                onChange={(e) => setTtsInstruction(e.target.value)} 
-                className="api-key-input"
-              />
-              <small style={{display: 'block', color: 'var(--text-secondary)', marginTop: '0.3rem'}}>Instruksi ini akan disisipkan di awal teks untuk memberikan konteks kepada AI.</small>
-            </div>
+            <p className="help-text">Karakter dan tempo mengikuti pilihan suara. Hanya naskah yang dikirim untuk dibacakan, tanpa instruksi tambahan di awal audio.</p>
 
             <div className="input-group">
               <label>Teks / Skrip (Max 4096 karakter)</label>
@@ -4149,13 +3779,20 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
 
   return (
     <div className="app-layout">
-      {renderSidebar()}
-      <main className="main-content">
-        <div className="panel-header-mobile">
-          <button className="hamburger-btn" onClick={() => setIsMobileMenuOpen(true)}>☰</button>
-          <h2>Creator Hub AI</h2>
-        </div>
-        {activeTab === 'dashboard' && renderDashboard()}
+      <a className="skip-link" href="#workspace-main">Lewati ke konten</a>
+      <Sidebar activeTab={activeTab} onNavigate={navigate} open={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} apiReady={Boolean(apiKey.trim())} onLogout={() => onLogout().catch(e => alert(e.message))} />
+      <div className="workspace-body" inert={isMobileMenuOpen ? '' : undefined}>
+      <header className="workspace-header"><div className="breadcrumb"><button className="menu-toggle icon-button" onClick={() => setIsMobileMenuOpen(true)} aria-label="Buka navigasi" aria-expanded={isMobileMenuOpen} aria-controls="workspace-navigation"><Icon name="menu" /></button><span>Workspace</span><span className="breadcrumb-divider">/</span><strong>{pageTitle(activeTab)}</strong></div><div className="header-actions"><button className="header-api-status" onClick={() => navigate('settings')}><span className={`status-dot ${apiKey.trim() ? 'ready' : ''}`} />{apiKey.trim() ? 'API Key tersimpan' : 'Atur API Key'}</button><span className="profile-avatar">C</span></div></header>
+      <main className="main-content" id="workspace-main" ref={mainRef} tabIndex={-1}>
+        {Object.keys(loadErrors).length > 0 && <div className="load-error" role="alert"><div><strong>Data belum dapat dimuat</strong><p>{[...new Set(Object.values(loadErrors))].join(' ')}</p></div><button className="btn-secondary" onClick={() => { fetchHistory(); fetchBankStoryboard(); fetchProducts(); fetchImageBank(); }}><Icon name="refresh" size={16} />Coba lagi</button></div>}
+        {activeTab === 'dashboard' && <Dashboard history={history} products={bankStoryboardData} images={imageBankData} loading={isHistoryLoading || isBankStoryboardLoading || isImageBankLoading} apiReady={Boolean(apiKey.trim())} onNavigate={navigate} onOpenHistory={openHistory} onAddProduct={openNewProduct} />}
+        {activeTab === 'storyboard' && renderStoryboardForm()}
+        {activeTab === 'cooking_content' && renderCookingContentForm()}
+        {activeTab === 'ugc' && renderUgcForm()}
+        {activeTab === 'image_gen' && renderImageGenForm()}
+        {activeTab === 'bank_gambar' && renderImageBankForm()}
+        {activeTab === 'tts' && renderTtsForm()}
+        {activeTab === 'tiktok' && renderTiktokScraperForm()}
         {activeTab === 'bang_jenggot' && renderBangJenggotForm()}
         {activeTab === 'bank_storyboard' && renderBankStoryboardForm()}
 
@@ -4166,6 +3803,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
 
         {activeTab === 'settings' && renderSettings()}
       </main>
+      </div>
+      {notice && createPortal(<div className="toast" role="status"><Icon name="spark" size={20} /><p>{notice}</p><button className="icon-button" onClick={() => setNotice('')} aria-label="Tutup pemberitahuan"><Icon name="close" size={18} /></button></div>, document.body)}
     </div>
   )
 }

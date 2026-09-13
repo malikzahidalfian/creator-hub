@@ -1,24 +1,19 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+import { requirePost } from '../server/session.js';
+import { fetchPublicText, parsePublicUrl, isSite } from '../server/safe-url.js';
 
-  const { url } = req.body;
+export default async function handler(req, res) {
+  if (!requirePost(req, res)) return;
+
+  const { url } = req.body || {};
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
   try {
-    // 1. Cek apakah ini link Tokopedia / TikTok Shop (vt.tokopedia.com dll)
-    if (url.includes('tokopedia.com')) {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
-        redirect: 'follow'
-      });
-      
-      if (!response.ok) {
-        return res.status(response.status).json({ error: 'Gagal mengambil data dari link TikTok Shop/Tokopedia.' });
-      }
-      
-      const html = await response.text();
+    const parsedUrl = parsePublicUrl(url);
+    if (!isSite(parsedUrl.hostname, 'tiktok.com') && !isSite(parsedUrl.hostname, 'tokopedia.com')) {
+      return res.status(400).json({ error: 'Gunakan link TikTok atau Tokopedia yang valid.' });
+    }
+    if (isSite(parsedUrl.hostname, 'tokopedia.com')) {
+      const html = await fetchPublicText(url);
       
       // Ekstrak title menggunakan Regex
       const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i) || html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"[^>]*>/i);
@@ -49,7 +44,7 @@ export default async function handler(req, res) {
     // 2. Jika link TikTok biasa, gunakan oEmbed
     const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
     
-    const response = await fetch(oembedUrl);
+    const response = await fetch(oembedUrl, { signal: AbortSignal.timeout(15_000) });
     
     if (!response.ok) {
        return res.status(response.status).json({ error: 'Gagal mengambil data dari TikTok. Pastikan link valid.' });
