@@ -98,6 +98,69 @@ test('product data is available in affiliate picker and generation/copy handle e
   await expect(page.getByRole('status')).toContainText('Teks gagal disalin');
 });
 
+for (const width of [390, 1440]) {
+  test(`article threads read the source before choosing a concept and hook at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 950 });
+    await mockData(page);
+    await page.addInitScript(() => localStorage.setItem('storyboard_api_key', 'test-key'));
+    const source = 'https://example.com/article';
+    const article = 'Dinas Perhubungan akan menguji bus malam di dua rute mulai Oktober. Uji coba berlangsung tiga bulan dan menyasar pekerja yang pulang setelah pukul 22.00. Tarif belum diputuskan.';
+    const withAffiliate = width === 390;
+    const blocks = [
+      'Pulang kerja lewat pukul 22.00? Dua rute bus akan menguji layanan malam mulai Oktober.',
+      'Uji coba direncanakan berlangsung tiga bulan untuk menjangkau pekerja malam.',
+      `Tarifnya belum diputuskan. Sumber: ${source}`,
+      ...(withAffiliate ? ['Wajan Granit untuk memasak. https://example.com/wajan'] : [])
+    ];
+    let extractionRoute;
+    const generations = [];
+    await page.route('**/api/scrape-article', route => { extractionRoute = route; });
+    await page.route('**/api/generate', route => {
+      generations.push(route.request().postDataJSON());
+      return route.fulfill({ json: { choices: [{ message: { content: blocks.join('\n---\n') } }] } });
+    });
+    await openWorkspace(page);
+    await navigate(page, 'Threads Artikel');
+    await expect(page.getByText('Gaya Bahasa (Diksi)', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Tema Emosi (Tone)', { exact: true })).toHaveCount(0);
+    await page.getByPlaceholder('Masukkan URL berita', { exact: false }).fill(source);
+    await page.getByRole('spinbutton').fill('3');
+    if (withAffiliate) {
+      await page.getByPlaceholder('Contoh: Fokus pada dampaknya', { exact: false }).fill('Fokus pada pekerja malam.');
+      await page.getByRole('button', { name: /Pilih Produk Affiliate/ }).click();
+      await page.getByRole('button', { name: /Wajan Granit/ }).click();
+    }
+    await page.getByRole('button', { name: /Generate Utas Berita/ }).click();
+    await expect.poll(() => Boolean(extractionRoute)).toBe(true);
+    expect(extractionRoute.request().postDataJSON()).toEqual({ url: source });
+    await expect(page.getByRole('button', { name: /Membaca Artikel/ })).toBeDisabled();
+    expect(generations).toHaveLength(0);
+    await extractionRoute.fulfill({ json: { content: article } });
+    await expect(page.locator('.prompt-card')).toHaveCount(blocks.length);
+    await expect(page.getByRole('heading', { name: 'Hook (Tweet 1)' })).toBeVisible();
+    await expect(page.locator('.prompt-content')).toHaveText(blocks);
+    expect(generations).toHaveLength(1);
+    const system = generations[0].messages.find(message => message.role === 'system').content;
+    const user = generations[0].messages.find(message => message.role === 'user').content;
+    expect(user).toContain(article);
+    expect(user).toContain(source);
+    expect(system).toContain('Tentukan sendiri satu sudut pandang/konsep utama, gaya bahasa, dan tema emosi');
+    expect(system).toContain('HOOK PEMBUKA ADALAH PRIORITAS');
+    expect(system).toContain('Jangan mengarang angka, kutipan');
+    expect(system).toContain('Buat tepat 3 tweet berita');
+    expect(system).toContain(`Cantumkan link sumber di akhir tweet berita terakhir: ${source}`);
+    if (withAffiliate) {
+      expect(system).toContain('total 4 tweet');
+      expect(system).toContain('Nama Produk: Wajan Granit');
+      expect(system).toContain('https://example.com/wajan');
+      expect(user).toContain('Fokus pada pekerja malam.');
+    } else {
+      expect(system).toContain('Tidak ada unsur jualan sama sekali.');
+      expect(user).not.toContain('INSTRUKSI KHUSUS DARI USER');
+    }
+  });
+}
+
 test('failed article extraction stops generation instead of inventing news', async ({ page }) => {
   await mockData(page);
   await page.addInitScript(() => localStorage.setItem('storyboard_api_key', 'test-key'));
