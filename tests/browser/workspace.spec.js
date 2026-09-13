@@ -98,14 +98,21 @@ test('product data is available in affiliate picker and generation/copy handle e
   await expect(page.getByRole('status')).toContainText('Teks gagal disalin');
 });
 
-for (const width of [390, 1440]) {
-  test(`article threads read the source before choosing a concept and hook at ${width}px`, async ({ page }) => {
+const articleStyleCases = [
+  { width: 390, style: 'santai', label: 'Santai (Gue-Elu, Gaul)', tone: 'penasaran', toneLabel: 'Misterius/Penasaran', direction: 'Gunakan gue/lo' },
+  { width: 1440, style: 'formal', label: 'Formal (Baku, Profesional)', tone: 'inspiratif', toneLabel: 'Inspiratif & Motivasi', direction: 'bahasa Indonesia baku dengan verba aktif' },
+  { width: 390, style: 'humoris', label: 'Humoris (Banyak Candaan)', tone: 'lucu', toneLabel: 'Santai & Lucu', direction: 'Bangun setup singkat lalu punchline' },
+  { width: 1440, style: 'nyinyir', label: 'Nyinyir (Julid, Pedas)', tone: 'debat', toneLabel: 'Kontroversial (Bikin Debat)', direction: 'Benturkan janji dengan pelaksanaan', withAffiliate: true },
+  { width: 1440, style: 'storytelling', label: 'Storytelling Emosional', tone: 'emosional', toneLabel: 'Sangat Emosional/Baper', direction: 'Pencerita yang hangat dan dekat dengan manusia' }
+];
+
+for (const { width, style, label, tone, toneLabel, direction, withAffiliate = false } of articleStyleCases) {
+  test(`article threads read the source and send the ${style} writing profile at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 950 });
     await mockData(page);
     await page.addInitScript(() => localStorage.setItem('storyboard_api_key', 'test-key'));
     const source = 'https://example.com/article';
     const article = 'Dinas Perhubungan akan menguji bus malam di dua rute mulai Oktober. Uji coba berlangsung tiga bulan dan menyasar pekerja yang pulang setelah pukul 22.00. Tarif belum diputuskan.';
-    const withAffiliate = width === 390;
     const blocks = [
       'Pulang kerja lewat pukul 22.00? Dua rute bus akan menguji layanan malam mulai Oktober.',
       'Uji coba direncanakan berlangsung tiga bulan untuk menjangkau pekerja malam.',
@@ -121,8 +128,14 @@ for (const width of [390, 1440]) {
     });
     await openWorkspace(page);
     await navigate(page, 'Threads Artikel');
-    await expect(page.getByText('Gaya Bahasa (Diksi)', { exact: true })).toHaveCount(0);
-    await expect(page.getByText('Tema Emosi (Tone)', { exact: true })).toHaveCount(0);
+    const styleSelect = page.getByLabel('Gaya Bahasa (Diksi)', { exact: true });
+    const toneSelect = page.getByLabel('Tema Emosi (Tone)', { exact: true });
+    await expect(styleSelect).toHaveValue('santai');
+    await expect(toneSelect).toHaveValue('penasaran');
+    await expect(styleSelect.locator('option')).toHaveCount(5);
+    await expect(toneSelect.locator('option')).toHaveCount(5);
+    await styleSelect.selectOption(style);
+    await toneSelect.selectOption(tone);
     await page.getByPlaceholder('Masukkan URL berita', { exact: false }).fill(source);
     await page.getByRole('spinbutton').fill('3');
     if (withAffiliate) {
@@ -144,7 +157,12 @@ for (const width of [390, 1440]) {
     const user = generations[0].messages.find(message => message.role === 'user').content;
     expect(user).toContain(article);
     expect(user).toContain(source);
-    expect(system).toContain('Tentukan sendiri satu sudut pandang/konsep utama, gaya bahasa, dan tema emosi');
+    expect(system).toContain(`GAYA BAHASA PILIHAN: ${label}`);
+    expect(system).toContain(`TEMA EMOSI PILIHAN: ${toneLabel}`);
+    expect(system).toContain(direction);
+    for (const other of articleStyleCases.filter(item => item.style !== style)) {
+      expect(system).not.toContain(other.direction);
+    }
     expect(system).toContain('HOOK PEMBUKA ADALAH PRIORITAS');
     expect(system).toContain('Jangan mengarang angka, kutipan');
     expect(system).toContain('Buat tepat 3 tweet berita');
