@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Dashboard from './components/Dashboard'
+import AccountSettings from './components/AccountSettings'
+import MobileNav from './components/MobileNav'
 import Sidebar, { pageTitle } from './components/Sidebar'
 import Icon from './components/Icon'
 import Modal from './components/Modal'
@@ -2037,13 +2039,13 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
       {isBjProductModalOpen && (
         <Modal label="Pilih produk storyboard" onClose={() => setIsBjProductModalOpen(false)}>
           <div className="modal-content glass-panel" onClick={(e) => e.stopPropagation()} style={{width: '90%', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto', padding: '2rem'}}>
-            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem'}}>
+            <div className="dialog-header" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem'}}>
               <h2>{selectedBjFolder ? `📂 ${selectedBjFolder}` : '📦 Pilih Kategori Produk'}</h2>
               <button aria-label="Tutup pilihan produk" onClick={() => setIsBjProductModalOpen(false)} style={{background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '1.5rem', cursor: 'pointer'}}>×</button>
             </div>
 
             {!selectedBjFolder ? (
-              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem'}}>
+              <div className="dialog-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem'}}>
                 {Object.keys(groupedBankData).map(cat => (
                   <div key={cat} onClick={() => setSelectedBjFolder(cat)} className="folder-card" style={{padding: '1.5rem 1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', cursor: 'pointer', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)', transition: 'transform 0.2s, background 0.2s'}}>
                     <div style={{fontSize: '3rem', marginBottom: '0.5rem'}}>📁</div>
@@ -2055,7 +2057,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
             ) : (
               <div>
                 <button onClick={() => setSelectedBjFolder(null)} className="btn-secondary" style={{marginBottom: '1rem'}}>⬅️ Kembali ke Kategori</button>
-                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem'}}>
+                <div className="dialog-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem'}}>
                   {(groupedBankData[selectedBjFolder] || []).map(item => {
                     let parsed = {};
                     try { parsed = JSON.parse(item.result); } catch(e) {}
@@ -3095,7 +3097,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {/* Modal Detail Produk */}
         {selectedProductDetail && (
           <Modal label="Detail produk" onClose={() => setSelectedProductDetail(null)}>
-            <div className="glass-panel fade-in" style={{
+            <div className="glass-panel product-detail fade-in" style={{
               width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto',
               background: '#fff', borderRadius: '16px', padding: '0',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column'
@@ -3106,7 +3108,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 ) : (
                   <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '4rem'}}>📦</div>
                 )}
-                <button onClick={() => setSelectedProductDetail(null)} style={{position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>✖</button>
+                <button aria-label="Tutup detail produk" onClick={() => setSelectedProductDetail(null)} style={{position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '36px', height: '36px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>✖</button>
               </div>
               <div style={{padding: '2rem', flex: 1}}>
                 <span style={{display: 'inline-block', background: '#e0e7ff', color: '#4f46e5', padding: '0.3rem 0.8rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem'}}>{selectedProductDetail.item.product_desc || 'Kategori'}</span>
@@ -3136,9 +3138,9 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto',
               background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
             }}>
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+              <div className="dialog-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
                 <h3 style={{color: 'var(--primary-color)', margin: 0}}>{editingBankId ? 'Edit Produk' : 'Tambah Aset Baru'}</h3>
-                <button aria-label="Tutup form produk" disabled={isSaving} onClick={() => {
+                <button aria-label="Tutup form produk" disabled={isSaving || isGeneratingSelling} onClick={() => {
                   setIsAddProductModalOpen(false);
                   setEditingBankId(null);
                   setBankProductName(''); setBankDesc(''); setBankImgUrl(''); setBankModelImgUrl(''); setBankCategory(''); setBankProductLink('');
@@ -3154,8 +3156,8 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                 <textarea id="bank-description"
                   placeholder="Paste hasil Selling Point dari ChatGPT di sini, atau jelaskan produk secara manual..." 
                   value={bankDesc} 
-                  onChange={(e) => setBankDesc(e.target.value)} 
-                  rows="15" 
+                  onChange={(e) => setBankDesc(e.target.value)}
+                  rows="6"
                   style={{fontFamily: 'monospace', fontSize: '0.9rem'}}
                 />
                 <button 
@@ -3199,7 +3201,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                   </datalist>
                 </div>
               </div>
-              <button className="btn-primary generate-btn" onClick={handleSaveBank} disabled={!bankCategory || !bankProductName || isSaving} style={{width: '100%', marginTop: '1rem'}}>
+              <button className="btn-primary generate-btn dialog-save" onClick={handleSaveBank} disabled={!bankCategory || !bankProductName || isSaving} style={{width: '100%', marginTop: '1rem'}}>
                 {isSaving ? 'Menyimpan...' : (editingBankId ? '💾 Simpan Perubahan' : '💾 Simpan ke Bank')}
               </button>
             </fieldset>
@@ -3219,9 +3221,10 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         <div className="glass-panel" style={{padding: '1.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', boxShadow: 'none'}}>
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
             <h3 style={{margin: 0, color: '#1e293b'}}>Aset Tersimpan ({filteredBankData.length})</h3>
-            <div style={{display: 'flex', gap: '0.5rem'}}>
-              <input 
-                type="text" 
+            <div className="product-search" style={{display: 'flex', gap: '0.5rem'}}>
+              <input
+                type="search"
+                aria-label="Cari produk tersimpan"
                 placeholder="Cari aset..." 
                 className="api-key-input"
                 style={{padding: '0.4rem 0.8rem', width: '200px', margin: 0}}
@@ -3287,8 +3290,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                       <button 
                         onClick={() => setActiveBankCategory(categoryName)}
                         style={{background: 'transparent', border: 'none', color: '#0ea5e9', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', transition: 'color 0.2s'}}
-                        onMouseEnter={(e) => e.target.style.color = '#0284c7'}
-                        onMouseLeave={(e) => e.target.style.color = '#0ea5e9'}
                       >
                         Lihat Semua &rarr;
                       </button>
@@ -3308,8 +3309,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                           position: 'relative',
                           boxShadow: '0 4px 10px rgba(0,0,0,0.03)'
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.08)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.03)'; }}
                         onClick={() => setSelectedProductDetail({item, parsed})}
                         >
                           {parsed.imgUrl ? (
@@ -3399,7 +3398,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                         {imageUrl ? (
                           <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
                             <img src={imageUrl} alt={`Visualisasi Bagian ${index + 1}`} style={{width: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '12px', background: 'rgba(0,0,0,0.2)'}} />
-                            <div style={{display: 'flex', gap: '0.5rem'}}>
+                            <div className="action-row" style={{display: 'flex', gap: '0.5rem'}}>
                               <a href={safeLink(imageUrl)} target="_blank" rel="noreferrer" className="btn-secondary" style={{textDecoration: 'none', display: 'flex', alignItems: 'center', fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>
                                 🔍 Buka Resolusi Penuh
                               </a>
@@ -3409,9 +3408,10 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
                             </div>
                           </div>
                         ) : (
-                          <div style={{display: 'flex', gap: '0.5rem'}}>
-                            <input 
-                              type="text" 
+                          <div className="action-row" style={{display: 'flex', gap: '0.5rem'}}>
+                            <input
+                              type="url"
+                              aria-label={`URL gambar bagian ${index + 1}`}
                               placeholder="URL Gambar Hasil (Midjourney/Flux/dsb)..." 
                               className="text-input" 
                               value={imageInputs[index] || ''}
@@ -3538,10 +3538,10 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         <div className="layout-grid">
           <div className="glass-panel" style={{gridColumn: '1 / -1'}}>
             <div className="input-group">
-              <label>Link TikTok</label>
-              <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
-                <input
-                  type="text"
+              <label htmlFor="tiktok-url">Link TikTok</label>
+              <div className="action-row" style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
+                <input id="tiktok-url"
+                  type="url"
                   value={tiktokUrl}
                   onChange={(e) => setTiktokUrl(e.target.value)}
                   placeholder="Masukkan URL TikTok (contoh: https://vt.tiktok.com/...)"
@@ -3782,9 +3782,9 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
       <a className="skip-link" href="#workspace-main">Lewati ke konten</a>
       <Sidebar activeTab={activeTab} onNavigate={navigate} open={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} apiReady={Boolean(apiKey.trim())} onLogout={() => onLogout().catch(e => alert(e.message))} />
       <div className="workspace-body" inert={isMobileMenuOpen ? '' : undefined}>
-      <header className="workspace-header"><div className="breadcrumb"><button className="menu-toggle icon-button" onClick={() => setIsMobileMenuOpen(true)} aria-label="Buka navigasi" aria-expanded={isMobileMenuOpen} aria-controls="workspace-navigation"><Icon name="menu" /></button><span>Workspace</span><span className="breadcrumb-divider">/</span><strong>{pageTitle(activeTab)}</strong></div><div className="header-actions"><button className="header-api-status" onClick={() => navigate('settings')}><span className={`status-dot ${apiKey.trim() ? 'ready' : ''}`} />{apiKey.trim() ? 'API Key tersimpan' : 'Atur API Key'}</button><span className="profile-avatar">C</span></div></header>
+      <header className="workspace-header"><div className="breadcrumb"><button className="menu-toggle icon-button" onClick={() => setIsMobileMenuOpen(true)} aria-label="Buka navigasi" aria-expanded={isMobileMenuOpen} aria-controls="workspace-navigation"><Icon name="menu" /></button><span>Workspace</span><span className="breadcrumb-divider">/</span><strong>{pageTitle(activeTab)}</strong></div><div className="header-actions"><button className="header-api-status" onClick={() => navigate('settings')}><span className={`status-dot ${apiKey.trim() ? 'ready' : ''}`} />{apiKey.trim() ? 'API Key tersimpan' : 'Atur API Key'}</button><button className="profile-avatar profile-button" aria-label="Pengaturan akun" onClick={() => navigate('account')}>C</button></div></header>
       <main className="main-content" id="workspace-main" ref={mainRef} tabIndex={-1}>
-        {Object.keys(loadErrors).length > 0 && <div className="load-error" role="alert"><div><strong>Data belum dapat dimuat</strong><p>{[...new Set(Object.values(loadErrors))].join(' ')}</p></div><button className="btn-secondary" onClick={() => { fetchHistory(); fetchBankStoryboard(); fetchProducts(); fetchImageBank(); }}><Icon name="refresh" size={16} />Coba lagi</button></div>}
+        {!['account', 'settings'].includes(activeTab) && Object.keys(loadErrors).length > 0 && <div className="load-error" role="alert"><div><strong>Data belum dapat dimuat</strong><p>{[...new Set(Object.values(loadErrors))].join(' ')}</p></div><button className="btn-secondary" onClick={() => { fetchHistory(); fetchBankStoryboard(); fetchProducts(); fetchImageBank(); }}><Icon name="refresh" size={16} />Coba lagi</button></div>}
         {activeTab === 'dashboard' && <Dashboard history={history} products={bankStoryboardData} images={imageBankData} loading={isHistoryLoading || isBankStoryboardLoading || isImageBankLoading} apiReady={Boolean(apiKey.trim())} onNavigate={navigate} onOpenHistory={openHistory} onAddProduct={openNewProduct} />}
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'cooking_content' && renderCookingContentForm()}
@@ -3802,7 +3802,9 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'history' && renderDatabase()}
 
         {activeTab === 'settings' && renderSettings()}
+        {activeTab === 'account' && <AccountSettings onOpenApi={() => navigate('settings')} />}
       </main>
+      <MobileNav activeTab={activeTab} onNavigate={navigate} />
       </div>
       {notice && createPortal(<div className="toast" role="status"><Icon name="spark" size={20} /><p>{notice}</p><button className="icon-button" onClick={() => setNotice('')} aria-label="Tutup pemberitahuan"><Icon name="close" size={18} /></button></div>, document.body)}
     </div>

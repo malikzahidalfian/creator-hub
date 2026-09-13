@@ -13,7 +13,7 @@ async function mockData(page, records = [product, content]) {
 }
 async function login(page) {
   await page.goto('/');
-  await page.getByLabel('Password workspace').fill('browser-test-password-123');
+  await page.getByLabel('Password workspace', { exact: true }).fill('browser-test-password-123');
   await page.getByRole('button', { name: 'Masuk ke workspace' }).click();
   await expect(page.getByRole('heading', { name: 'Ruang untuk ide besar Anda.' })).toBeVisible();
 }
@@ -29,8 +29,8 @@ test('login really protects API access; localStorage flag cannot bypass it', asy
   expect(response.status()).toBe(401);
   await page.addInitScript(() => localStorage.setItem('storyboard_auth', 'true'));
   await page.goto('/');
-  await expect(page.getByLabel('Password workspace')).toBeVisible();
-  await page.getByLabel('Password workspace').fill('wrong');
+  await expect(page.getByLabel('Password workspace', { exact: true })).toBeVisible();
+  await page.getByLabel('Password workspace', { exact: true }).fill('wrong');
   await page.getByRole('button', { name: 'Masuk ke workspace' }).click();
   await expect(page.getByRole('alert')).toContainText('Password tidak sesuai');
 });
@@ -168,7 +168,7 @@ test('logout removes access and login page is responsive', async ({ page }) => {
   await mockData(page);
   await login(page);
   await page.getByRole('button', { name: 'Keluar workspace' }).click();
-  await expect(page.getByLabel('Password workspace')).toBeVisible();
+  await expect(page.getByLabel('Password workspace', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'test-results/login-desktop.png', fullPage: true });
   const result = await page.request.get('/api/database');
   expect(result.status()).toBe(401);

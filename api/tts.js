@@ -2,7 +2,7 @@ import { requirePost, requireApiKey } from '../server/session.js';
 
 export const maxDuration = 60;
 export default async function handler(req, res) {
-  if (!requirePost(req, res) || !requireApiKey(req, res)) return;
+  if (!await requirePost(req, res) || !requireApiKey(req, res)) return;
   if (typeof req.body?.input !== 'string' || !req.body.input.trim() || req.body.input.length > 4096) {
     return res.status(400).json({ error: 'Teks harus berisi 1–4096 karakter.' });
   }

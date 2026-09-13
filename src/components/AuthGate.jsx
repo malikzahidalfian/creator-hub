@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { appFetch } from '../lib/client';
 import Icon from './Icon';
+import PasswordField from './PasswordField';
+import { useMobileViewport } from '../lib/viewport';
 
 export default function AuthGate({ children }) {
+  useMobileViewport();
   const [status, setStatus] = useState('loading');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -46,7 +49,7 @@ export default function AuthGate({ children }) {
         <span className="eyebrow">SELAMAT DATANG KEMBALI</span>
         <h2>Masuk ke workspace</h2><p>Lanjutkan ide dan karya Anda berikutnya.</p>
         {status === 'loading' ? <div className="loading-state" role="status"><span className="loading-spinner" /> Memeriksa sesi...</div> : <form onSubmit={login}>
-          <div className="input-group"><label htmlFor="login-password">Password workspace</label><input id="login-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Masukkan password Anda" autoComplete="current-password" required autoFocus aria-invalid={Boolean(error)} aria-describedby={error ? 'login-error' : undefined} /></div>
+          <PasswordField id="login-password" label="Password workspace" value={password} onChange={e => setPassword(e.target.value)} placeholder="Masukkan password Anda" autoComplete="current-password" required disabled={busy} aria-invalid={Boolean(error)} aria-describedby={error ? 'login-error' : undefined} />
           {error && <p className="form-error" id="login-error" role="alert">{error}</p>}
           <button className="btn-primary" type="submit" disabled={busy}>{busy ? 'Memverifikasi...' : 'Masuk ke workspace'}<Icon name="arrow" size={18} /></button>
         </form>}

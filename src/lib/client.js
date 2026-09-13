@@ -39,7 +39,7 @@ export async function appFetch(url, options = {}) {
   const response = await globalThis.fetch(url, { ...options, signal: options.signal || AbortSignal.timeout(internal ? 60_000 : 120_000) });
   if (internal && !response.ok) {
     const error = await response.json().catch(() => ({}));
-    if (response.status === 401 && url !== '/api/auth' && error.error?.includes('Sesi')) window.dispatchEvent(new Event('session-expired'));
+    if (response.status === 401 && (error.code === 'SESSION_EXPIRED' || (url !== '/api/auth' && typeof error.error === 'string' && error.error.includes('Sesi')))) window.dispatchEvent(new Event('session-expired'));
     throw new Error(typeof error.error === 'string' ? error.error : error.error?.message || `Permintaan gagal (${response.status}).`);
   }
   if (internal && !/application\/json|audio\//i.test(response.headers.get('content-type') || '')) {

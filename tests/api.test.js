@@ -1,4 +1,8 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { readCredentials } from '../server/credentials.js';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import https from 'node:https';
@@ -14,10 +18,15 @@ import { fetchPublicText, htmlToText, isPublicAddress, isSite, parsePublicUrl } 
 
 process.env.APP_PASSWORD = 'test-only-password-123';
 process.env.SESSION_SECRET = 'test-only-session-secret-with-more-than-32-characters';
+const directory = await mkdtemp(join(tmpdir(), 'creator-api-'));
+process.env.AUTH_STORE = 'file';
+process.env.AUTH_FILE = join(directory, 'credentials.json');
+const credential = await readCredentials();
+after(() => rm(directory, { recursive: true, force: true }));
 function response() {
   return { statusCode: 200, headers: {}, setHeader(key, value) { this.headers[key] = value; }, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; }, send(value) { this.body = value; return this; } };
 }
-function request(body = {}, method = 'POST') { return { body, method, headers: { cookie: sessionCookie().split(';')[0], authorization: 'Bearer test-key' }, url: '/api/database', socket: { remoteAddress: 'test' } }; }
+function request(body = {}, method = 'POST') { return { body, method, headers: { cookie: sessionCookie(false, credential).split(';')[0], authorization: 'Bearer test-key', 'content-type': 'application/json' }, url: '/api/database', socket: { remoteAddress: 'test' } }; }
 
 test('all sensitive APIs reject requests without a valid session', async () => {
   for (const handler of [database, generate, generateImage, scrapeArticle, scrapeTiktok, tts]) {
@@ -28,40 +37,41 @@ test('all sensitive APIs reject requests without a valid session', async () => {
 });
 test('login creates HttpOnly session, rejects tampering, logout clears cookie', async () => {
   let res = response();
-  await auth({ ...request({ password: 'wrong' }), headers: {} }, res);
+  await auth(request({ password: 'wrong' }), res);
   assert.equal(res.statusCode, 401);
   res = response();
   await auth(request({ password: process.env.APP_PASSWORD }), res);
   assert.equal(res.statusCode, 200);
   assert.match(res.headers['Set-Cookie'], /HttpOnly; SameSite=Strict/);
   const cookie = res.headers['Set-Cookie'];
-  assert.ok(hasSession({ headers: { cookie } }));
-  assert.equal(hasSession({ headers: { cookie: cookie.replace(/\d/, '0') } }), false);
+  assert.ok(hasSession({ headers: { cookie } }, credential));
+  assert.equal(hasSession({ headers: { cookie: cookie.replace(/\d/, '0') } }, credential), false);
   res = response();
   await auth(request({}, 'DELETE'), res);
   assert.match(res.headers['Set-Cookie'], /Max-Age=0/);
 });
-test('missing server configuration fails closed and password changes invalidate sessions', async () => {
+test('bootstrap environment no longer overrides stored credentials; missing session secret fails closed', async () => {
   const old = process.env.APP_PASSWORD;
-  const cookie = sessionCookie();
+  const secret = process.env.SESSION_SECRET;
   try {
     process.env.APP_PASSWORD = 'a-different-test-password';
-    assert.equal(hasSession({ headers: { cookie } }), false);
-    delete process.env.APP_PASSWORD;
+    assert.equal((await readCredentials()).version, credential.version);
+    const req = request({ password: old });
+    delete process.env.SESSION_SECRET;
     const res = response();
-    await auth(request({ password: 'anything' }), res);
+    await auth(req, res);
     assert.equal(res.statusCode, 503);
-  } finally { process.env.APP_PASSWORD = old; }
+  } finally { process.env.APP_PASSWORD = old; process.env.SESSION_SECRET = secret; }
 });
 test('expired cookies do not authenticate', t => {
   const now = Date.now();
   t.mock.method(Date, 'now', () => now - 9 * 60 * 60 * 1000);
-  const cookie = sessionCookie();
+  const cookie = sessionCookie(false, credential);
   Date.now.mock.restore();
-  assert.equal(hasSession({ headers: { cookie } }), false);
+  assert.equal(hasSession({ headers: { cookie } }, credential), false);
 });
 test('proxy validates provider, missing body and missing key before contacting provider', async () => {
-  for (const req of [{ ...request(), headers: { ...request().headers, 'x-provider': 'toString' } }, request(undefined), { ...request({ messages: [{}] }), headers: { cookie: sessionCookie() } }]) {
+  for (const req of [{ ...request(), headers: { ...request().headers, 'x-provider': 'toString' } }, request(undefined), { ...request({ messages: [{}] }), headers: { cookie: sessionCookie(false, credential) } }]) {
     const res = response(); await generate(req, res); assert.equal(res.statusCode, 400);
   }
   const res = response(); await generate(request({}, 'GET'), res); assert.equal(res.statusCode, 405);

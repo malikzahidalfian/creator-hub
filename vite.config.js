@@ -36,8 +36,14 @@ function localApi() {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  for (const key of ['APP_PASSWORD', 'SESSION_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']) {
+  for (const key of ['APP_PASSWORD', 'SESSION_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'AUTH_STORE', 'AUTH_FILE']) {
     if (!process.env[key] && env[key]) process.env[key] = env[key];
   }
-  return { plugins: [react(), localApi()] };
+  return {
+    plugins: [react(), localApi()],
+    server: {
+      fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.private/**'] },
+      watch: { ignored: ['**/.private/**'] }
+    }
+  };
 });
