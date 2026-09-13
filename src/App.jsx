@@ -2802,7 +2802,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     <div className="content-wrapper fade-in">
       <div className="content-panel">
         <h2 className="desktop-title">Utas dari Berita/Artikel</h2>
-        <p className="subtitle">Minta rekomendasi gaya dari isi artikel, atau pilih sendiri. AI menyusun hook dan alur utas dengan karakter yang Anda pilih.</p>
+        <p className="subtitle">Ubah berita menjadi tweet singkat dengan hook menarik dan gaya pilihan Anda. Minta rekomendasi AI atau pilih gaya sendiri.</p>
         <div className="layout-grid">
           <div className="glass-panel input-section">
             <div className="input-group">
@@ -2846,6 +2846,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             <div className="input-group">
               <label>Jumlah Cuitan / Tweet (Panjang Utas)</label>
               <input type="number" min="2" max="20" className="api-key-input" value={genThreadLengthCount} onChange={(e) => setGenThreadLengthCount(e.target.value)} />
+              <p className="help-text">Tiap tweet diarahkan berisi satu ide dalam 1–2 kalimat pendek. Lebih banyak tweet berarti lebih banyak bagian, bukan paragraf lebih panjang.</p>
             </div>
 
             <div className="input-group">

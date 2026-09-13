@@ -46,6 +46,8 @@ Generator tetap memerlukan API Key provider dari browser. Validasi metode HTTP, 
 
 Model teks utama dan analisis gambar menggunakan `gpt-5.5` melalui 1inference, dengan konfigurasi bersama di `src/lib/ai-model.js`. Generator konten memakai `reasoning_effort: low`; rekomendasi gaya artikel memakai `none` dan `max_completion_tokens: 400` untuk jawaban JSON singkat. Permintaan GPT-5.5 tidak mengirim `temperature`; gambar referensi memakai `detail: high` agar batas resolusinya eksplisit. Model generator gambar, TTS, serta analisis video Gemini mengikuti pilihan fiturnya masing-masing. Model utama ditampilkan di Pengaturan API. Akses dan saldo GPT-5.5 mengikuti akun 1inference; kegagalan provider ditampilkan tanpa beralih diam-diam ke GPT-4o.
 
+Prompt Threads Artikel di `src/lib/article-thread.js` mengarahkan semua gaya ke satu ide per tweet, 1–2 kalimat pendek, target 140–220 karakter dan maksimal 280 karakter di luar URL. Batas ini mencakup hook, penutup, dan promosi opsional. Jumlah cuitan membagi isi berita menjadi bagian kecil; gaya formal dan storytelling tetap singkat. Model diminta memeriksa dan meringkas jawabannya sebelum mengirim. Panjang merupakan instruksi prompt, bukan pemotongan otomatis di aplikasi; kualitas dan kepatuhan keluaran tetap perlu dinilai dengan respons provider langsung.
+
 ## Penggunaan di HP
 
 Navigasi bawah: Beranda, Produk, Buat, Riwayat, API. Menu lengkap tersedia lewat tombol menu atas. Dukungan portrait/landscape, safe area, dan penyesuaian visual viewport saat keyboard muncul tetap aktif. Untuk membuka dev server dari HP satu Wi-Fi, jalankan npm run dev -- --host 0.0.0.0 lalu buka alamat IP komputer dan port Vite. Gunakan deployment HTTPS untuk pemakaian sehari-hari.
