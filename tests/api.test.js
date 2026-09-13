@@ -130,6 +130,32 @@ test('GPT-5.5 access errors stay visible without falling back to another model',
   assert.deepEqual(models, ['gpt-5.5']);
 });
 
+test('1inference images use the catalog image model and preserve provider results and errors', async t => {
+  const calls = [];
+  let status = 200;
+  let result = { data: [{ b64_json: 'image-data' }] };
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls.push({ url, headers: options.headers, body: JSON.parse(options.body) });
+    return new Response(JSON.stringify(result), { status });
+  });
+  let res = response();
+  await generateImage(request({ prompt: 'Foto produk.' }), res);
+  assert.deepEqual(calls[0], {
+    url: 'https://api.1inference.com/v1/images/generations',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-key' },
+    body: { model: 'venice-gpt-image-1.5', prompt: 'Foto produk.', n: 1, size: '1024x1024' }
+  });
+  assert.deepEqual(res.body, result);
+  result = { error: { message: 'Saldo tidak cukup.' } };
+  status = 403;
+  res = response();
+  await generateImage(request({ prompt: 'Foto produk.', model: 'seedream-4.5' }), res);
+  assert.equal(calls[1].body.model, 'seedream-4.5');
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.body.error, 'Saldo tidak cukup.');
+  assert.equal(calls.length, 2);
+});
+
 test('OpenRouter image generation uses chat multimodal endpoint', async t => {
   let captured;
   t.mock.method(globalThis, 'fetch', async (url, options) => { captured = { url, body: JSON.parse(options.body) }; return new Response('{}'); });

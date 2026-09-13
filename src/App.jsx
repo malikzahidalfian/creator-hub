@@ -11,7 +11,8 @@ import { uploadGeminiFile } from './lib/gemini'
 import { useMobileViewport } from './lib/viewport'
 import { articleThreadStyles, articleThreadTones, buildArticleThreadPrompt } from './lib/article-thread'
 import { useArticleRecommendation } from './lib/use-article-recommendation'
-import { TEXT_MODEL, TEXT_CHAT_OPTIONS } from './lib/ai-model'
+import { TEXT_MODEL, TEXT_CHAT_OPTIONS, IMAGE_MODEL, GPT_IMAGE_WORKFLOW } from './lib/ai-model'
+import { generatePaidImage } from './lib/image-generation'
 
 function App() {
   useMobileViewport()
@@ -112,7 +113,8 @@ function App() {
 
   // --- AI IMAGE GEN STATES ---
   const [imgPrompt, setImgPrompt] = useState('')
-  const [imgModel, setImgModel] = useState('turbo-free') 
+  const [imgModel, setImgModel] = useState(GPT_IMAGE_WORKFLOW)
+  const [imgStatus, setImgStatus] = useState('')
   const [customOpenRouterModel, setCustomOpenRouterModel] = useState('')
   const [isGeneratingImg, setIsGeneratingImg] = useState(false)
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null)
@@ -2330,13 +2332,14 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
   }
 
   const handleGenerateImage = async () => {
-    if (!imgPrompt) return alert("Prompt tidak boleh kosong!");
+    if (!imgPrompt.trim()) return alert("Prompt tidak boleh kosong!");
     if (!imgModel.includes('free') && !apiKey) {
       alert("Pastikan API Key sudah diisi di menu API Settings untuk menggunakan model berbayar.");
       return;
     }
 
     setIsGeneratingImg(true);
+    setImgStatus('Melukis gambar...');
     setGeneratedImageUrl(null);
 
     try {
@@ -2351,40 +2354,15 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
           img.src = url;
         });
         setGeneratedImageUrl(url);
-        setIsGeneratingImg(false);
       } else {
-        // Gunakan 1inference API
-        const response = await fetch("/api/generate-image", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`,
-            "X-Provider": "1inference"
-          },
-          body: JSON.stringify({
-            model: imgModel,
-            prompt: imgPrompt
-          })
-        });
-
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(`API Error ${response.status}: ${JSON.stringify(errData)}`);
-        }
-        const data = await response.json();
-        
-        const image = data?.data?.[0];
-        const imageUrl = image?.url || (image?.b64_json ? `data:image/png;base64,${image.b64_json}` : data?.choices?.[0]?.message?.images?.[0]?.image_url?.url);
-        if (imageUrl) {
-          setGeneratedImageUrl(imageUrl);
-        } else {
-          throw new Error("Gagal mendapatkan URL gambar dari API: " + JSON.stringify(data));
-        }
-        setIsGeneratingImg(false);
+        const imageUrl = await generatePaidImage({ prompt: imgPrompt, model: imgModel, apiKey, onStatus: setImgStatus });
+        setGeneratedImageUrl(imageUrl);
       }
     } catch (e) {
       alert("Error: " + e.message);
+    } finally {
       setIsGeneratingImg(false);
+      setImgStatus('');
     }
   };
   const getWorkingGeminiKey = (startIndex) => {
@@ -2645,37 +2623,43 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     <div className="content-wrapper fade-in">
       <div className="content-panel">
         <h2 className="desktop-title">AI Image Generator</h2>
-        <p className="subtitle">Ubah teks menjadi gambar menakjubkan dengan AI tingkat tinggi.</p>
+        <p className="subtitle">Tulis ide Anda. GPT-5.5 menyusun konsep, lalu GPT Image membuat gambarnya.</p>
         <div className="layout-grid">
           <div className="glass-panel input-section">
             <div className="input-group">
-              <label>Pilih Mesin AI (Model)</label>
-              <select value={imgModel} onChange={(e) => setImgModel(e.target.value)} className="select-input">
+              <label htmlFor="image-model">Pilih Mesin AI (Model)</label>
+              <select id="image-model" value={imgModel} onChange={(e) => setImgModel(e.target.value)} className="select-input" disabled={isGeneratingImg}>
+                <optgroup label="GPT Image melalui 1inference (Butuh API Key)">
+                  <option value={GPT_IMAGE_WORKFLOW}>GPT-5.5 + GPT Image 1.5</option>
+                  <option value={IMAGE_MODEL}>GPT Image 1.5 (Langsung dari deskripsi)</option>
+                </optgroup>
                 <optgroup label="Server Gratis (Tanpa API Key)">
                   <option value="turbo-free">SDXL Turbo (100% Gratis - Cepat & Artistik)</option>
                   <option value="flux-free">Flux.1 AI (100% Gratis - Kualitas HD Realistis)</option>
                 </optgroup>
                 <optgroup label="1inference (Butuh API Key)">
-                  <option value="dall-e-3">DALL-E 3 (Kualitas Tertinggi OpenAI)</option>
+                  <option value="dall-e-3">DALL-E 3</option>
                   <option value="venice-z-image-turbo">Venice Image Turbo (Cepat & Stabil)</option>
                   <option value="seedream-4.5">Seedream 4.5</option>
                 </optgroup>
               </select>
+              {imgModel === GPT_IMAGE_WORKFLOW && <p className="help-text">GPT-5.5 merapikan ide Anda sebelum digambar oleh GPT Image 1.5. Kedua tahap memakai saldo 1inference.</p>}
             </div>
 
             <div className="input-group">
-              <label>Deskripsi Gambar (Prompt)</label>
-              <textarea placeholder="Contoh: Kucing lucu memakai kacamata hitam di pantai..." value={imgPrompt} onChange={(e) => setImgPrompt(e.target.value)} rows="4" />
+              <label htmlFor="image-prompt">Deskripsi Gambar (Prompt)</label>
+              <textarea id="image-prompt" placeholder="Contoh: Kucing lucu memakai kacamata hitam di pantai..." value={imgPrompt} onChange={(e) => setImgPrompt(e.target.value)} rows="4" disabled={isGeneratingImg} />
             </div>
             
-            <button className="btn-primary generate-btn" onClick={handleGenerateImage} disabled={!imgPrompt || isGeneratingImg}>
-              {isGeneratingImg ? 'Melukis Gambar...' : '🎨 Generate Gambar'}
+            <button className="btn-primary generate-btn" onClick={handleGenerateImage} disabled={!imgPrompt.trim() || isGeneratingImg || (!imgModel.includes('free') && !apiKey)}>
+              {isGeneratingImg ? imgStatus : '🎨 Generate Gambar'}
             </button>
+            {!imgModel.includes('free') && !apiKey && <p className="warning-text">Isi API Key 1inference di Pengaturan API untuk memakai model ini.</p>}
           </div>
           
           <div className="glass-panel" style={{padding: '1.5rem', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px'}}>
             {isGeneratingImg ? (
-              <div style={{textAlign: 'center'}}><span className="loading-spinner" style={{width: '40px', height: '40px', borderTopColor: 'var(--primary-color)'}}></span><p style={{marginTop: '1rem', color: 'var(--text-secondary)'}}>Sedang melukis...</p></div>
+              <div style={{textAlign: 'center'}} role="status"><span className="loading-spinner" style={{width: '40px', height: '40px', borderTopColor: 'var(--primary-color)'}}></span><p style={{marginTop: '1rem', color: 'var(--text-secondary)'}}>{imgStatus}</p></div>
             ) : generatedImageUrl ? (
               <div className="fade-in" style={{width: '100%', textAlign: 'center'}}>
                 <img src={generatedImageUrl} alt="Hasil AI" style={{width: '100%', borderRadius: '12px', border: '1px solid var(--glass-border)', marginBottom: '1rem'}} />

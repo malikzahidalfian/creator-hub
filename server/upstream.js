@@ -1,6 +1,6 @@
-export async function proxyJson(res, url, options) {
+export async function proxyJson(res, url, options, { timeoutMs = 50_000 } = {}) {
   try {
-    const response = await fetch(url, { ...options, signal: AbortSignal.timeout(50_000) });
+    const response = await fetch(url, { ...options, signal: AbortSignal.timeout(timeoutMs) });
     const text = await response.text();
     let data;
     try { data = text ? JSON.parse(text) : null; } catch {
