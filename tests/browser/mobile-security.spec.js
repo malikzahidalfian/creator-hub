@@ -1,8 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 
-const password = 'browser-test-password-123';
-const changedPassword = 'new-browser-test-password-456';
 const product = { id: 'phone-product', type: 'Bank Storyboard', product_desc: 'Perlengkapan Dapur', created_at: new Date().toISOString(), result: JSON.stringify({ name: 'Wajan Granit untuk Dapur Keluarga', desc: 'Deskripsi produk yang cukup panjang untuk menguji pembungkusan teks pada layar kecil. '.repeat(12) }) };
 const history = { id: 'phone-history', type: 'Storyboard', product_desc: 'Storyboard dari HP', created_at: new Date().toISOString(), result: `Scene pertama\n${'https://example.com/'.repeat(25)}\n\n---\n\nScene kedua` };
 async function mockData(page) {
@@ -13,10 +11,8 @@ async function mockData(page) {
     return route.fulfill({ json: [product, history].filter(item => !type || item.type === type) });
   });
 }
-async function login(page, value = password) {
+async function openWorkspace(page) {
   await page.goto('/');
-  await page.getByLabel('Password workspace', { exact: true }).fill(value);
-  await page.getByRole('button', { name: 'Masuk ke workspace' }).click();
   await expect(page.getByRole('heading', { name: 'Ruang untuk ide besar Anda.' })).toBeVisible();
 }
 async function overflow(page) {
@@ -31,64 +27,20 @@ async function touchTargets(page) {
   expect(small).toEqual([]);
 }
 
-test('change password from phone, validate fields, rotate sessions and login with the new password', async ({ page, browser }) => {
+test('phone opens directly and API settings remain reachable from bottom navigation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockData(page);
-  await login(page);
-  const other = await browser.newContext();
-  try {
-    await other.addCookies(await page.context().cookies());
-    await page.getByRole('navigation', { name: 'Navigasi cepat HP' }).getByRole('button', { name: 'Akun', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Akun & Keamanan' })).toBeVisible();
-    const current = page.getByLabel('Password saat ini', { exact: true });
-    const fresh = page.getByLabel('Password baru', { exact: true });
-    const confirm = page.getByLabel('Konfirmasi password baru', { exact: true });
-    const save = page.getByRole('button', { name: 'Simpan password baru' });
-    await current.fill('wrong-password'); await fresh.fill('short'); await confirm.fill('different');
-    await expect(save).toBeDisabled();
-    await expect(page.getByText('Konfirmasi password belum sama.', { exact: true })).toBeVisible();
-    await fresh.fill(changedPassword); await confirm.fill(changedPassword);
-    await page.getByRole('button', { name: 'Tampilkan password baru', exact: true }).click();
-    await expect(fresh).toHaveAttribute('type', 'text');
-    await page.getByRole('button', { name: 'Sembunyikan password baru', exact: true }).click();
-    await save.click();
-    await expect(page.getByRole('alert')).toContainText('Password saat ini tidak sesuai');
-    await expect(fresh).toHaveValue(changedPassword);
-    await current.fill(password);
-    await save.click();
-    await expect(page.getByRole('status')).toContainText('Password berhasil diganti');
-    await expect(fresh).toHaveValue('');
-    await overflow(page); await touchTargets(page);
-    await page.screenshot({ path: 'test-results/account-mobile.png', fullPage: true });
-    expect((await other.request.get('http://127.0.0.1:4175/api/database')).status()).toBe(401);
-    const oldLogin = await other.request.post('http://127.0.0.1:4175/api/auth', { data: { password } });
-    expect(oldLogin.status()).toBe(401);
-    await page.reload();
-    await expect(page.getByRole('heading', { name: 'Ruang untuk ide besar Anda.' })).toBeVisible();
-    await page.request.delete('/api/auth');
-    await login(page, changedPassword);
-  } finally {
-    // Never mutate the user's real credential file. Restore the isolated test account.
-    const loggedIn = await page.request.post('/api/auth', { data: { password: changedPassword } });
-    if (loggedIn.ok()) {
-      const restored = await page.request.patch('/api/auth', { data: { currentPassword: changedPassword, newPassword: password, confirmPassword: password } });
-      expect(restored.status()).toBe(200);
-    }
-    await other.close();
-  }
-});
-
-test('failed password persistence retains the form and does not claim success', async ({ page }) => {
-  await mockData(page); await login(page);
-  await page.getByRole('button', { name: 'Pengaturan akun' }).click();
-  await page.getByLabel('Password saat ini', { exact: true }).fill(password);
-  await page.getByLabel('Password baru', { exact: true }).fill(changedPassword);
-  await page.getByLabel('Konfirmasi password baru', { exact: true }).fill(changedPassword);
-  await page.route('**/api/auth', route => route.request().method() === 'PATCH' ? route.fulfill({ status: 503, json: { error: 'Penyimpanan password tidak tersedia.' } }) : route.continue());
-  await page.getByRole('button', { name: 'Simpan password baru' }).click();
-  await expect(page.getByRole('alert')).toContainText('Penyimpanan password tidak tersedia');
-  await expect(page.getByLabel('Password baru', { exact: true })).toHaveValue(changedPassword);
-  await expect(page.getByRole('button', { name: 'Simpan password baru' })).toBeEnabled();
+  await openWorkspace(page);
+  await page.getByRole('navigation', { name: 'Navigasi cepat HP' }).getByRole('button', { name: 'API', exact: true }).click();
+  await expect(page.getByLabel('Gemini API Key utama')).toBeVisible();
+  await expect(page.getByLabel('Password workspace', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Keluar workspace' })).toHaveCount(0);
+  await page.getByLabel('1inference API Key', { exact: true }).fill('phone-test-key');
+  await overflow(page); await touchTargets(page);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Ruang untuk ide besar Anda.' })).toBeVisible();
+  await page.getByRole('banner').getByRole('button', { name: 'Buka pengaturan API' }).click();
+  await expect(page.getByLabel('1inference API Key', { exact: true })).toHaveValue('phone-test-key');
 });
 
 for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 740 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
@@ -96,7 +48,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 740 }
     await page.setViewportSize(viewport);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await mockData(page); await login(page);
+    await mockData(page); await openWorkspace(page);
     const bottom = page.getByRole('navigation', { name: 'Navigasi cepat HP' });
     await expect(bottom).toBeVisible(); await overflow(page); await touchTargets(page);
     await bottom.getByRole('button', { name: 'Produk', exact: true }).click();
@@ -121,17 +73,17 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 740 }
     await expect(picker).not.toBeVisible();
     await page.getByRole('button', { name: 'Buka navigasi' }).click();
     await expect(page.getByRole('button', { name: 'Tutup navigasi' })).toBeVisible();
-    await page.getByRole('button', { name: 'Akun & Keamanan', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Ganti password', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Pengaturan API', exact: true }).click();
+    await expect(page.getByLabel('Gemini API Key utama')).toBeVisible();
     await overflow(page); await touchTargets(page);
-    if (viewport.width === 320) await page.screenshot({ path: 'test-results/account-small-phone.png', fullPage: true });
+    if (viewport.width === 320) await page.screenshot({ path: 'test-results/settings-small-phone.png', fullPage: true });
     expect(errors).toEqual([]);
   });
 }
 
 test('shrinking visual viewport keeps product form usable above the keyboard', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await mockData(page); await login(page);
+  await mockData(page); await openWorkspace(page);
   await page.getByRole('navigation', { name: 'Navigasi cepat HP' }).getByRole('button', { name: 'Produk', exact: true }).click();
   await page.getByRole('button', { name: 'Tambah Produk', exact: false }).click();
   const dialog = page.getByRole('dialog', { name: 'Tambah produk' });

@@ -1,14 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
-const authDirectory = process.env.CREATOR_E2E_AUTH_DIR ||= mkdtempSync(join(tmpdir(), 'creator-e2e-'));
 
 export default defineConfig({
   testDir: './tests/browser',
   fullyParallel: false,
-  globalTeardown: './tests/browser/teardown.js',
   workers: 1,
   timeout: 60_000,
   expect: { timeout: 10_000 },
@@ -23,6 +17,6 @@ export default defineConfig({
     url: 'http://127.0.0.1:4175',
     timeout: 120_000,
     reuseExistingServer: false,
-    env: { APP_PASSWORD: 'browser-test-password-123', SESSION_SECRET: 'browser-test-secret-longer-than-32-characters', AUTH_STORE: 'file', AUTH_FILE: join(authDirectory, 'credentials.json') }
+    env: { APP_PASSWORD: '', SESSION_SECRET: '', SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '' }
   }
 });

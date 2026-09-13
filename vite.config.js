@@ -36,7 +36,7 @@ function localApi() {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  for (const key of ['APP_PASSWORD', 'SESSION_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'AUTH_STORE', 'AUTH_FILE']) {
+  for (const key of ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']) {
     if (!process.env[key] && env[key]) process.env[key] = env[key];
   }
   return {

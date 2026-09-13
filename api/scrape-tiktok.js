@@ -1,8 +1,8 @@
-import { requirePost } from '../server/session.js';
+import { requirePost } from '../server/request.js';
 import { fetchPublicText, parsePublicUrl, isSite } from '../server/safe-url.js';
 
 export default async function handler(req, res) {
-  if (!await requirePost(req, res)) return;
+  if (!requirePost(req, res)) return;
 
   const { url } = req.body || {};
   if (!url) return res.status(400).json({ error: 'URL is required' });

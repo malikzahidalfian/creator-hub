@@ -7,10 +7,10 @@ export const navigation = [
   { label: 'ALAT KREATIF', items: [['video_script', 'Script Video', 'film'], ['image_gen', 'AI Image', 'image'], ['bank_gambar', 'Bank Gambar', 'image'], ['tts', 'Text to Speech', 'audio'], ['tiktok', 'TikTok Scraper', 'link']] }
 ];
 export function pageTitle(tab) {
-  return tab === 'account' ? 'Akun & Keamanan' : navigation.flatMap(group => group.items).find(item => item[0] === tab)?.[1] || 'Pengaturan API';
+  return navigation.flatMap(group => group.items).find(item => item[0] === tab)?.[1] || 'Pengaturan API';
 }
 
-export default function Sidebar({ activeTab, onNavigate, open, onClose, apiReady, onLogout }) {
+export default function Sidebar({ activeTab, onNavigate, open, onClose, apiReady }) {
   const sidebar = useRef(null);
   const closeButton = useRef(null);
   useEffect(() => {
@@ -37,9 +37,8 @@ export default function Sidebar({ activeTab, onNavigate, open, onClose, apiReady
         {navigation.map(group => <div className="nav-group" key={group.label}><p className="nav-group-label">{group.label}</p>{group.items.map(([id, label, icon]) => <button key={id} className={`nav-item ${id === activeTab ? 'active' : ''}`} aria-current={id === activeTab ? 'page' : undefined} onClick={() => onNavigate(id)}><Icon name={icon} size={19} /><span>{label}</span>{id === activeTab && <span className="nav-active-dot" />}</button>)}</div>)}
       </nav>
       <div className="sidebar-bottom">
-        <button className={`nav-item ${activeTab === 'account' ? 'active' : ''}`} onClick={() => onNavigate('account')} aria-current={activeTab === 'account' ? 'page' : undefined}><Icon name="shield" size={19} />Akun & Keamanan</button>
         <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')} aria-current={activeTab === 'settings' ? 'page' : undefined}><Icon name="settings" size={19} />Pengaturan API<span className={`status-dot ${apiReady ? 'ready' : ''}`} /></button>
-        <div className="workspace-profile"><div className="profile-avatar">C</div><div><strong>Creator Workspace</strong><small>Ruang kerja pribadi</small></div><button className="icon-button" aria-label="Keluar workspace" title="Keluar" onClick={onLogout}><Icon name="logout" size={18} /></button></div>
+        <div className="workspace-profile"><div className="profile-avatar">C</div><div><strong>Creator Workspace</strong><small>Ruang kerja kreator</small></div></div>
       </div>
     </aside>
   </>;

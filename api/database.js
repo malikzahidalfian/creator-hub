@@ -1,8 +1,7 @@
-import { requireSession } from '../server/session.js';
 import { proxyJson } from '../server/upstream.js';
 
 export default async function handler(req, res) {
-  if (!await requireSession(req, res)) return;
+  res.setHeader('Cache-Control', 'no-store');
   if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method)) {
     res.setHeader('Allow', 'GET, POST, PATCH, DELETE');
     return res.status(405).json({ error: 'Method not allowed' });

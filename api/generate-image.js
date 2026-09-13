@@ -1,9 +1,9 @@
-import { requirePost, requireApiKey } from '../server/session.js';
+import { requirePost, requireApiKey } from '../server/request.js';
 import { proxyJson } from '../server/upstream.js';
 
 export const maxDuration = 60;
 export default async function handler(req, res) {
-  if (!await requirePost(req, res) || !requireApiKey(req, res)) return;
+  if (!requirePost(req, res) || !requireApiKey(req, res)) return;
   const provider = req.headers['x-provider'] || '1inference';
   const { prompt, model } = req.body || {};
   if (typeof prompt !== 'string' || !prompt.trim()) return res.status(400).json({ error: 'Prompt wajib diisi.' });

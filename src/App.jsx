@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Dashboard from './components/Dashboard'
-import AccountSettings from './components/AccountSettings'
 import MobileNav from './components/MobileNav'
 import Sidebar, { pageTitle } from './components/Sidebar'
 import Icon from './components/Icon'
@@ -9,8 +8,10 @@ import Modal from './components/Modal'
 import { appFetch as fetch, readStorage, writeStorage, readGeminiKeys, parseRecord, safeLink, historyParts, loadAllRecords } from './lib/client'
 import { useReleaseObjectUrl } from './lib/media'
 import { uploadGeminiFile } from './lib/gemini'
+import { useMobileViewport } from './lib/viewport'
 
-function App({ onLogout }) {
+function App() {
+  useMobileViewport()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [apiKey, setApiKey] = useState(() => readStorage('storyboard_api_key').trim())
   const [notice, setNotice] = useState('')
@@ -178,7 +179,7 @@ function App({ onLogout }) {
   const toneList = ['Sangat Emosional/Baper', 'Misterius/Penasaran', 'Inspiratif & Motivasi', 'Kontroversial (Bikin Debat)', 'Santai & Lucu'];
   const categoriesList = ['Otomotif', 'Fashion', 'Politik', 'Agama Islam', 'Fakta-fakta', 'Kesehatan', 'Teknologi', 'Hiburan', 'Bisnis', 'Olahraga', 'Custom...'];
 
-  // Database access is authenticated and proxied by /api/database.
+  // Database access is proxied by /api/database; server keys stay on the server.
 
   // --- DATABASE (HISTORY) STATES ---
   const [activeDatabaseCategory, setActiveDatabaseCategory] = useState('Storyboard');
@@ -3780,11 +3781,11 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
   return (
     <div className="app-layout">
       <a className="skip-link" href="#workspace-main">Lewati ke konten</a>
-      <Sidebar activeTab={activeTab} onNavigate={navigate} open={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} apiReady={Boolean(apiKey.trim())} onLogout={() => onLogout().catch(e => alert(e.message))} />
+      <Sidebar activeTab={activeTab} onNavigate={navigate} open={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} apiReady={Boolean(apiKey.trim())} />
       <div className="workspace-body" inert={isMobileMenuOpen ? '' : undefined}>
-      <header className="workspace-header"><div className="breadcrumb"><button className="menu-toggle icon-button" onClick={() => setIsMobileMenuOpen(true)} aria-label="Buka navigasi" aria-expanded={isMobileMenuOpen} aria-controls="workspace-navigation"><Icon name="menu" /></button><span>Workspace</span><span className="breadcrumb-divider">/</span><strong>{pageTitle(activeTab)}</strong></div><div className="header-actions"><button className="header-api-status" onClick={() => navigate('settings')}><span className={`status-dot ${apiKey.trim() ? 'ready' : ''}`} />{apiKey.trim() ? 'API Key tersimpan' : 'Atur API Key'}</button><button className="profile-avatar profile-button" aria-label="Pengaturan akun" onClick={() => navigate('account')}>C</button></div></header>
+      <header className="workspace-header"><div className="breadcrumb"><button className="menu-toggle icon-button" onClick={() => setIsMobileMenuOpen(true)} aria-label="Buka navigasi" aria-expanded={isMobileMenuOpen} aria-controls="workspace-navigation"><Icon name="menu" /></button><span>Workspace</span><span className="breadcrumb-divider">/</span><strong>{pageTitle(activeTab)}</strong></div><div className="header-actions"><button className="header-api-status" onClick={() => navigate('settings')}><span className={`status-dot ${apiKey.trim() ? 'ready' : ''}`} />{apiKey.trim() ? 'API Key tersimpan' : 'Atur API Key'}</button><button className="profile-avatar profile-button" aria-label="Buka pengaturan API" onClick={() => navigate('settings')}>C</button></div></header>
       <main className="main-content" id="workspace-main" ref={mainRef} tabIndex={-1}>
-        {!['account', 'settings'].includes(activeTab) && Object.keys(loadErrors).length > 0 && <div className="load-error" role="alert"><div><strong>Data belum dapat dimuat</strong><p>{[...new Set(Object.values(loadErrors))].join(' ')}</p></div><button className="btn-secondary" onClick={() => { fetchHistory(); fetchBankStoryboard(); fetchProducts(); fetchImageBank(); }}><Icon name="refresh" size={16} />Coba lagi</button></div>}
+        {activeTab !== 'settings' && Object.keys(loadErrors).length > 0 && <div className="load-error" role="alert"><div><strong>Data belum dapat dimuat</strong><p>{[...new Set(Object.values(loadErrors))].join(' ')}</p></div><button className="btn-secondary" onClick={() => { fetchHistory(); fetchBankStoryboard(); fetchProducts(); fetchImageBank(); }}><Icon name="refresh" size={16} />Coba lagi</button></div>}
         {activeTab === 'dashboard' && <Dashboard history={history} products={bankStoryboardData} images={imageBankData} loading={isHistoryLoading || isBankStoryboardLoading || isImageBankLoading} apiReady={Boolean(apiKey.trim())} onNavigate={navigate} onOpenHistory={openHistory} onAddProduct={openNewProduct} />}
         {activeTab === 'storyboard' && renderStoryboardForm()}
         {activeTab === 'cooking_content' && renderCookingContentForm()}
@@ -3802,7 +3803,6 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
         {activeTab === 'history' && renderDatabase()}
 
         {activeTab === 'settings' && renderSettings()}
-        {activeTab === 'account' && <AccountSettings onOpenApi={() => navigate('settings')} />}
       </main>
       <MobileNav activeTab={activeTab} onNavigate={navigate} />
       </div>

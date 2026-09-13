@@ -1,8 +1,4 @@
-import test, { after } from 'node:test';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { readCredentials } from '../server/credentials.js';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import https from 'node:https';
@@ -13,65 +9,77 @@ import generateImage from '../api/generate-image.js';
 import scrapeArticle from '../api/scrape-article.js';
 import scrapeTiktok from '../api/scrape-tiktok.js';
 import tts from '../api/tts.js';
-import { hasSession, sessionCookie } from '../server/session.js';
 import { fetchPublicText, htmlToText, isPublicAddress, isSite, parsePublicUrl } from '../server/safe-url.js';
 
-process.env.APP_PASSWORD = 'test-only-password-123';
-process.env.SESSION_SECRET = 'test-only-session-secret-with-more-than-32-characters';
-const directory = await mkdtemp(join(tmpdir(), 'creator-api-'));
-process.env.AUTH_STORE = 'file';
-process.env.AUTH_FILE = join(directory, 'credentials.json');
-const credential = await readCredentials();
-after(() => rm(directory, { recursive: true, force: true }));
 function response() {
   return { statusCode: 200, headers: {}, setHeader(key, value) { this.headers[key] = value; }, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; }, send(value) { this.body = value; return this; } };
 }
-function request(body = {}, method = 'POST') { return { body, method, headers: { cookie: sessionCookie(false, credential).split(';')[0], authorization: 'Bearer test-key', 'content-type': 'application/json' }, url: '/api/database', socket: { remoteAddress: 'test' } }; }
+function request(body = {}, method = 'POST') { return { body, method, headers: { authorization: 'Bearer test-key', 'content-type': 'application/json' }, url: '/api/database', socket: { remoteAddress: 'test' } }; }
 
-test('all sensitive APIs reject requests without a valid session', async () => {
-  for (const handler of [database, generate, generateImage, scrapeArticle, scrapeTiktok, tts]) {
+function environment(t, values) {
+  const previous = Object.fromEntries(Object.keys(values).map(key => [key, process.env[key]]));
+  const apply = entries => {
+    for (const [key, value] of Object.entries(entries)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  };
+  t.after(() => apply(previous));
+  apply(values);
+}
+
+test('public workspace status works without password, secret or credential storage in production', async t => {
+  environment(t, { NODE_ENV: 'production', VERCEL: '1', APP_PASSWORD: undefined, SESSION_SECRET: undefined, AUTH_STORE: 'supabase', SUPABASE_URL: undefined, SUPABASE_SERVICE_ROLE_KEY: undefined });
+  t.mock.method(globalThis, 'fetch', () => { throw new Error('Auth must not access credential storage'); });
+  for (const method of ['GET', 'POST', 'DELETE']) {
     const res = response();
-    await handler({ method: 'POST', headers: {}, body: {} }, res);
-    assert.equal(res.statusCode, 401);
+    await auth(request({}, method), res);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.body, { authenticated: true, configured: true, access: 'public' });
+    assert.equal(res.headers['Cache-Control'], 'no-store');
+    assert.equal(res.headers['Set-Cookie'], undefined);
+  }
+  const res = response();
+  await auth(request({ newPassword: 'unused-password' }, 'PATCH'), res);
+  assert.equal(res.statusCode, 405);
+});
+
+test('public database reads and writes work without a session or auth configuration in production', async t => {
+  environment(t, { NODE_ENV: 'production', VERCEL: '1', APP_PASSWORD: undefined, SESSION_SECRET: undefined, SUPABASE_URL: 'https://database.example.com', SUPABASE_SERVICE_ROLE_KEY: 'server-test-key' });
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls.push({ url, options });
+    return new Response(JSON.stringify([{ id: 'record-123', type: 'Storyboard', result: 'Saved content' }]), { headers: { 'Content-Type': 'application/json' } });
+  });
+  for (const method of ['GET', 'POST', 'PATCH', 'DELETE']) {
+    const req = request({ type: 'Storyboard', result: 'Saved content' }, method);
+    req.headers = { 'content-type': 'application/json' };
+    if (['PATCH', 'DELETE'].includes(method)) req.url += '?id=eq.record-123';
+    const res = response();
+    await database(req, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body[0].id, 'record-123');
+    assert.equal(res.headers['Cache-Control'], 'no-store');
+  }
+  assert.deepEqual(calls.map(call => call.options.method), ['GET', 'POST', 'PATCH', 'DELETE']);
+  assert.ok(calls.every(call => call.url.includes('/rest/v1/prompts?') && call.options.headers.Authorization === 'Bearer server-test-key'));
+});
+
+test('generation APIs still require a provider key and POST without requiring a workspace session', async () => {
+  for (const handler of [generate, generateImage, tts]) {
+    const res = response();
+    await handler({ ...request(), headers: {} }, res);
+    assert.equal(res.statusCode, 400);
+    assert.match(res.body.error, /API Key/);
+  }
+  for (const handler of [generate, generateImage, scrapeArticle, scrapeTiktok, tts]) {
+    const res = response();
+    await handler(request({}, 'GET'), res);
+    assert.equal(res.statusCode, 405);
   }
 });
-test('login creates HttpOnly session, rejects tampering, logout clears cookie', async () => {
-  let res = response();
-  await auth(request({ password: 'wrong' }), res);
-  assert.equal(res.statusCode, 401);
-  res = response();
-  await auth(request({ password: process.env.APP_PASSWORD }), res);
-  assert.equal(res.statusCode, 200);
-  assert.match(res.headers['Set-Cookie'], /HttpOnly; SameSite=Strict/);
-  const cookie = res.headers['Set-Cookie'];
-  assert.ok(hasSession({ headers: { cookie } }, credential));
-  assert.equal(hasSession({ headers: { cookie: cookie.replace(/\d/, '0') } }, credential), false);
-  res = response();
-  await auth(request({}, 'DELETE'), res);
-  assert.match(res.headers['Set-Cookie'], /Max-Age=0/);
-});
-test('bootstrap environment no longer overrides stored credentials; missing session secret fails closed', async () => {
-  const old = process.env.APP_PASSWORD;
-  const secret = process.env.SESSION_SECRET;
-  try {
-    process.env.APP_PASSWORD = 'a-different-test-password';
-    assert.equal((await readCredentials()).version, credential.version);
-    const req = request({ password: old });
-    delete process.env.SESSION_SECRET;
-    const res = response();
-    await auth(req, res);
-    assert.equal(res.statusCode, 503);
-  } finally { process.env.APP_PASSWORD = old; process.env.SESSION_SECRET = secret; }
-});
-test('expired cookies do not authenticate', t => {
-  const now = Date.now();
-  t.mock.method(Date, 'now', () => now - 9 * 60 * 60 * 1000);
-  const cookie = sessionCookie(false, credential);
-  Date.now.mock.restore();
-  assert.equal(hasSession({ headers: { cookie } }, credential), false);
-});
+
 test('proxy validates provider, missing body and missing key before contacting provider', async () => {
-  for (const req of [{ ...request(), headers: { ...request().headers, 'x-provider': 'toString' } }, request(undefined), { ...request({ messages: [{}] }), headers: { cookie: sessionCookie(false, credential) } }]) {
+  for (const req of [{ ...request(), headers: { ...request().headers, 'x-provider': 'toString' } }, request(undefined), { ...request({ messages: [{}] }), headers: {} }]) {
     const res = response(); await generate(req, res); assert.equal(res.statusCode, 400);
   }
   const res = response(); await generate(request({}, 'GET'), res); assert.equal(res.statusCode, 405);

@@ -11,10 +11,8 @@ async function mockData(page, records = [product, content]) {
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
   await page.route('https://fonts.gstatic.com/**', route => route.abort());
 }
-async function login(page) {
+async function openWorkspace(page) {
   await page.goto('/');
-  await page.getByLabel('Password workspace', { exact: true }).fill('browser-test-password-123');
-  await page.getByRole('button', { name: 'Masuk ke workspace' }).click();
   await expect(page.getByRole('heading', { name: 'Ruang untuk ide besar Anda.' })).toBeVisible();
 }
 async function navigate(page, name) {
@@ -23,21 +21,23 @@ async function navigate(page, name) {
   await page.getByRole('navigation').getByRole('button', { name, exact: true }).click();
 }
 
-test('login really protects API access; localStorage flag cannot bypass it', async ({ page, request }) => {
+test('fresh visits open the dashboard without an auth request, password or cookie', async ({ page, request }) => {
   await mockData(page);
-  const response = await request.get('/api/database');
-  expect(response.status()).toBe(401);
-  await page.addInitScript(() => localStorage.setItem('storyboard_auth', 'true'));
-  await page.goto('/');
-  await expect(page.getByLabel('Password workspace', { exact: true })).toBeVisible();
-  await page.getByLabel('Password workspace', { exact: true }).fill('wrong');
-  await page.getByRole('button', { name: 'Masuk ke workspace' }).click();
-  await expect(page.getByRole('alert')).toContainText('Password tidak sesuai');
+  const authRequests = [];
+  await page.route('**/api/auth', route => { authRequests.push(route.request().method()); return route.fulfill({ status: 503, json: { error: 'Session secret is missing' } }); });
+  await openWorkspace(page);
+  await expect(page.getByLabel('Password workspace', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Keluar workspace' })).toHaveCount(0);
+  expect(authRequests).toEqual([]);
+  expect((await page.context().cookies()).filter(cookie => cookie.name === 'creator_session')).toEqual([]);
+  const response = await request.get('/api/auth');
+  expect(response.status()).toBe(200);
+  expect(await response.json()).toEqual({ authenticated: true, configured: true, access: 'public' });
 });
 
 test('dashboard uses real counts and old Bang Jenggot records render as readable scenes', async ({ page }) => {
   await mockData(page);
-  await login(page);
+  await openWorkspace(page);
   await expect(page.getByRole('button', { name: /Konten tersimpan/ }).locator('strong')).toHaveText('1');
   await expect(page.getByRole('button', { name: /Produk di workspace/ }).locator('strong')).toHaveText('1');
   await page.screenshot({ path: 'test-results/dashboard-desktop.png', fullPage: true });
@@ -58,7 +58,7 @@ test('failed product saves retain draft; successful save closes modal; editing p
     }
     await route.fallback();
   });
-  await login(page);
+  await openWorkspace(page);
   await page.getByRole('button', { name: /Tambah produk Lengkapi/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Tambah produk' });
   await dialog.getByLabel('Nama Produk', { exact: true }).fill('Produk percobaan');
@@ -87,7 +87,7 @@ test('product data is available in affiliate picker and generation/copy handle e
   await mockData(page);
   await page.addInitScript(() => localStorage.setItem('storyboard_api_key', 'test-key'));
   await page.route('**/api/generate', route => route.fulfill({ json: { choices: [{ message: { content: 'Hook pertama\n\n---\n\nTweet kedua' } }] } }));
-  await login(page);
+  await openWorkspace(page);
   await navigate(page, 'Threads Affiliate');
   await page.locator('select').first().selectOption('prod-1');
   await expect(page.getByPlaceholder('Contoh: Sepatu Lari Lokal Kualitas Dunia')).toHaveValue('Wajan Granit');
@@ -104,7 +104,7 @@ test('failed article extraction stops generation instead of inventing news', asy
   let generated = false;
   await page.route('**/api/scrape-article', route => route.fulfill({ status: 422, json: { error: 'Artikel tidak tersedia' } }));
   await page.route('**/api/generate', route => { generated = true; return route.fulfill({ json: {} }); });
-  await login(page);
+  await openWorkspace(page);
   await navigate(page, 'Threads Artikel');
   await page.getByPlaceholder('Masukkan URL berita', { exact: false }).fill('https://example.com/article');
   await page.getByRole('button', { name: /Generate Utas Berita/ }).click();
@@ -119,7 +119,7 @@ for (const width of [390, 768, 1440]) {
     page.on('pageerror', error => errors.push(error.message));
     await mockData(page, [product, { ...product, id: 'bad', result: 'null' }]);
     await page.addInitScript(() => localStorage.setItem('gemini_api_keys', '{"broken":true}'));
-    await login(page);
+    await openWorkspace(page);
     for (const name of ['Bang Jenggot AI', 'Storyboard Veo', 'Konten Masak', 'UGC Studio', 'Threads Affiliate', 'Threads Artikel', 'Script Video', 'AI Image', 'Bank Gambar', 'Text to Speech', 'TikTok Scraper', 'Data Produk']) {
       await navigate(page, name);
       await expect(page.locator('.content-panel')).toBeVisible();
@@ -150,7 +150,7 @@ test('UGC generate and copy works; saved-image storyboard analysis is enabled', 
   await page.addInitScript(() => localStorage.setItem('storyboard_api_key', 'test-key'));
   await page.route('https://example.com/product.png', route => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=', 'base64') }));
   await page.route('**/api/generate', route => route.fulfill({ json: { choices: [{ message: { content: 'Hook produk. Isi konten. CTA belanja.' } }] } }));
-  await login(page);
+  await openWorkspace(page);
   await navigate(page, 'UGC Studio');
   await page.locator('select').first().selectOption('prod-1');
   await page.getByRole('button', { name: /Generate/ }).click();
@@ -164,14 +164,14 @@ test('UGC generate and copy works; saved-image storyboard analysis is enabled', 
   await page.screenshot({ path: 'test-results/storyboard-desktop.png', fullPage: true });
 });
 
-test('logout removes access and login page is responsive', async ({ page }) => {
+test('reload with a stale session cookie still opens the dashboard directly', async ({ page }) => {
   await mockData(page);
-  await login(page);
-  await page.getByRole('button', { name: 'Keluar workspace' }).click();
-  await expect(page.getByLabel('Password workspace', { exact: true })).toBeVisible();
-  await page.screenshot({ path: 'test-results/login-desktop.png', fullPage: true });
-  const result = await page.request.get('/api/database');
-  expect(result.status()).toBe(401);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: 'test-results/login-mobile.png', fullPage: true });
+  await page.context().addCookies([{ name: 'creator_session', value: 'expired.invalid.cookie', url: 'http://127.0.0.1:4175' }]);
+  await openWorkspace(page);
+  await page.getByRole('banner').getByRole('button', { name: 'Buka pengaturan API' }).click();
+  await expect(page.getByLabel('Gemini API Key utama')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Simpan password baru' })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Ruang untuk ide besar Anda.' })).toBeVisible();
+  await expect(page.getByLabel('Password workspace', { exact: true })).toHaveCount(0);
 });
