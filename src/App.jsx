@@ -10,6 +10,7 @@ import { useReleaseObjectUrl } from './lib/media'
 import { uploadGeminiFile } from './lib/gemini'
 import { useMobileViewport } from './lib/viewport'
 import { articleThreadStyles, articleThreadTones, buildArticleThreadPrompt } from './lib/article-thread'
+import { useArticleRecommendation } from './lib/use-article-recommendation'
 
 function App() {
   useMobileViewport()
@@ -106,6 +107,7 @@ function App() {
   const [genThreadCustomCategory, setGenThreadCustomCategory] = useState('')
   const [viralIdeas, setViralIdeas] = useState([])
   const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false)
+  const { recommendation: articleStyleRecommendation, recommendationError, recommendationStatus, isRecommending, requestRecommendation, getArticleContent } = useArticleRecommendation(genThreadSource, apiKey)
 
   // --- AI IMAGE GEN STATES ---
   const [imgPrompt, setImgPrompt] = useState('')
@@ -2284,21 +2286,7 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
     setGeneratedGenThread(null);
     
     try {
-      // 1. Scrape the article first
-      let articleContent = "";
-      try {
-        const scrapeRes = await fetch("/api/scrape-article", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: genThreadSource })
-        });
-        if (!scrapeRes.ok) throw new Error("Gagal mengambil teks dari URL");
-        const scrapeData = await scrapeRes.json();
-        articleContent = scrapeData.content || "";
-      } catch (scrapeErr) {
-        throw new Error('Artikel tidak dapat dibaca. Coba link sumber lain; konten tidak dibuat agar tidak mengarang isi berita. ' + scrapeErr.message);
-      }
-      if (!articleContent.trim()) throw new Error('Artikel kosong. Gunakan sumber lain.');
+      const articleContent = await getArticleContent();
 
       const systemPrompt = buildArticleThreadPrompt({
         styleId: genThreadLanguageStyle,
@@ -2822,12 +2810,29 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
     <div className="content-wrapper fade-in">
       <div className="content-panel">
         <h2 className="desktop-title">Utas dari Berita/Artikel</h2>
-        <p className="subtitle">Pilih gaya bahasa dan emosi Anda. AI membaca artikel, lalu meracik hook dan alur utas dengan karakter yang Anda pilih.</p>
+        <p className="subtitle">Minta rekomendasi gaya dari isi artikel, atau pilih sendiri. AI menyusun hook dan alur utas dengan karakter yang Anda pilih.</p>
         <div className="layout-grid">
           <div className="glass-panel input-section">
             <div className="input-group">
               <label>Link Berita / Artikel (Wajib)</label>
               <input type="text" className="api-key-input" placeholder="Masukkan URL berita (Contoh: https://kompas.com/...)" value={genThreadSource} onChange={(e) => setGenThreadSource(e.target.value)} />
+              <button className="btn-secondary" onClick={requestRecommendation} disabled={!safeLink(genThreadSource) || !apiKey || isRecommending || isGeneratingGenThread}>
+                {recommendationStatus === 'reading' ? 'Membaca artikel...' : recommendationStatus === 'analyzing' ? 'AI sedang memilih gaya...' : '✨ Rekomendasikan Gaya'}
+              </button>
+              <p className="help-text">AI membaca berita dan menyarankan gaya beserta alasannya. Anda tetap menentukan pilihan akhir.</p>
+              <div aria-live="polite" aria-busy={isRecommending}>
+                {recommendationError && <p role="alert" className="warning-text">{recommendationError}</p>}
+                {articleStyleRecommendation && (
+                  <section className="article-style-recommendation" aria-label="Rekomendasi gaya bahasa">
+                    <span className="help-text">Rekomendasi AI</span>
+                    <h3>{articleThreadStyles.find(style => style.id === articleStyleRecommendation.styleId)?.label}</h3>
+                    <p>{articleStyleRecommendation.reason}</p>
+                    <button className="btn-secondary" onClick={() => setGenThreadLanguageStyle(articleStyleRecommendation.styleId)} disabled={genThreadLanguageStyle === articleStyleRecommendation.styleId || isGeneratingGenThread}>
+                      {genThreadLanguageStyle === articleStyleRecommendation.styleId ? 'Gaya ini dipakai' : 'Pakai gaya ini'}
+                    </button>
+                  </section>
+                )}
+              </div>
             </div>
             <div className="input-group">
               <label>Instruksi Utas (Opsional)</label>
@@ -2859,7 +2864,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               </button>
             </div>
             
-            <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadSource || isGeneratingGenThread || !apiKey || isSelectingGenThreadProduct}>
+            <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadSource || isGeneratingGenThread || !apiKey || isSelectingGenThreadProduct || isRecommending}>
               {isGeneratingGenThread ? 'Membaca Artikel & Menyusun Utas...' : '✨ Generate Utas Berita'}
             </button>
             {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}

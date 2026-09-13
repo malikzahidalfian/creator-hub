@@ -184,6 +184,10 @@ input[type='checkbox'], input[type='range'] { accent-color: var(--primary-color)
 .generate-btn { width: 100%; margin-top: 6px; padding: 12px; }
 .warning-text { border: 1px solid #efdfbd; background: #fffbf1; color: #946b2c; border-radius: 8px; padding: 11px; font-size: 11px; line-height: 1.6; }
 .help-text { font-size: 11px; color: #858da0; line-height: 1.6; }
+.article-style-recommendation { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid #ddd6f4; border-radius: 10px; background: #f8f6ff; overflow-wrap: anywhere; }
+.article-style-recommendation h3 { color: #685293; }
+.article-style-recommendation p { color: var(--text-secondary); font-size: 13px; line-height: 1.7; }
+.article-style-recommendation .btn-secondary { align-self: flex-start; }
 .prompts-container { display: flex; flex-direction: column; gap: 20px; }
 .prompt-card { background: #fff; border: 1px solid var(--glass-border); border-radius: 12px; overflow: hidden; }
 .prompt-card:not(:has(.prompt-header)) { padding: 20px; }
