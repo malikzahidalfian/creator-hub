@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { appFetch, assistantText, safeLink } from './client.js';
 import { buildArticleStyleRecommendationPrompt, parseArticleStyleRecommendation } from './article-thread.js';
+import { TEXT_CHAT_OPTIONS } from './ai-model.js';
 
 const idleState = { status: 'idle', recommendation: null, error: '' };
 
@@ -53,13 +54,13 @@ export function useArticleRecommendation(source, apiKey) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}`, 'X-Provider': '1inference' },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          ...TEXT_CHAT_OPTIONS,
           messages: [
             { role: 'system', content: buildArticleStyleRecommendationPrompt() },
             { role: 'user', content: `Link sumber: ${sourceUrl}\n\nIsi artikel:\n"""\n${content}\n"""` }
           ],
-          temperature: 0.3,
-          max_tokens: 400
+          reasoning_effort: 'none',
+          max_completion_tokens: 400
         }),
         signal
       });

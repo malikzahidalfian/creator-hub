@@ -11,6 +11,7 @@ import { uploadGeminiFile } from './lib/gemini'
 import { useMobileViewport } from './lib/viewport'
 import { articleThreadStyles, articleThreadTones, buildArticleThreadPrompt } from './lib/article-thread'
 import { useArticleRecommendation } from './lib/use-article-recommendation'
+import { TEXT_MODEL, TEXT_CHAT_OPTIONS } from './lib/ai-model'
 
 function App() {
   useMobileViewport()
@@ -592,16 +593,15 @@ Berikan output dengan format:
           "X-Provider": "1inference"
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          ...TEXT_CHAT_OPTIONS,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: [
                 { type: "text", text: `Product Description: ${productDesc}` },
-                { type: "image_url", image_url: { url: base64Image } }
+                { type: "image_url", image_url: { url: base64Image, detail: "high" } }
               ]
             }
           ],
-          temperature: 0.7
         })
       });
 
@@ -632,11 +632,11 @@ Berikan output dengan format:
         { type: "text", text: `Product Description: ${productDesc}\n\nKey Selling Points (Context):\n${storySellingPoint}` }
       ];
       if (productFile) {
-        userContentItems.push({ type: "image_url", image_url: { url: await fileToBase64(productFile) } });
+        userContentItems.push({ type: "image_url", image_url: { url: await fileToBase64(productFile), detail: "high" } });
       } else if (productImage && typeof productImage === 'string') {
         const urls = productImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
         for (const u of urls) {
-          userContentItems.push({ type: "image_url", image_url: { url: u } });
+          userContentItems.push({ type: "image_url", image_url: { url: u, detail: "high" } });
         }
       }
       
@@ -694,12 +694,11 @@ Efek Suara (Sound Effects):
           "X-Provider": "1inference"
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          ...TEXT_CHAT_OPTIONS,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userContentItems }
           ],
-          temperature: 0.7
         })
       });
 
@@ -734,12 +733,11 @@ Efek Suara (Sound Effects):
           "X-Provider": "1inference"
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          ...TEXT_CHAT_OPTIONS,
           messages: [
             { role: "system", content: "Anda adalah asisten kreatif pembuat ide konten memasak. Berikan SATU ide hidangan yang sangat spesifik dan menggugah selera (dalam 1-2 kalimat) yang cocok dimasak menggunakan alat masak yang disebutkan. Jawab langsung idenya, tanpa basa-basi." },
             { role: "user", content: `Alat masak: ${cookDesc}\nTipe Konten: ${cookType}` }
           ],
-          temperature: 0.7
         })
       });
 
@@ -774,7 +772,7 @@ Efek Suara (Sound Effects):
         base64Image = cookImage;
       }
       if (base64Image) {
-        userContent.push({ type: "image_url", image_url: { url: base64Image } });
+        userContent.push({ type: "image_url", image_url: { url: base64Image, detail: "high" } });
       }
 
       const promptCountNum = parseInt(cookPromptCount) || 1;
@@ -832,12 +830,11 @@ ${formatInstructionStr}`;
           "X-Provider": "1inference"
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          ...TEXT_CHAT_OPTIONS,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userContent }
           ],
-          temperature: 0.8
         })
       });
 
@@ -1234,20 +1231,20 @@ VOICE OVER: "(Dialog/narasi)"
         userContent.push({ type: "text", text: `Deskripsi Produk: ${bjDesc}\nStory Angle: ${angle}\nTotal Durasi Video: ${bjVideoDuration} Detik\nInstruksi Khusus: ${bjInstruction || 'Terserah AI'}` });
 
         if (bjFile) {
-          userContent.push({ type: "image_url", image_url: { url: await fileToBase64(bjFile) } });
+          userContent.push({ type: "image_url", image_url: { url: await fileToBase64(bjFile), detail: "high" } });
         } else if (bjImage && typeof bjImage === 'string') {
           const urls = bjImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
           for (const u of urls) {
-            userContent.push({ type: "image_url", image_url: { url: u } });
+            userContent.push({ type: "image_url", image_url: { url: u, detail: "high" } });
           }
         }
 
         if (bjModelFile) {
-          userContent.push({ type: "image_url", image_url: { url: await fileToBase64(bjModelFile) } });
+          userContent.push({ type: "image_url", image_url: { url: await fileToBase64(bjModelFile), detail: "high" } });
         } else if (bjModelImage && typeof bjModelImage === 'string') {
           const urls = bjModelImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
           for (const u of urls) {
-            userContent.push({ type: "image_url", image_url: { url: u } });
+            userContent.push({ type: "image_url", image_url: { url: u, detail: "high" } });
           }
         }
 
@@ -1259,12 +1256,11 @@ VOICE OVER: "(Dialog/narasi)"
             "X-Provider": "1inference"
           },
           body: JSON.stringify({
-            model: "gpt-4o",
+            ...TEXT_CHAT_OPTIONS,
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: userContent }
             ],
-            temperature: 0.8
           })
         });
 
@@ -1669,11 +1665,11 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
     try {
       let userContentItems = [{ type: "text", text: promptText }];
       if (ugcFile) {
-        userContentItems.push({ type: "image_url", image_url: { url: await fileToBase64(ugcFile) } });
+        userContentItems.push({ type: "image_url", image_url: { url: await fileToBase64(ugcFile), detail: "high" } });
       } else if (ugcImage && typeof ugcImage === 'string') {
         const urls = ugcImage.split(/[\n,]+/).map(u => u.trim()).filter(u => u.startsWith('http'));
         for (const u of urls) {
-          userContentItems.push({ type: "image_url", image_url: { url: u } });
+          userContentItems.push({ type: "image_url", image_url: { url: u, detail: "high" } });
         }
       }
 
@@ -1685,7 +1681,7 @@ Berikan langsung hasil variasi naskahnya dengan format yang jelas (pisahkan tiap
           'X-Provider': '1inference'
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          ...TEXT_CHAT_OPTIONS,
           messages: [{ role: "user", content: userContentItems }]
         })
       });
@@ -2166,12 +2162,11 @@ Link Afiliasi Saya: ${threadLink || '[ISI_LINK_NANTI]'}`;
           "X-Provider": "1inference"
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          ...TEXT_CHAT_OPTIONS,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }
           ],
-          temperature: 0.8
         })
       });
 
@@ -2245,12 +2240,11 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
           "X-Provider": "1inference"
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          ...TEXT_CHAT_OPTIONS,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `Berikan analisis tren viral 7 hari terakhir untuk kategori: ${categoryToSearch}` }
           ],
-          temperature: 0.8
         })
       });
 
@@ -2313,12 +2307,11 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
           "X-Provider": "1inference"
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          ...TEXT_CHAT_OPTIONS,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }
           ],
-          temperature: 0.85
         })
       });
 
@@ -2547,12 +2540,11 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
           "X-Provider": "1inference"
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          ...TEXT_CHAT_OPTIONS,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `Nama Produk: ${bankProductName}\nDeskripsi Produk:\n${bankDesc}` }
           ],
-          temperature: 0.7
         })
       });
 
@@ -3570,6 +3562,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
       <div className="settings-grid">
         <div className="glass-panel"><div className="settings-card-heading"><span className="icon-tile indigo"><Icon name="spark" /></span><div><h3>1inference</h3><p>Asisten utama untuk proses kreatif Anda</p></div></div>
           <div className="input-group"><label htmlFor="primary-api-key">1inference API Key</label><input id="primary-api-key" type="password" value={apiKey} onChange={handleKeyChange} placeholder="Masukkan API Key 1inference Anda..." autoComplete="off" spellCheck={false} /><small className="help-text">Digunakan untuk storyboard, threads, gambar, dan text to speech.</small></div>
+          <p className="settings-note">Model teks utama: <strong>{TEXT_MODEL.toUpperCase()}</strong>. Digunakan untuk penulisan konten, analisis gambar, dan rekomendasi gaya artikel.</p>
           <p className="settings-note">Kunci yang terisi belum tentu aktif. Validitas dan saldo akan diperiksa oleh provider saat Anda membuat konten.</p>
         </div>
         <div className="glass-panel"><div className="settings-card-heading"><span className="icon-tile teal"><Icon name="shield" /></span><div><h3>Privasi kunci Anda</h3><p>Gunakan hanya pada perangkat pribadi</p></div></div><p className="help-text">API Key disimpan di localStorage browser, bukan di database. Pengguna perangkat ini dan ekstensi browser yang memiliki izin dapat mengaksesnya. Hapus kunci sebelum memakai perangkat bersama.</p><button className="btn-secondary" style={{marginTop: 20}} onClick={() => { setApiKey(''); setGeminiKeys(Array(10).fill('')); writeStorage('storyboard_api_key', ''); writeStorage('gemini_api_keys', '[]'); alert('Kunci API di browser ini telah dihapus.'); }}>Hapus semua kunci tersimpan</button></div>

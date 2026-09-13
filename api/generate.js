@@ -1,5 +1,6 @@
 import { requirePost, requireApiKey } from '../server/request.js';
 import { proxyJson } from '../server/upstream.js';
+import { TEXT_MODEL, TEXT_CHAT_OPTIONS } from '../src/lib/ai-model.js';
 
 export const maxDuration = 60;
 
@@ -16,9 +17,19 @@ export default async function handler(req, res) {
   if (!Array.isArray(req.body?.messages) || !req.body.messages.length) return res.status(400).json({ error: 'Pesan wajib diisi.' });
   const headers = { 'Content-Type': 'application/json', Authorization: req.headers.authorization };
   if (provider === 'openrouter') headers['X-Title'] = 'Creator Hub AI';
-  const model = provider === 'deepseek' ? 'deepseek-chat' : req.body.model || (provider === 'openrouter' ? 'openrouter/free' : 'gpt-4o');
+  const defaultModel = provider === '1inference' ? TEXT_MODEL : provider === 'openrouter' ? 'openrouter/free' : 'gpt-4o';
+  const model = provider === 'deepseek' ? 'deepseek-chat' : req.body.model || defaultModel;
+  const payload = { ...(model === TEXT_MODEL ? TEXT_CHAT_OPTIONS : {}), ...req.body, model, stream: false };
+  if (model === TEXT_MODEL) {
+    // Do not send legacy sampling settings with GPT-5.5 reasoning requests.
+    delete payload.temperature;
+    if (payload.max_tokens !== undefined) {
+      payload.max_completion_tokens ??= payload.max_tokens;
+      delete payload.max_tokens;
+    }
+  }
   return proxyJson(res, urls[provider], {
     method: 'POST', headers,
-    body: JSON.stringify({ ...req.body, model, stream: false })
+    body: JSON.stringify(payload)
   });
 }

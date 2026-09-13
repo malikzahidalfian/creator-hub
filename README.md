@@ -44,6 +44,8 @@ Izin tersebut melindungi akses langsung ke Supabase. Endpoint /api/database apli
 
 Generator tetap memerlukan API Key provider dari browser. Validasi metode HTTP, payload, ID data, pagination, dan URL publik tetap berlaku. Pengambil artikel membatasi protokol, alamat publik, DNS, redirect, waktu, dan ukuran respons. Isi berita yang gagal dibaca tidak diteruskan ke AI untuk ditebak.
 
+Model teks utama dan analisis gambar menggunakan `gpt-5.5` melalui 1inference, dengan konfigurasi bersama di `src/lib/ai-model.js`. Generator konten memakai `reasoning_effort: low`; rekomendasi gaya artikel memakai `none` dan `max_completion_tokens: 400` untuk jawaban JSON singkat. Permintaan GPT-5.5 tidak mengirim `temperature`; gambar referensi memakai `detail: high` agar batas resolusinya eksplisit. Model generator gambar, TTS, serta analisis video Gemini mengikuti pilihan fiturnya masing-masing. Model utama ditampilkan di Pengaturan API. Akses dan saldo GPT-5.5 mengikuti akun 1inference; kegagalan provider ditampilkan tanpa beralih diam-diam ke GPT-4o.
+
 ## Penggunaan di HP
 
 Navigasi bawah: Beranda, Produk, Buat, Riwayat, API. Menu lengkap tersedia lewat tombol menu atas. Dukungan portrait/landscape, safe area, dan penyesuaian visual viewport saat keyboard muncul tetap aktif. Untuk membuka dev server dari HP satu Wi-Fi, jalankan npm run dev -- --host 0.0.0.0 lalu buka alamat IP komputer dan port Vite. Gunakan deployment HTTPS untuk pemakaian sehari-hari.

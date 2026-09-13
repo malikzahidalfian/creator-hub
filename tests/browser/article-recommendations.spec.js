@@ -49,6 +49,11 @@ for (const width of [390, 1440]) {
     await extractionRoute.fulfill({ json: { content: firstArticle } });
     await expect(card).toContainText(recommendation.reason);
     await expect(card.getByRole('heading')).toHaveText('Nyinyir (Julid, Pedas)');
+    expect(requests[0].model).toBe('gpt-5.5');
+    expect(requests[0].reasoning_effort).toBe('none');
+    expect(requests[0].max_completion_tokens).toBe(400);
+    expect(requests[0]).not.toHaveProperty('max_tokens');
+    expect(requests[0]).not.toHaveProperty('temperature');
     expect(requests[0].messages.find(message => message.role === 'user').content).toContain(firstArticle);
     expect(requests[0].messages.find(message => message.role === 'user').content).toContain(firstSource);
     for (const id of ['santai', 'formal', 'humoris', 'nyinyir', 'storytelling']) {
@@ -69,6 +74,8 @@ for (const width of [390, 1440]) {
     await expect(page.locator('.prompt-card')).toHaveCount(3);
     expect(reads).toBe(1);
     expect(requests).toHaveLength(2);
+    expect(requests[1].model).toBe('gpt-5.5');
+    expect(requests[1].reasoning_effort).toBe('low');
     expect(requests[1].messages[0].content).toContain('GAYA BAHASA PILIHAN: Nyinyir (Julid, Pedas)');
     expect(requests[1].messages[1].content).toContain(firstArticle);
 

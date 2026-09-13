@@ -94,6 +94,42 @@ test('chat proxy respects selected OpenRouter model and maps non-JSON upstream r
   globalThis.fetch = async () => new Response('<html>bad gateway</html>');
   res = response(); await generate(req, res); assert.equal(res.statusCode, 502);
 });
+test('GPT-5.5 is the 1inference default and accepts legacy token limits without legacy sampling', async t => {
+  const captured = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    captured.push({ url, body: JSON.parse(options.body), authorization: options.headers.Authorization });
+    return new Response(JSON.stringify({ model: 'gpt-5.5', choices: [{ message: { content: 'OK' } }] }), { headers: { 'Content-Type': 'application/json' } });
+  });
+  const messages = [{ role: 'user', content: [{ type: 'text', text: 'Jelaskan produk ini.' }, { type: 'image_url', image_url: { url: 'https://example.com/product.png', detail: 'high' } }] }];
+  const original = { messages, max_tokens: 400, temperature: 0.8 };
+  let res = response();
+  await generate(request(original), res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(captured[0].url, 'https://api.1inference.com/v1/chat/completions');
+  assert.equal(captured[0].authorization, 'Bearer test-key');
+  assert.deepEqual(captured[0].body, { model: 'gpt-5.5', reasoning_effort: 'low', messages, max_completion_tokens: 400, stream: false });
+  assert.equal(original.max_tokens, 400);
+  assert.equal(original.temperature, 0.8);
+  res = response();
+  await generate(request({ model: 'gpt-5.5', reasoning_effort: 'none', max_completion_tokens: 600, max_tokens: 400, messages }), res);
+  assert.equal(captured[1].body.reasoning_effort, 'none');
+  assert.equal(captured[1].body.max_completion_tokens, 600);
+  assert.equal(captured[1].body.max_tokens, undefined);
+});
+
+test('GPT-5.5 access errors stay visible without falling back to another model', async t => {
+  const models = [];
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    models.push(JSON.parse(options.body).model);
+    return new Response(JSON.stringify({ error: { message: 'Model gpt-5.5 tidak tersedia untuk API key ini.' } }), { status: 403 });
+  });
+  const res = response();
+  await generate(request({ messages: [{ role: 'user', content: 'Halo' }] }), res);
+  assert.equal(res.statusCode, 403);
+  assert.match(res.body.error, /gpt-5.5 tidak tersedia/);
+  assert.deepEqual(models, ['gpt-5.5']);
+});
+
 test('OpenRouter image generation uses chat multimodal endpoint', async t => {
   let captured;
   t.mock.method(globalThis, 'fetch', async (url, options) => { captured = { url, body: JSON.parse(options.body) }; return new Response('{}'); });

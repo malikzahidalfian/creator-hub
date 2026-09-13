@@ -153,6 +153,9 @@ for (const { width, style, label, tone, toneLabel, direction, withAffiliate = fa
     await expect(page.getByRole('heading', { name: 'Hook (Tweet 1)' })).toBeVisible();
     await expect(page.locator('.prompt-content')).toHaveText(blocks);
     expect(generations).toHaveLength(1);
+    expect(generations[0].model).toBe('gpt-5.5');
+    expect(generations[0].reasoning_effort).toBe('low');
+    expect(generations[0]).not.toHaveProperty('temperature');
     const system = generations[0].messages.find(message => message.role === 'system').content;
     const user = generations[0].messages.find(message => message.role === 'user').content;
     expect(user).toContain(article);
@@ -211,6 +214,7 @@ for (const width of [390, 768, 1440]) {
     if (await toggle.isVisible()) await toggle.click();
     await page.getByRole('button', { name: 'Pengaturan API', exact: true }).click();
     await expect(page.getByLabel('Gemini API Key utama')).toBeVisible();
+    await expect(page.getByText('Model teks utama:', { exact: false })).toContainText('GPT-5.5');
     await page.getByLabel('1inference API Key', { exact: true }).fill('test-key');
     expect(await page.evaluate(() => localStorage.getItem('storyboard_api_key'))).toBe('test-key');
     expect(errors).toEqual([]);
