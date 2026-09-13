@@ -32,6 +32,7 @@ for (const width of [390, 1440]) {
     expect(render).toBeUndefined();
     const body = concept.request().postDataJSON();
     expect(body.model).toBe('gpt-5.5');
+    expect(body.max_completion_tokens).toBe(2048);
     expect(body.messages.find(item => item.role === 'user').content).toBe(prompt);
     expect(concept.request().headers().authorization).toBe('Bearer test-key');
     await concept.fulfill({ json: { choices: [{ message: { content: brief } }] } });
@@ -101,4 +102,34 @@ test('paid image generation requires a key while free models remain selectable',
   await expect(page.getByText('Isi API Key 1inference di Pengaturan API untuk memakai model ini.')).toBeVisible();
   await page.getByLabel('Pilih Mesin AI (Model)').selectOption('turbo-free');
   await expect(page.getByRole('button', { name: /Generate Gambar/ })).toBeEnabled();
+});
+
+test('retrying a payment failure reuses the successful concept and editing the prompt invalidates it', async ({ page }) => {
+  let concepts = 0;
+  let renders = 0;
+  await page.route('**/api/generate', route => {
+    concepts++;
+    return route.fulfill({ json: { choices: [{ message: { content: brief } }] } });
+  });
+  await page.route('**/api/generate-image', route => {
+    renders++;
+    return route.fulfill({ status: 402, json: { error: '1inference menolak permintaan. Jika saldo masih ada, periksa batas API key.', code: 'payment_required', model: 'venice-gpt-image-1.5', providerMessage: 'Payment Required', requestId: 'image-402' } });
+  });
+  await openImage(page, { width: 390 });
+  await page.getByLabel('Deskripsi Gambar (Prompt)').fill('Foto kucing.');
+  await page.getByRole('button', { name: /Generate Gambar/ }).click();
+  const error = page.getByRole('alert');
+  await expect(error).toContainText('Tahap: pembuatan gambar');
+  await error.getByText('Detail error', { exact: true }).click();
+  await expect(error).toContainText('image-402');
+  await expect(error.getByRole('link', { name: /Periksa API key/ })).toHaveAttribute('href', 'https://1inference.com/dashboard/api-keys');
+  await page.getByRole('button', { name: /Generate Gambar/ }).click();
+  await expect(error).toBeVisible();
+  expect(concepts).toBe(1);
+  expect(renders).toBe(2);
+  await page.getByLabel('Deskripsi Gambar (Prompt)').fill('Foto anjing.');
+  await page.getByRole('button', { name: /Generate Gambar/ }).click();
+  await expect(error).toBeVisible();
+  expect(concepts).toBe(2);
+  expect(renders).toBe(3);
 });

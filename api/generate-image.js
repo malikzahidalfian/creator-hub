@@ -14,5 +14,5 @@ export default async function handler(req, res) {
   const payload = openrouter
     ? { model: model || 'google/gemini-2.5-flash-image', messages: [{ role: 'user', content: prompt }], modalities: ['image', 'text'] }
     : { model: model || (provider === '1inference' ? IMAGE_MODEL : 'gpt-image-1'), prompt, n: 1, size: '1024x1024' };
-  return proxyJson(res, url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: req.headers.authorization }, body: JSON.stringify(payload) }, { timeoutMs: 150_000 });
+  return proxyJson(res, url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: req.headers.authorization }, body: JSON.stringify(payload) }, { timeoutMs: 150_000, provider, model: payload.model });
 }

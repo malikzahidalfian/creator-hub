@@ -218,6 +218,10 @@ input[type='checkbox'], input[type='range'] { accent-color: var(--primary-color)
 .settings-card-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
 .settings-card-heading h3 { font-size: 16px; }.settings-card-heading p { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
 .settings-note { margin-top: 18px; font-size: 11px; line-height: 1.8; color: #9197a9; }
+.ai-request-error { overflow-wrap: anywhere; }
+.ai-request-error p, .ai-request-error details { margin-top: 8px; }
+.ai-request-error summary { cursor: pointer; }
+.ai-request-error a { color: inherit; text-decoration: underline; }
 .gemini-key-list { display: grid; gap: 15px; margin-top: 20px; }
 .settings-details summary { font-size: 12px; color: #6c5b9b; cursor: pointer; }
 /* Login */

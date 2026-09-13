@@ -31,5 +31,5 @@ export default async function handler(req, res) {
   return proxyJson(res, urls[provider], {
     method: 'POST', headers,
     body: JSON.stringify(payload)
-  });
+  }, { provider, model });
 }

@@ -5,21 +5,28 @@ const imageBriefPrompt = `Susun satu prompt gambar siap pakai dari deskripsi pen
 Pertahankan teks yang diminta muncul pada gambar persis seperti aslinya, termasuk bahasa dan ejaannya. Jangan menambahkan tulisan, logo, atau watermark yang tidak diminta. Hindari klaim produk rekaan. Jika deskripsi sudah lengkap, rapikan tanpa memperluas konsep.
 Keluarkan hanya satu prompt, maksimal 180 kata, tanpa pengantar, penjelasan, judul, atau daftar alternatif.`;
 
-export async function generatePaidImage({ prompt, model, apiKey, onStatus }) {
+export async function generatePaidImage({ prompt, model, apiKey, onStatus, briefCache }) {
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}`, 'X-Provider': '1inference' };
   let imagePrompt = prompt.trim();
   let imageModel = model;
 
   if (model === GPT_IMAGE_WORKFLOW) {
-    onStatus('GPT-5.5 menyusun konsep...');
-    const response = await appFetch('/api/generate', {
-      method: 'POST', headers,
-      body: JSON.stringify({ ...TEXT_CHAT_OPTIONS, messages: [
-        { role: 'system', content: imageBriefPrompt },
-        { role: 'user', content: imagePrompt }
-      ] })
-    });
-    imagePrompt = assistantText(await response.json());
+    const cached = briefCache?.current;
+    if (cached?.prompt === imagePrompt && cached?.apiKey === apiKey) {
+      imagePrompt = cached.brief;
+    } else {
+      onStatus('GPT-5.5 menyusun konsep...');
+      const response = await appFetch('/api/generate', {
+        method: 'POST', headers,
+        body: JSON.stringify({ ...TEXT_CHAT_OPTIONS, max_completion_tokens: 2048, messages: [
+          { role: 'system', content: imageBriefPrompt },
+          { role: 'user', content: imagePrompt }
+        ] })
+      }).catch(error => { throw Object.assign(error, { stage: 'konsep gambar' }); });
+      const brief = assistantText(await response.json());
+      if (briefCache) briefCache.current = { prompt: imagePrompt, apiKey, brief };
+      imagePrompt = brief;
+    }
     imageModel = IMAGE_MODEL;
   }
 
@@ -27,7 +34,7 @@ export async function generatePaidImage({ prompt, model, apiKey, onStatus }) {
   const response = await appFetch('/api/generate-image', {
     method: 'POST', headers, signal: AbortSignal.timeout(180_000),
     body: JSON.stringify({ model: imageModel, prompt: imagePrompt })
-  });
+  }).catch(error => { throw Object.assign(error, { stage: 'pembuatan gambar' }); });
   const data = await response.json();
   const image = data?.data?.[0];
   if (typeof image?.b64_json === 'string' && image.b64_json.trim()) {

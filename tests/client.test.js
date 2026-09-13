@@ -46,6 +46,16 @@ test('API errors are readable and HTML fallback cannot masquerade as a working A
   await assert.rejects(appFetch('/api/generate'), /API tidak tersedia/);
 });
 
+test('client retains payment diagnostics so failed requests can be explained in the form', async t => {
+  const details = { error: 'Provider menolak pembayaran.', code: 'payment_required', provider: '1inference', model: 'gpt-5.5', providerMessage: 'Payment Required', providerCode: 'insufficient_balance', requestId: 'request-123' };
+  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify(details), { status: 402, headers: { 'Content-Type': 'application/json' } }));
+  await assert.rejects(appFetch('/api/generate'), error => {
+    assert.equal(error.status, 402);
+    for (const key of ['code', 'provider', 'model', 'providerMessage', 'providerCode', 'requestId']) assert.equal(error[key], details[key]);
+    return true;
+  });
+});
+
 test('database loader continues beyond the first page without truncating history', async () => {
   const offsets = [];
   const records = await loadAllRecords('', async url => {

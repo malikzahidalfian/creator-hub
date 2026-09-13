@@ -39,7 +39,10 @@ export async function appFetch(url, options = {}) {
   const response = await globalThis.fetch(url, { ...options, signal: options.signal || AbortSignal.timeout(internal ? 60_000 : 120_000) });
   if (internal && !response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(typeof error.error === 'string' ? error.error : error.error?.message || `Permintaan gagal (${response.status}).`);
+    throw Object.assign(new Error(typeof error.error === 'string' ? error.error : error.error?.message || `Permintaan gagal (${response.status}).`), {
+      status: response.status, code: error.code, provider: error.provider, model: error.model,
+      providerMessage: error.providerMessage, providerCode: error.providerCode, requestId: error.requestId
+    });
   }
   if (internal && !/application\/json|audio\//i.test(response.headers.get('content-type') || '')) {
     throw new Error('API tidak tersedia. Jalankan npm run dev atau gunakan deployment Vercel.');

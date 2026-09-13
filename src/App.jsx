@@ -13,6 +13,7 @@ import { articleThreadStyles, articleThreadTones, buildArticleThreadPrompt } fro
 import { useArticleRecommendation } from './lib/use-article-recommendation'
 import { TEXT_MODEL, TEXT_CHAT_OPTIONS, IMAGE_MODEL, GPT_IMAGE_WORKFLOW } from './lib/ai-model'
 import { generatePaidImage } from './lib/image-generation'
+import AiRequestError from './components/AiRequestError'
 
 function App() {
   useMobileViewport()
@@ -115,6 +116,9 @@ function App() {
   const [imgPrompt, setImgPrompt] = useState('')
   const [imgModel, setImgModel] = useState(GPT_IMAGE_WORKFLOW)
   const [imgStatus, setImgStatus] = useState('')
+  const [imgError, setImgError] = useState(null)
+  const [genThreadError, setGenThreadError] = useState(null)
+  const imageBriefCache = useRef(null)
   const [customOpenRouterModel, setCustomOpenRouterModel] = useState('')
   const [isGeneratingImg, setIsGeneratingImg] = useState(false)
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null)
@@ -2279,6 +2283,7 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
     if (!Number.isInteger(Number(genThreadLengthCount)) || Number(genThreadLengthCount) < 2 || Number(genThreadLengthCount) > 20) return alert('Jumlah cuitan harus 2–20.');
     if (!safeLink(genThreadSource)) return alert('Gunakan URL artikel http/https yang valid.');
     setIsGeneratingGenThread(true);
+    setGenThreadError(null);
     setGeneratedGenThread(null);
     
     try {
@@ -2310,6 +2315,7 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
         },
         body: JSON.stringify({
           ...TEXT_CHAT_OPTIONS,
+          max_completion_tokens: 4096,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }
@@ -2325,6 +2331,7 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
       
       setGeneratedGenThread(blocks);
     } catch (error) {
+      setGenThreadError(error);
       alert("Error: " + error.message);
     } finally {
       setIsGeneratingGenThread(false)
@@ -2339,6 +2346,7 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
     }
 
     setIsGeneratingImg(true);
+    setImgError(null);
     setImgStatus('Melukis gambar...');
     setGeneratedImageUrl(null);
 
@@ -2355,10 +2363,11 @@ Gunakan persis struktur kunci berikut untuk setiap topik:
         });
         setGeneratedImageUrl(url);
       } else {
-        const imageUrl = await generatePaidImage({ prompt: imgPrompt, model: imgModel, apiKey, onStatus: setImgStatus });
+        const imageUrl = await generatePaidImage({ prompt: imgPrompt, model: imgModel, apiKey, onStatus: setImgStatus, briefCache: imageBriefCache });
         setGeneratedImageUrl(imageUrl);
       }
     } catch (e) {
+      setImgError(e);
       alert("Error: " + e.message);
     } finally {
       setIsGeneratingImg(false);
@@ -2655,6 +2664,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
               {isGeneratingImg ? imgStatus : '🎨 Generate Gambar'}
             </button>
             {!imgModel.includes('free') && !apiKey && <p className="warning-text">Isi API Key 1inference di Pengaturan API untuk memakai model ini.</p>}
+            <AiRequestError error={imgError} />
           </div>
           
           <div className="glass-panel" style={{padding: '1.5rem', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px'}}>
@@ -2844,6 +2854,7 @@ PASTIKAN OUTPUT MURNI JSON TANPA FORMATTING MARKDOWN \`\`\`json !`;
             <button className="btn-primary generate-btn" onClick={handleGenerateGenThread} disabled={!genThreadSource || isGeneratingGenThread || !apiKey || isSelectingGenThreadProduct || isRecommending}>
               {isGeneratingGenThread ? 'Membaca Artikel & Menyusun Utas...' : '✨ Generate Utas Berita'}
             </button>
+            <AiRequestError error={genThreadError} />
             {!apiKey && <p className="warning-text">⚠️ Silakan masukkan API Key di menu API Settings terlebih dahulu.</p>}
           </div>
           <div className="glass-panel" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>

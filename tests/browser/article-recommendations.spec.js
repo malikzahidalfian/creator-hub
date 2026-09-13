@@ -75,6 +75,7 @@ for (const width of [390, 1440]) {
     expect(reads).toBe(1);
     expect(requests).toHaveLength(2);
     expect(requests[1].model).toBe('gpt-5.5');
+    expect(requests[1].max_completion_tokens).toBe(4096);
     expect(requests[1].reasoning_effort).toBe('low');
     expect(requests[1].messages[0].content).toContain('GAYA BAHASA PILIHAN: Nyinyir (Julid, Pedas)');
     expect(requests[1].messages[1].content).toContain(firstArticle);
@@ -90,6 +91,29 @@ for (const width of [390, 1440]) {
     expect(requests[2].messages[1].content).not.toContain(firstArticle);
   });
 }
+
+test('article payment failures show provider details and preserve the URL and style', async ({ page }) => {
+  const requests = [];
+  await page.route('**/api/scrape-article', route => route.fulfill({ json: { content: firstArticle } }));
+  await page.route('**/api/generate', route => {
+    requests.push(route.request().postDataJSON());
+    return route.fulfill({ status: 402, json: { error: '1inference menolak pembayaran. Jika saldo masih ada, periksa API key.', code: 'payment_required', model: 'gpt-5.5', providerMessage: 'Payment Required', requestId: 'article-402' } });
+  });
+  await openArticle(page);
+  await page.getByPlaceholder('Masukkan URL berita', { exact: false }).fill(firstSource);
+  await page.getByLabel('Gaya Bahasa (Diksi)', { exact: true }).selectOption('humoris');
+  await page.getByRole('button', { name: /Generate Utas Berita/ }).click();
+  const error = page.getByRole('alert');
+  await expect(error).toContainText('Permintaan ditolak provider (402)');
+  await error.getByText('Detail error', { exact: true }).click();
+  await expect(error).toContainText('article-402');
+  await expect(error).toContainText('gpt-5.5');
+  await expect(page.getByPlaceholder('Masukkan URL berita', { exact: false })).toHaveValue(firstSource);
+  await expect(page.getByLabel('Gaya Bahasa (Diksi)', { exact: true })).toHaveValue('humoris');
+  expect(requests).toHaveLength(1);
+  expect(requests[0].max_completion_tokens).toBe(4096);
+  await expect(page.getByRole('button', { name: /Generate Utas Berita/ })).toBeEnabled();
+});
 
 test('a late recommendation for an old URL cannot replace the new article recommendation', async ({ page }) => {
   let oldRequest;

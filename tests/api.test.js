@@ -156,6 +156,27 @@ test('1inference images use the catalog image model and preserve provider result
   assert.equal(calls.length, 2);
 });
 
+test('payment errors preserve status and provider details without claiming the account balance is empty', async t => {
+  let result = JSON.stringify({ error: { message: 'Payment Required for Bearer sk_private-test', code: 'insufficient_balance' } });
+  t.mock.method(globalThis, 'fetch', async () => new Response(result, { status: 402, headers: { 'x-request-id': 'provider-request-123' } }));
+  for (const handler of [generate, generateImage]) {
+    const res = response();
+    await handler(request({ prompt: 'Foto produk.', messages: [{ role: 'user', content: 'Halo' }] }), res);
+    assert.equal(res.statusCode, 402);
+    assert.equal(res.body.code, 'payment_required');
+    assert.equal(res.body.provider, '1inference');
+    assert.equal(res.body.providerCode, 'insufficient_balance');
+    assert.equal(res.body.requestId, 'provider-request-123');
+    assert.match(res.body.error, /Jika saldo masih ada/);
+    assert.doesNotMatch(res.body.providerMessage, /sk_private-test/);
+  }
+  result = 'Payment Required';
+  const res = response();
+  await generate(request({ messages: [{ role: 'user', content: 'Halo' }] }), res);
+  assert.equal(res.statusCode, 402);
+  assert.equal(res.body.providerMessage, 'Payment Required');
+});
+
 test('OpenRouter image generation uses chat multimodal endpoint', async t => {
   let captured;
   t.mock.method(globalThis, 'fetch', async (url, options) => { captured = { url, body: JSON.parse(options.body) }; return new Response('{}'); });
